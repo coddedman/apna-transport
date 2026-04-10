@@ -1,10 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Prisma Schema for Hyva Transport MTMS
+// Prisma 7: DB URLs go in prisma.config.ts, not here.
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
@@ -12,26 +10,43 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  SUPER_ADMIN    // Platform Owner
+  ORG_ADMIN      // Transporter Admin
+  FIELD_MANAGER  // Site Supervisor
+}
+
+enum ExpenseType {
+  FUEL
+  DRIVER_ADVANCE
+  MAINTENANCE
+  TOLL
+  CASH_PAYMENT
+}
+
 model Transporter {
   id           String    @id @default(cuid())
-  companyName  String
+  name         String
+  registration String?   // GST/Business ID
   users        User[]
   projects     Project[]
   owners       Owner[]
+  createdAt    DateTime  @default(now())
 }
 
 model User {
-  id            String      @id @default(cuid())
-  name          String
-  email         String      @unique
-  role          String      @default("MANAGER")
+  id            String       @id @default(cuid())
+  email         String       @unique
+  password      String
+  role          Role         @default(ORG_ADMIN)
   transporterId String?
   transporter   Transporter? @relation(fields: [transporterId], references: [id])
 }
 
 model Project {
   id            String      @id @default(cuid())
-  name          String
+  projectName   String
+  location      String
   transporterId String
   transporter   Transporter @relation(fields: [transporterId], references: [id])
   trips         Trip[]
@@ -39,7 +54,8 @@ model Project {
 
 model Owner {
   id            String      @id @default(cuid())
-  name          String
+  ownerName     String
+  phone         String
   transporterId String
   transporter   Transporter @relation(fields: [transporterId], references: [id])
   vehicles      Vehicle[]
@@ -61,23 +77,17 @@ model Trip {
   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id])
-  weight      Float
+  weight      Float    // MT (Metric Tons)
   ratePerTon  Float
   totalAmount Float    // weight * ratePerTon
 }
 
 model Expense {
   id        String      @id @default(cuid())
+  date      DateTime    @default(now())
   vehicleId String
   vehicle   Vehicle     @relation(fields: [vehicleId], references: [id])
   amount    Float
   type      ExpenseType
-}
-
-enum ExpenseType { 
-  FUEL
-  ADVANCE
-  MAINTENANCE
-  TOLL
-  OTHER 
+  remarks   String?
 }

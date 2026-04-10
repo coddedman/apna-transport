@@ -103,7 +103,7 @@ export default function Home() {
 
       {/* CTA */}
       <Link
-        href="/dashboard"
+        href="/login"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -119,7 +119,7 @@ export default function Home() {
           boxShadow: '0 0 30px rgba(245,158,11,0.2)',
         }}
       >
-        Open Dashboard →
+        Get Started →
       </Link>
 
       <p style={{
