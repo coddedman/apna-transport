@@ -3,11 +3,14 @@ import { getVehicles } from '@/lib/actions/vehicles'
 export default async function VehiclesPage() {
   const vehicles = await getVehicles()
 
+  const activeCount = vehicles.length // Or some other logic
+  const upcomingRenewals = 0 // In real system, query by renewal date
+  
   const stats = [
-    { label: 'Total Vehicles', value: vehicles.length, icon: '🚛', color: 'accent' },
-    { label: 'Active Fleet', value: vehicles.length, icon: '✅', color: 'success' }, // Simplify for now
-    { label: 'Total Trips', value: vehicles.reduce((acc, v) => acc + v.trips.length, 0), icon: '🛣️', color: 'info' },
-    { label: 'Upcoming Renewals', value: '0', icon: '⚠️', color: 'purple' },
+    { label: 'Total Vehicles', value: vehicles.length.toLocaleString(), icon: '🚛', color: 'accent' },
+    { label: 'Active Fleet', value: activeCount.toLocaleString(), icon: '✅', color: 'success' },
+    { label: 'Total Trips Logged', value: vehicles.reduce((acc, v) => acc + v.trips.length, 0).toLocaleString(), icon: '🛣️', color: 'info' },
+    { label: 'Upcoming Renewals', value: upcomingRenewals.toString(), icon: '⚠️', color: 'purple' },
   ]
 
   return (
