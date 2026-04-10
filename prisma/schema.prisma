@@ -51,6 +51,7 @@ model Project {
   transporterId String
   transporter   Transporter @relation(fields: [transporterId], references: [id])
   trips         Trip[]
+  vehicles      Vehicle[]
 }
 
 model Owner {
@@ -67,6 +68,8 @@ model Vehicle {
   plateNo   String    @unique
   ownerId   String
   owner     Owner     @relation(fields: [ownerId], references: [id])
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id])
   trips     Trip[]
   expenses  Expense[]
 }

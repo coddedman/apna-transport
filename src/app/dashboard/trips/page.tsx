@@ -1,5 +1,8 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getVehicles } from '@/lib/actions/vehicles'
+import { getProjects } from '@/lib/actions/projects'
+import AddTripButton from '@/components/AddTripButton'
 
 export default async function TripsPage() {
   const session = await auth()
@@ -7,14 +10,18 @@ export default async function TripsPage() {
 
   if (!transporterId) return <div>Unauthorized</div>
 
-  const tripsData = await prisma.trip.findMany({
-    where: { project: { transporterId } },
-    include: {
-      vehicle: true,
-      project: true
-    },
-    orderBy: { date: 'desc' }
-  })
+  const [tripsData, vehicles, projects] = await Promise.all([
+    prisma.trip.findMany({
+      where: { project: { transporterId } },
+      include: {
+        vehicle: true,
+        project: true
+      },
+      orderBy: { date: 'desc' }
+    }),
+    getVehicles(),
+    getProjects()
+  ])
 
   // Format the data dynamically
   const trips = tripsData.map(t => ({
@@ -41,7 +48,7 @@ export default async function TripsPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-primary">+ Log New Trip</button>
+          <AddTripButton vehicles={vehicles} projects={projects} />
         </div>
       </header>
 

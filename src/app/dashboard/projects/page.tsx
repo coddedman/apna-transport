@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import AddProjectButton from '@/components/AddProjectButton'
 
 export default async function ProjectsPage() {
   const session = await auth()
@@ -44,7 +45,7 @@ export default async function ProjectsPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-primary">+ Create Project</button>
+          <AddProjectButton />
         </div>
       </header>
 

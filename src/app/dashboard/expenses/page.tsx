@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { getVehicles } from '@/lib/actions/vehicles'
+import AddExpenseButton from '@/components/AddExpenseButton'
 
 export default async function ExpensesPage() {
   const session = await auth()
@@ -7,13 +9,16 @@ export default async function ExpensesPage() {
 
   if (!transporterId) return <div>Unauthorized</div>
 
-  const expensesData = await prisma.expense.findMany({
-    where: { vehicle: { owner: { transporterId } } },
-    include: {
-      vehicle: true
-    },
-    orderBy: { date: 'desc' }
-  })
+  const [expensesData, vehicles] = await Promise.all([
+    prisma.expense.findMany({
+      where: { vehicle: { owner: { transporterId } } },
+      include: {
+        vehicle: true
+      },
+      orderBy: { date: 'desc' }
+    }),
+    getVehicles()
+  ])
 
   const expenses = expensesData.map(e => ({
     id: e.id,
@@ -44,7 +49,7 @@ export default async function ExpensesPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-primary">+ Log Expense</button>
+          <AddExpenseButton vehicles={vehicles} />
         </div>
       </header>
 

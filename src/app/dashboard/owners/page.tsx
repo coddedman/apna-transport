@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import AddOwnerButton from '@/components/AddOwnerButton'
 
 export default async function OwnersPage() {
   const session = await auth()
@@ -60,7 +61,7 @@ export default async function OwnersPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-primary">+ Add Owner</button>
+          <AddOwnerButton />
         </div>
       </header>
 

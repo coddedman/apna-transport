@@ -2,32 +2,52 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
+import { revalidatePath } from 'next/cache'
 
 export async function getVehicles() {
   const session = await auth()
-  if (!session?.user?.transporterId) return []
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) return []
 
   return await prisma.vehicle.findMany({
     where: {
       owner: {
-        transporterId: session.user.transporterId
+        transporterId: transporterId
       }
     },
     include: {
       owner: true,
+      project: true,
       trips: true,
+    },
+    orderBy: {
+      plateNo: 'asc'
     }
   })
 }
 
-export async function registerVehicle(data: { plateNo: string, ownerId: string }) {
+export async function createVehicle(formData: FormData) {
   const session = await auth()
-  if (!session?.user?.transporterId) throw new Error('Unauthorized')
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
 
-  return await prisma.vehicle.create({
+  const plateNo = formData.get('plateNo') as string
+  const ownerId = formData.get('ownerId') as string
+  const projectId = formData.get('projectId') as string
+
+  if (!plateNo || !ownerId) {
+    throw new Error('Missing required fields')
+  }
+
+  const vehicle = await prisma.vehicle.create({
     data: {
-      plateNo: data.plateNo,
-      ownerId: data.ownerId,
+      plateNo: plateNo.toUpperCase(),
+      ownerId: ownerId,
+      projectId: projectId || null,
     }
   })
+
+  revalidatePath('/dashboard/vehicles')
+  revalidatePath('/dashboard')
+  return vehicle
 }

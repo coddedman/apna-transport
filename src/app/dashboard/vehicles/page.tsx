@@ -1,7 +1,14 @@
 import { getVehicles } from '@/lib/actions/vehicles'
+import { getOwners } from '@/lib/actions/owners'
+import { getProjects } from '@/lib/actions/projects'
+import AddVehicleButton from '@/components/AddVehicleButton'
 
 export default async function VehiclesPage() {
-  const vehicles = await getVehicles()
+  const [vehicles, owners, projects] = await Promise.all([
+    getVehicles(),
+    getOwners(),
+    getProjects()
+  ])
 
   const activeCount = vehicles.length // Or some other logic
   const upcomingRenewals = 0 // In real system, query by renewal date
@@ -23,7 +30,7 @@ export default async function VehiclesPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-primary">+ Register Vehicle</button>
+          <AddVehicleButton owners={owners} projects={projects} />
         </div>
       </header>
 
@@ -56,8 +63,8 @@ export default async function VehiclesPage() {
                 <tr>
                   <th>Vehicle No.</th>
                   <th>Owner</th>
+                  <th>Assigned Project</th>
                   <th>Total Trips</th>
-                  <th>Last Trip</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -73,8 +80,14 @@ export default async function VehiclesPage() {
                     <tr key={v.id}>
                       <td><strong>{v.plateNo}</strong></td>
                       <td>{v.owner.ownerName}</td>
+                      <td>
+                        {v.project ? (
+                          <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{v.project.projectName}</span>
+                        ) : (
+                          <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Not Assigned</span>
+                        )}
+                      </td>
                       <td>{v.trips.length}</td>
-                      <td>{v.trips.length > 0 ? 'Recent' : 'N/A'}</td>
                       <td>
                         <span className="badge active">● Active</span>
                       </td>
