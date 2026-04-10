@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
@@ -26,7 +26,14 @@ export default function LoginPage() {
       setError('Invalid email or password')
       setLoading(false)
     } else {
-      router.push('/dashboard')
+      // Fetch session to check the user's role for correct redirect
+      const session = await getSession()
+      const role = (session?.user as any)?.role
+      if (role === 'SUPER_ADMIN') {
+        router.push('/platform')
+      } else {
+        router.push('/dashboard')
+      }
     }
   }
 
@@ -91,7 +98,8 @@ export default function LoginPage() {
         </form>
 
         <div className="login-footer">
-          <p>Demo credentials: <strong>admin@hyvatransport.com</strong> / <strong>Admin@123</strong></p>
+          <p style={{ marginBottom: '4px' }}>Super Admin: <strong>super@hyvatransport.com</strong> / <strong>SuperAdmin@123</strong></p>
+          <p>Transporter: <strong>admin@hyvatransport.com</strong> / <strong>Admin@123</strong></p>
         </div>
       </div>
     </div>

@@ -18,6 +18,21 @@ async function main() {
   })
   console.log('✅ Transporter:', transporter.name)
 
+  // Create SUPER_ADMIN user (Platform Owner)
+  const superAdminPassword = await bcrypt.hash('SuperAdmin@123', 10)
+  const superAdmin = await prisma.user.upsert({
+    where: { email: 'super@hyvatransport.com' },
+    update: { password: superAdminPassword },
+    create: {
+      email: 'super@hyvatransport.com',
+      password: superAdminPassword,
+      role: 'SUPER_ADMIN',
+      // SUPER_ADMIN doesn't belong to a specific transporter
+      transporterId: null,
+    },
+  })
+  console.log('✅ Super Admin:', superAdmin.email)
+
   // Create admin user
   const hashedPassword = await bcrypt.hash('Admin@123', 10)
   const admin = await prisma.user.upsert({
@@ -47,7 +62,9 @@ async function main() {
   console.log('✅ Field Manager:', manager.email)
 
   console.log('\n🎉 Seeding complete!')
-  console.log('   Login with: admin@hyvatransport.com / Admin@123')
+  console.log('   Platform Owner: super@hyvatransport.com / SuperAdmin@123')
+  console.log('   Transporter Admin: admin@hyvatransport.com / Admin@123')
+  console.log('   Field Manager: manager@hyvatransport.com / Manager@123')
   
   await prisma.$disconnect()
 }

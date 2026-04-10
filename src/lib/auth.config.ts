@@ -6,10 +6,18 @@ export const authConfig = {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isDashboard = nextUrl.pathname.startsWith('/dashboard')
-      if (isDashboard) {
+      const isPlatform = nextUrl.pathname.startsWith('/platform')
+      const isProtected = isDashboard || isPlatform
+
+      if (isProtected) {
         if (isLoggedIn) return true
         return false // Redirect unauthenticated users to login page
       } else if (isLoggedIn && nextUrl.pathname === '/login') {
+        // Redirect to the correct dashboard based on role
+        const role = (auth?.user as any)?.role
+        if (role === 'SUPER_ADMIN') {
+          return Response.redirect(new URL('/platform', nextUrl))
+        }
         return Response.redirect(new URL('/dashboard', nextUrl))
       }
       return true

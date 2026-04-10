@@ -1,30 +1,30 @@
-import Sidebar from '@/components/Sidebar'
+import PlatformSidebar from '@/components/PlatformSidebar'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export const metadata = {
-  title: 'Dashboard — Hyva Transport',
+  title: 'Platform Admin — Hyva Transport',
 }
 
-export default async function DashboardLayout({
+export default async function PlatformLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const session = await auth()
-  
+
   if (!session) {
     redirect('/login')
   }
 
-  // Super Admins should use the /platform view
-  if ((session.user as any)?.role === 'SUPER_ADMIN') {
-    redirect('/platform')
+  // Only SUPER_ADMIN can access /platform
+  if ((session.user as any)?.role !== 'SUPER_ADMIN') {
+    redirect('/dashboard')
   }
 
   return (
     <div className="app-layout">
-      <Sidebar />
+      <PlatformSidebar />
       <div className="main-content">
         {children}
       </div>
