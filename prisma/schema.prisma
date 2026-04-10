@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Transporter {
+  id           String    @id @default(cuid())
+  companyName  String
+  users        User[]
+  projects     Project[]
+  owners       Owner[]
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String
+  email         String      @unique
+  role          String      @default("MANAGER")
+  transporterId String?
+  transporter   Transporter? @relation(fields: [transporterId], references: [id])
+}
+
+model Project {
+  id            String      @id @default(cuid())
+  name          String
+  transporterId String
+  transporter   Transporter @relation(fields: [transporterId], references: [id])
+  trips         Trip[]
+}
+
+model Owner {
+  id            String      @id @default(cuid())
+  name          String
+  transporterId String
+  transporter   Transporter @relation(fields: [transporterId], references: [id])
+  vehicles      Vehicle[]
+}
+
+model Vehicle {
+  id        String    @id @default(cuid())
+  plateNo   String    @unique
+  ownerId   String
+  owner     Owner     @relation(fields: [ownerId], references: [id])
+  trips     Trip[]
+  expenses  Expense[]
+}
+
+model Trip {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  weight      Float
+  ratePerTon  Float
+  totalAmount Float    // weight * ratePerTon
+}
+
+model Expense {
+  id        String      @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle     @relation(fields: [vehicleId], references: [id])
+  amount    Float
+  type      ExpenseType
+}
+
+enum ExpenseType { 
+  FUEL
+  ADVANCE
+  MAINTENANCE
+  TOLL
+  OTHER 
+}

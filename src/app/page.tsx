@@ -1,65 +1,134 @@
-import Image from "next/image";
+import Link from 'next/link'
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0b1120 0%, #111827 50%, #0b1120 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px 24px',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Background glow effects */}
+      <div style={{
+        position: 'absolute',
+        top: '-200px',
+        right: '-200px',
+        width: '600px',
+        height: '600px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-300px',
+        left: '-100px',
+        width: '500px',
+        height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Logo */}
+      <div style={{
+        width: '72px',
+        height: '72px',
+        borderRadius: '18px',
+        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '28px',
+        fontWeight: 900,
+        color: '#0b1120',
+        marginBottom: '28px',
+        boxShadow: '0 0 60px rgba(245,158,11,0.2)',
+      }}>
+        HT
+      </div>
+
+      {/* Title */}
+      <h1 style={{
+        fontSize: '42px',
+        fontWeight: 900,
+        color: '#f1f5f9',
+        letterSpacing: '-0.04em',
+        textAlign: 'center',
+        marginBottom: '12px',
+        lineHeight: 1.1,
+      }}>
+        Hyva Transport
+      </h1>
+
+      <p style={{
+        fontSize: '18px',
+        color: '#64748b',
+        textAlign: 'center',
+        maxWidth: '520px',
+        lineHeight: 1.6,
+        marginBottom: '40px',
+      }}>
+        Multi-tenant fleet management platform for transport companies.
+        Manage vehicles, log trips, track expenses, and settle owners — all in one place.
+      </p>
+
+      {/* Feature pills */}
+      <div style={{
+        display: 'flex',
+        gap: '10px',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        marginBottom: '44px',
+      }}>
+        {['🚛 Fleet Tracking', '⚖️ Weight-Based Billing', '💰 Auto Settlements', '📊 Analytics'].map((f) => (
+          <span key={f} style={{
+            padding: '8px 16px',
+            borderRadius: '100px',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            fontSize: '13px',
+            color: '#94a3b8',
+            fontWeight: 500,
+          }}>
+            {f}
+          </span>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <Link
+        href="/dashboard"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '14px 32px',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+          color: '#0b1120',
+          fontSize: '15px',
+          fontWeight: 700,
+          textDecoration: 'none',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 0 30px rgba(245,158,11,0.2)',
+        }}
+      >
+        Open Dashboard →
+      </Link>
+
+      <p style={{
+        marginTop: '20px',
+        fontSize: '12px',
+        color: '#475569',
+      }}>
+        Version 0.1.0 · Built with Next.js + Prisma
+      </p>
     </div>
-  );
+  )
 }
