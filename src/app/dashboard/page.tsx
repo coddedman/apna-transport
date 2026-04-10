@@ -1,44 +1,134 @@
-export default function DashboardPage() {
-  // Demo data for the dashboard
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import Link from 'next/link'
+
+export default async function DashboardPage() {
+  const session = await auth()
+  const user = session?.user as any
+  const transporterId = user?.transporterId
+
+  // Security guard for platform owners who strayed here
+  if (!transporterId) {
+    return (
+      <div className="page-body">
+        <div className="card">
+          <div className="card-body">
+            You do not have a Transporter ID assigned. If you are a Super Admin, please go to the <Link href="/platform" style={{color: 'var(--color-accent)'}}>Platform Dashboard</Link>.
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // 1. Fetch High-Level Database Stats
+  const [totalTrips, activeVehicles, tripsAggr] = await Promise.all([
+    prisma.trip.count({
+      where: { project: { transporterId } }
+    }),
+    prisma.vehicle.count({
+      where: { owner: { transporterId } }
+    }),
+    prisma.trip.aggregate({
+      _sum: { weight: true, totalAmount: true },
+      where: { project: { transporterId } }
+    })
+  ])
+
+  const weightMoved = tripsAggr._sum.weight || 0
+  const revenue = tripsAggr._sum.totalAmount || 0
+
   const stats = [
-    { label: 'Total Trips', value: '1,284', trend: '+12%', trendDir: 'up', icon: '🛣️', color: 'accent' },
-    { label: 'Active Vehicles', value: '47', trend: '+3', trendDir: 'up', icon: '🚛', color: 'success' },
-    { label: 'Weight Moved', value: '8,420 T', trend: '+8%', trendDir: 'up', icon: '⚖️', color: 'info' },
-    { label: 'Revenue', value: '₹24.8L', trend: '+15%', trendDir: 'up', icon: '💰', color: 'purple' },
+    { label: 'Total Trips', value: totalTrips.toLocaleString(), trend: '-', trendDir: 'none', icon: '🛣️', color: 'accent' },
+    { label: 'Active Vehicles', value: activeVehicles.toLocaleString(), trend: '-', trendDir: 'none', icon: '🚛', color: 'success' },
+    { label: 'Weight Moved', value: `${weightMoved.toFixed(1)} MT`, trend: '-', trendDir: 'none', icon: '⚖️', color: 'info' },
+    { label: 'Revenue', value: `₹${revenue.toLocaleString('en-IN')}`, trend: '-', trendDir: 'none', icon: '💰', color: 'purple' },
   ]
 
-  const recentTrips = [
-    { id: 1, vehicle: 'HR-55-AB-1234', project: 'Manesar Bypass', weight: '22.5 T', amount: '₹11,250', date: 'Today, 10:30 AM' },
-    { id: 2, vehicle: 'HR-55-CD-5678', project: 'Gurugram Metro', weight: '18.0 T', amount: '₹9,000', date: 'Today, 9:15 AM' },
-    { id: 3, vehicle: 'DL-01-EF-9012', project: 'Dwarka Expressway', weight: '25.0 T', amount: '₹15,000', date: 'Yesterday, 4:45 PM' },
-    { id: 4, vehicle: 'HR-55-GH-3456', project: 'Manesar Bypass', weight: '20.0 T', amount: '₹10,000', date: 'Yesterday, 2:30 PM' },
-    { id: 5, vehicle: 'DL-01-IJ-7890', project: 'Kundli-Sonipat', weight: '24.0 T', amount: '₹12,000', date: 'Yesterday, 11:00 AM' },
-  ]
+  // 2. Fetch Recent Trips dynamically
+  const recentTripsData = await prisma.trip.findMany({
+    where: { project: { transporterId } },
+    orderBy: { date: 'desc' },
+    take: 5,
+    include: {
+      vehicle: true,
+      project: true
+    }
+  })
 
-  const chartData = [
-    { label: 'Mon', height: 65, color: 'var(--color-accent)' },
-    { label: 'Tue', height: 85, color: 'var(--color-accent)' },
-    { label: 'Wed', height: 50, color: 'var(--color-accent)' },
-    { label: 'Thu', height: 95, color: 'var(--color-accent)' },
-    { label: 'Fri', height: 70, color: 'var(--color-accent)' },
-    { label: 'Sat', height: 40, color: 'var(--color-accent)' },
-    { label: 'Sun', height: 20, color: 'rgba(245,158,11,0.3)' },
-  ]
+  // 3. Fetch Expenses Breakdown
+  const expenses = await prisma.expense.groupBy({
+    by: ['type'],
+    _sum: { amount: true },
+    where: { vehicle: { owner: { transporterId } } }
+  })
+  
+  const totalExpense = expenses.reduce((acc, curr) => acc + (curr._sum.amount || 0), 0)
+  const expenseColors: Record<string, string> = {
+    FUEL: 'var(--color-accent)',
+    DRIVER_ADVANCE: 'var(--color-info)',
+    MAINTENANCE: 'var(--color-purple)',
+    TOLL: 'var(--color-success)',
+    CASH_PAYMENT: 'var(--color-warning)'
+  }
 
-  const activities = [
-    { color: 'accent', text: '<strong>HR-55-AB-1234</strong> completed trip from Manesar Bypass', time: '10 min ago' },
-    { color: 'success', text: 'New vehicle <strong>DL-01-KL-2345</strong> onboarded', time: '1 hr ago' },
-    { color: 'info', text: 'Fuel expense of <strong>₹4,500</strong> logged for HR-55-CD-5678', time: '2 hrs ago' },
-    { color: 'purple', text: 'Settlement generated for owner <strong>Ramesh Kumar</strong>', time: '3 hrs ago' },
-    { color: 'accent', text: '<strong>DL-01-EF-9012</strong> completed trip from Dwarka Expressway', time: '5 hrs ago' },
-  ]
+  const expenseBreakdown = expenses.map(e => ({
+    type: e.type.replace('_', ' '),
+    amount: `₹${(e._sum.amount || 0).toLocaleString('en-IN')}`,
+    pct: totalExpense > 0 ? Math.round(((e._sum.amount || 0) / totalExpense) * 100) : 0,
+    color: expenseColors[e.type] || 'var(--color-accent)'
+  })).sort((a, b) => b.pct - a.pct)
 
-  const expenseBreakdown = [
-    { type: 'Fuel', amount: '₹3,45,000', pct: 55, color: 'var(--color-accent)' },
-    { type: 'Driver Advance', amount: '₹1,20,000', pct: 19, color: 'var(--color-info)' },
-    { type: 'Maintenance', amount: '₹95,000', pct: 15, color: 'var(--color-purple)' },
-    { type: 'Toll', amount: '₹68,000', pct: 11, color: 'var(--color-success)' },
-  ]
+  // 4. Fully Dynamic Weekly Chart logic from DB (Trailing 7 days)
+  const today = new Date()
+  const weeklyTrips = await prisma.trip.findMany({
+    where: { 
+      project: { transporterId },
+      date: { gte: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000) }
+    },
+    select: { date: true, weight: true }
+  })
+
+  // Build the trailing 7 days
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const chartMap = new Map()
+  let maxWeightPerDay = 1 // Prevent divide by zero
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000)
+    chartMap.set(d.toDateString(), 0)
+  }
+
+  weeklyTrips.forEach(t => {
+    const dateStr = new Date(t.date).toDateString()
+    if (chartMap.has(dateStr)) {
+      const current = chartMap.get(dateStr)
+      chartMap.set(dateStr, current + t.weight)
+      if (current + t.weight > maxWeightPerDay) {
+        maxWeightPerDay = current + t.weight
+      }
+    }
+  })
+
+  const chartData = Array.from(chartMap.entries()).map(([dateStr, weight]) => {
+    const dayLabel = days[new Date(dateStr).getDay()]
+    const height = Math.max((weight / maxWeightPerDay) * 100, 5) // At least 5% so the bar isn't invisible if 0
+    return {
+      label: dayLabel,
+      height: weight === 0 ? 0 : height, 
+      color: weight === 0 ? 'rgba(255,255,255,0.05)' : 'var(--color-accent)'
+    }
+  })
+
+  // Dynamic Recent Activity format mapping latest DB entries
+  const activities = recentTripsData.slice(0, 5).map(t => ({
+    color: 'accent',
+    text: `<strong>${t.vehicle.plateNo}</strong> completed trip from ${t.project.projectName}`,
+    time: new Date(t.date).toLocaleDateString()
+  }))
+
+  if (activities.length === 0) {
+    activities.push({ color: 'success', text: 'System initialized and connected to database.', time: 'Just now' })
+  }
 
   return (
     <>
@@ -46,12 +136,12 @@ export default function DashboardPage() {
         <div className="page-header-left">
           <div>
             <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Welcome back, Raja Singh</p>
+            <p className="page-subtitle">Welcome back, {user?.email}</p>
           </div>
         </div>
         <div className="page-header-right">
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-            📅 April 10, 2026
+            📅 {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </span>
         </div>
       </header>
@@ -71,12 +161,11 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Charts + Activity */}
+        {/* Charts + Expense Breakdown */}
         <div className="grid-2" style={{ marginBottom: '16px' }}>
-          {/* Weekly Trip Chart */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Weekly Trip Volume</span>
+              <span className="card-title">Weekly Trip Volume (Demo View)</span>
               <button className="btn btn-secondary btn-sm">This Week</button>
             </div>
             <div className="card-body">
@@ -104,37 +193,41 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Expense Breakdown */}
           <div className="card">
             <div className="card-header">
               <span className="card-title">Expense Breakdown</span>
-              <button className="btn btn-secondary btn-sm">This Month</button>
+              <button className="btn btn-secondary btn-sm">All Time</button>
             </div>
             <div className="card-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {expenseBreakdown.map((item) => (
-                  <div key={item.type}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{item.type}</span>
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-primary)', fontWeight: 600 }}>{item.amount}</span>
+              {expenseBreakdown.length === 0 ? (
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>
+                  No expenses recorded yet.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {expenseBreakdown.map((item) => (
+                    <div key={item.type}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{item.type}</span>
+                        <span style={{ fontSize: '13px', color: 'var(--color-text-primary)', fontWeight: 600 }}>{item.amount}</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
+                        <div style={{ width: `${item.pct}%`, height: '100%', background: item.color, borderRadius: '100px', transition: 'width 0.6s ease' }} />
+                      </div>
                     </div>
-                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
-                      <div style={{ width: `${item.pct}%`, height: '100%', background: item.color, borderRadius: '100px', transition: 'width 0.6s ease' }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Recent Trips + Activity */}
         <div className="grid-2">
-          {/* Recent Trips Table */}
           <div className="card">
             <div className="card-header">
               <span className="card-title">Recent Trips</span>
-              <a href="/dashboard/trips" className="btn btn-secondary btn-sm">View All →</a>
+              <Link href="/dashboard/trips" className="btn btn-secondary btn-sm">View All →</Link>
             </div>
             <div className="data-table-wrapper">
               <table className="data-table">
@@ -147,20 +240,27 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentTrips.map((trip) => (
-                    <tr key={trip.id}>
-                      <td><strong>{trip.vehicle}</strong></td>
-                      <td>{trip.project}</td>
-                      <td>{trip.weight}</td>
-                      <td style={{ color: 'var(--color-success)', fontWeight: 600 }}>{trip.amount}</td>
+                  {recentTripsData.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '20px' }}>
+                        No trips found. Add some trips in the module!
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    recentTripsData.map((trip) => (
+                      <tr key={trip.id}>
+                        <td><strong>{trip.vehicle.plateNo}</strong></td>
+                        <td>{trip.project.projectName}</td>
+                        <td>{trip.weight} MT</td>
+                        <td style={{ color: 'var(--color-success)', fontWeight: 600 }}>₹{trip.totalAmount.toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* Recent Activity */}
           <div className="card">
             <div className="card-header">
               <span className="card-title">Recent Activity</span>
