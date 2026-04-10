@@ -4,6 +4,11 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('⚠️ Seeding is disabled in production!')
+    return
+  }
+
   console.log('🌱 Seeding database (PostgreSQL)...')
   
   // Create test transporter
