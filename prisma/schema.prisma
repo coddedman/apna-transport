@@ -58,14 +58,15 @@ model Project {
 }
 
 model Owner {
-  id            String      @id @default(cuid())
-  ownerName     String
-  phone         String
-  transporterId String
-  transporter   Transporter @relation(fields: [transporterId], references: [id])
-  userId        String?     @unique
-  user          User?       @relation(fields: [userId], references: [id])
-  vehicles      Vehicle[]
+  id              String      @id @default(cuid())
+  ownerName       String
+  phone           String
+  defaultPassword String?     // Visible to admin until owner changes password
+  transporterId   String
+  transporter     Transporter @relation(fields: [transporterId], references: [id])
+  userId          String?     @unique
+  user            User?       @relation(fields: [userId], references: [id])
+  vehicles        Vehicle[]
 }
 
 model Vehicle {

@@ -29,5 +29,12 @@ export async function changePassword(formData: FormData) {
     }
   })
 
+  // Clear the visible default password on the Owner record 
+  // so admin sees null (meaning owner has set their own password)
+  await prisma.owner.updateMany({
+    where: { userId: session.user.id },
+    data: { defaultPassword: null }
+  })
+
   return { success: true }
 }

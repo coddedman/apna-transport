@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import AddOwnerButton from '@/components/AddOwnerButton'
+import EditOwnerButton from '@/components/EditOwnerButton'
 
 export default async function OwnersPage() {
   const session = await auth()
@@ -11,6 +12,7 @@ export default async function OwnersPage() {
   const ownersData = await prisma.owner.findMany({
     where: { transporterId },
     include: {
+      user: { select: { email: true } },
       vehicles: {
         include: {
           trips: true,
@@ -26,9 +28,8 @@ export default async function OwnersPage() {
     let totalVehicles = o.vehicles.length
     
     o.vehicles.forEach(v => {
-      const vehicleRevenue = v.trips.reduce((acc, t) => acc + t.totalAmount, 0)
-      const vehicleExpenses = v.expenses.reduce((acc, e) => acc + e.amount, 0)
-      // Pending payout is normally Revenue - Expenses for that owner's vehicles
+      const vehicleRevenue = v.trips.reduce((acc: number, t: any) => acc + t.totalAmount, 0)
+      const vehicleExpenses = v.expenses.reduce((acc: number, e: any) => acc + e.amount, 0)
       pendingPayout += (vehicleRevenue - vehicleExpenses)
     })
 
@@ -36,6 +37,9 @@ export default async function OwnersPage() {
       id: o.id,
       name: o.ownerName,
       phone: o.phone,
+      email: o.user?.email || null,
+      defaultPassword: o.defaultPassword,
+      user: o.user,
       vehicles: totalVehicles,
       status: totalVehicles > 0 ? 'active' : 'inactive',
       pending: `₹${Math.max(0, pendingPayout).toLocaleString('en-IN')}`
@@ -46,7 +50,7 @@ export default async function OwnersPage() {
   const totalPendingOverall = ownersData.reduce((acc, o) => {
     let pending = 0
     o.vehicles.forEach(v => {
-      pending += v.trips.reduce((acc, t) => acc + t.totalAmount, 0) - v.expenses.reduce((acc, e) => acc + e.amount, 0)
+      pending += v.trips.reduce((a: number, t: any) => a + t.totalAmount, 0) - v.expenses.reduce((a: number, e: any) => a + e.amount, 0)
     })
     return acc + Math.max(0, pending)
   }, 0)
@@ -110,15 +114,17 @@ export default async function OwnersPage() {
                 <tr>
                   <th>Owner Name</th>
                   <th>Contact</th>
+                  <th>Login Email</th>
+                  <th>Default Password</th>
                   <th>Vehicles</th>
                   <th>Pending Payout</th>
-                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {owners.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
                       No owners registered yet. Add one!
                     </td>
                   </tr>
@@ -127,14 +133,42 @@ export default async function OwnersPage() {
                     <tr key={owner.id}>
                       <td><strong>{owner.name}</strong></td>
                       <td>{owner.phone}</td>
+                      <td>
+                        {owner.email ? (
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{owner.email}</span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No login</span>
+                        )}
+                      </td>
+                      <td>
+                        {owner.defaultPassword ? (
+                          <code style={{ 
+                            fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)',
+                            background: 'rgba(245,158,11,0.08)', padding: '2px 8px',
+                            borderRadius: '4px', letterSpacing: '0.5px',
+                          }}>
+                            {owner.defaultPassword}
+                          </code>
+                        ) : owner.email ? (
+                          <span style={{ fontSize: '11px', color: 'var(--color-success)', fontStyle: 'italic' }}>
+                            Changed ✓
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>—</span>
+                        )}
+                      </td>
                       <td>{owner.vehicles} trucks</td>
                       <td style={{ color: owner.pending !== '₹0' ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: 600 }}>
                         {owner.pending}
                       </td>
                       <td>
-                        <span className={`badge ${owner.status}`}>
-                          {owner.status === 'active' ? '● Active' : '○ Inactive'}
-                        </span>
+                        <EditOwnerButton owner={{
+                          id: owner.id,
+                          ownerName: owner.name,
+                          phone: owner.phone,
+                          defaultPassword: owner.defaultPassword,
+                          user: owner.user,
+                        }} />
                       </td>
                     </tr>
                   ))
