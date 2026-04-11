@@ -9,21 +9,24 @@ export default async function ExpensesPage() {
 
   if (!transporterId) return <div>Unauthorized</div>
 
-  const [expensesData, vehicles] = await Promise.all([
+  const [expensesData, vehicles, projects] = await Promise.all([
     prisma.expense.findMany({
       where: { vehicle: { owner: { transporterId } } },
       include: {
-        vehicle: true
+        vehicle: true,
+        project: true
       },
       orderBy: { date: 'desc' }
     }),
-    getVehicles()
+    getVehicles(),
+    prisma.project.findMany({ where: { transporterId } })
   ])
 
   const expenses = expensesData.map(e => ({
     id: e.id,
     date: new Date(e.date).toLocaleDateString(),
     vehicle: e.vehicle.plateNo,
+    project: e.project?.projectName || '—',
     type: e.type,
     amount: e.amount,
     description: e.remarks || e.type,
@@ -32,6 +35,7 @@ export default async function ExpensesPage() {
   const typeColors: Record<string, string> = {
     FUEL: 'fuel',
     DRIVER_ADVANCE: 'advance',
+    OWNER_ADVANCE: 'purple',
     MAINTENANCE: 'maintenance',
     TOLL: 'toll',
     CASH_PAYMENT: 'other',
@@ -49,7 +53,7 @@ export default async function ExpensesPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <AddExpenseButton vehicles={vehicles} />
+          <AddExpenseButton vehicles={vehicles} projects={projects} />
         </div>
       </header>
 
@@ -65,23 +69,23 @@ export default async function ExpensesPage() {
             </div>
             <div className="stat-card-label">Total Fuel</div>
           </div>
-          <div className="stat-card maintenance">
-            <div className="stat-card-header">
-              <div className="stat-card-icon maintenance">🔧</div>
-            </div>
-            <div className="stat-card-value">
-              ₹{expenses.filter(e => e.type === 'MAINTENANCE').reduce((a, e) => a + e.amount, 0).toLocaleString('en-IN')}
-            </div>
-            <div className="stat-card-label">Maintenance</div>
-          </div>
           <div className="stat-card advance">
             <div className="stat-card-header">
-              <div className="stat-card-icon advance">💸</div>
+              <div className="stat-card-icon advance">🧑‍✈️</div>
             </div>
             <div className="stat-card-value">
               ₹{expenses.filter(e => e.type === 'DRIVER_ADVANCE').reduce((a, e) => a + e.amount, 0).toLocaleString('en-IN')}
             </div>
-            <div className="stat-card-label">Driver Advances</div>
+            <div className="stat-card-label">Driver Advance</div>
+          </div>
+          <div className="stat-card purple">
+            <div className="stat-card-header">
+              <div className="stat-card-icon purple">👤</div>
+            </div>
+            <div className="stat-card-value">
+              ₹{expenses.filter(e => e.type === 'OWNER_ADVANCE').reduce((a, e) => a + e.amount, 0).toLocaleString('en-IN')}
+            </div>
+            <div className="stat-card-label">Owner Advance</div>
           </div>
           <div className="stat-card accent">
             <div className="stat-card-header">
@@ -107,6 +111,7 @@ export default async function ExpensesPage() {
                 <tr>
                   <th>Date</th>
                   <th>Vehicle No.</th>
+                  <th>Project</th>
                   <th>Category</th>
                   <th>Description</th>
                   <th>Amount</th>
@@ -115,7 +120,7 @@ export default async function ExpensesPage() {
               <tbody>
                 {expenses.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
                       No expenses logged yet.
                     </td>
                   </tr>
@@ -124,6 +129,7 @@ export default async function ExpensesPage() {
                     <tr key={exp.id}>
                       <td>{exp.date}</td>
                       <td><strong>{exp.vehicle}</strong></td>
+                      <td>{exp.project}</td>
                       <td>
                         <span className={`badge ${typeColors[exp.type] || 'other'}`}>
                           {exp.type.replace('_', ' ')}

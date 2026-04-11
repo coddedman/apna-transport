@@ -21,6 +21,7 @@ enum Role {
 enum ExpenseType {
   FUEL
   DRIVER_ADVANCE
+  OWNER_ADVANCE
   MAINTENANCE
   TOLL
   CASH_PAYMENT
@@ -55,6 +56,7 @@ model Project {
   transporter   Transporter @relation(fields: [transporterId], references: [id])
   trips         Trip[]
   vehicles      Vehicle[]
+  expenses      Expense[]
 }
 
 model Owner {
@@ -98,6 +100,8 @@ model Expense {
   date      DateTime    @default(now())
   vehicleId String
   vehicle   Vehicle     @relation(fields: [vehicleId], references: [id])
+  projectId String?
+  project   Project?    @relation(fields: [projectId], references: [id])
   amount    Float
   type      ExpenseType
   remarks   String?

@@ -18,7 +18,12 @@ export async function getVehicles() {
     include: {
       owner: true,
       project: true,
-      trips: true,
+      trips: {
+        include: { project: true }
+      },
+      expenses: {
+        include: { project: true }
+      }
     },
     orderBy: {
       plateNo: 'asc'

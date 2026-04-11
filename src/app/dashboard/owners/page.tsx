@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import AddOwnerButton from '@/components/AddOwnerButton'
 import EditOwnerButton from '@/components/EditOwnerButton'
 import DeleteOwnerButton from '@/components/DeleteOwnerButton'
+import OwnerAnalyticsButton from '@/components/analytics/OwnerAnalyticsButton'
 
 export default async function OwnersPage() {
   const session = await auth()
@@ -14,10 +15,15 @@ export default async function OwnersPage() {
     where: { transporterId },
     include: {
       user: { select: { email: true, mustChangePassword: true } },
+      settlements: true,
       vehicles: {
         include: {
-          trips: true,
-          expenses: true
+          trips: {
+            include: { project: true }
+          },
+          expenses: {
+            include: { project: true }
+          }
         }
       }
     }
@@ -169,6 +175,7 @@ export default async function OwnersPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <OwnerAnalyticsButton owner={ownersData.find(od => od.id === owner.id)} />
                           <EditOwnerButton owner={{
                             id: owner.id,
                             ownerName: owner.name,

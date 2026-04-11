@@ -7,10 +7,11 @@ import toast from 'react-hot-toast'
 
 interface ExpenseFormProps {
   vehicles: { id: string, plateNo: string }[]
+  projects: { id: string, projectName: string }[]
   onSuccess: () => void
 }
 
-export default function ExpenseForm({ vehicles, onSuccess }: ExpenseFormProps) {
+export default function ExpenseForm({ vehicles, projects, onSuccess }: ExpenseFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -78,6 +79,7 @@ export default function ExpenseForm({ vehicles, onSuccess }: ExpenseFormProps) {
           <select name="type" className="form-select" required defaultValue="FUEL">
             <option value="FUEL">Fuel</option>
             <option value="DRIVER_ADVANCE">Driver Advance</option>
+            <option value="OWNER_ADVANCE">Owner Advance</option>
             <option value="MAINTENANCE">Maintenance</option>
             <option value="TOLL">Toll</option>
             <option value="CASH_PAYMENT">Cash Payment</option>
@@ -86,12 +88,25 @@ export default function ExpenseForm({ vehicles, onSuccess }: ExpenseFormProps) {
       </div>
 
       <div className="form-group">
+        <label className="form-label">Project (Optional)</label>
+        <select name="projectId" className="form-select" defaultValue="">
+          <option value="">No specific project</option>
+          {projects.map(p => (
+            <option key={p.id} value={p.id}>{p.projectName}</option>
+          ))}
+        </select>
+        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+          Assigning a project helps in project-wise profitability analysis.
+        </p>
+      </div>
+
+      <div className="form-group">
         <label className="form-label">Remarks / Description</label>
         <input 
           name="remarks" 
           type="text" 
           className="form-input" 
-          placeholder="e.g. Paid for diesel at HP pump"
+          placeholder="e.g. Advance given for trip"
         />
       </div>
       

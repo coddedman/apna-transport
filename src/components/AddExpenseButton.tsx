@@ -6,9 +6,10 @@ import ExpenseForm from './forms/ExpenseForm'
 
 interface AddExpenseButtonProps {
   vehicles: { id: string, plateNo: string }[]
+  projects: { id: string, projectName: string }[]
 }
 
-export default function AddExpenseButton({ vehicles }: AddExpenseButtonProps) {
+export default function AddExpenseButton({ vehicles, projects }: AddExpenseButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -24,6 +25,7 @@ export default function AddExpenseButton({ vehicles }: AddExpenseButtonProps) {
       >
         <ExpenseForm 
           vehicles={vehicles} 
+          projects={projects}
           onSuccess={() => setIsOpen(false)} 
         />
       </Modal>

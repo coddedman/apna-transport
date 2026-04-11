@@ -2,6 +2,7 @@ import { getVehicles } from '@/lib/actions/vehicles'
 import { getOwners } from '@/lib/actions/owners'
 import { getProjects } from '@/lib/actions/projects'
 import AddVehicleButton from '@/components/AddVehicleButton'
+import VehicleAnalyticsButton from '@/components/analytics/VehicleAnalyticsButton'
 
 export default async function VehiclesPage() {
   const [vehicles, owners, projects] = await Promise.all([
@@ -66,12 +67,13 @@ export default async function VehiclesPage() {
                   <th>Assigned Project</th>
                   <th>Total Trips</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {vehicles.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
                       No vehicles found. Start by registering one.
                     </td>
                   </tr>
@@ -90,6 +92,9 @@ export default async function VehiclesPage() {
                       <td>{v.trips.length}</td>
                       <td>
                         <span className="badge active">● Active</span>
+                      </td>
+                      <td>
+                        <VehicleAnalyticsButton vehicle={v} />
                       </td>
                     </tr>
                   ))

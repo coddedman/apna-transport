@@ -15,6 +15,7 @@ export async function createExpense(formData: FormData) {
   const type = formData.get('type') as ExpenseType
   const remarks = formData.get('remarks') as string
   const dateStr = formData.get('date') as string
+  const projectId = formData.get('projectId') as string
 
   if (!vehicleId || isNaN(amount) || !type) {
     throw new Error('Missing or invalid required fields')
@@ -25,6 +26,7 @@ export async function createExpense(formData: FormData) {
   const expense = await prisma.expense.create({
     data: {
       vehicleId,
+      projectId: projectId || null,
       amount,
       type,
       remarks,
