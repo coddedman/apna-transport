@@ -65,7 +65,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               className="form-input"
-              placeholder="admin@hyvatransport.com"
+              placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -96,11 +96,6 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In →'}
           </button>
         </form>
-
-        <div className="login-footer">
-          <p style={{ marginBottom: '4px' }}>Super Admin: <strong>super@hyvatransport.com</strong> / <strong>SuperAdmin@123</strong></p>
-          <p>Transporter: <strong>admin@hyvatransport.com</strong> / <strong>Admin@123</strong></p>
-        </div>
       </div>
     </div>
   )
