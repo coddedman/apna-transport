@@ -65,13 +65,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const weightMoved = tripsAggr._sum.weight || 0
   const revenue = tripsAggr._sum.totalAmount || 0
 
-  const stats = [
-    { label: 'Total Trips', value: totalTrips.toLocaleString(), trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '🛣️', color: 'accent' },
-    { label: 'Active Vehicles', value: activeVehicles.toLocaleString(), trend: '-', trendDir: 'none', icon: '🚛', color: 'success' },
-    { label: 'Weight Moved', value: `${weightMoved.toFixed(1)} MT`, trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '⚖️', color: 'info' },
-    { label: 'Revenue', value: `₹${revenue.toLocaleString('en-IN')}`, trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '💰', color: 'purple' },
-  ]
-
   // 2. Fetch Recent Trips dynamically
   const recentTripsData = await prisma.trip.findMany({
     where: { project: { transporterId }, ...tripDateFilter },
@@ -93,6 +86,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const totalExpenseAmount = expenses.reduce((acc, curr) => acc + (curr._sum.amount || 0), 0)
   const totalOwnerAdvances = ownerAdvancesAggr._sum.amount || 0
   const totalCombinedExpense = totalExpenseAmount + totalOwnerAdvances
+  const netProfit = revenue - totalCombinedExpense
+
+  const stats = [
+    { label: 'Total Trips', value: totalTrips.toLocaleString(), trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '🛣️', color: 'accent' },
+    { label: 'Revenue', value: `₹${revenue.toLocaleString('en-IN')}`, trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '💰', color: 'success' },
+    { label: 'Total Expenses', value: `₹${totalCombinedExpense.toLocaleString('en-IN')}`, trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '📉', color: 'warning' },
+    { label: 'Net Profit', value: `₹${netProfit.toLocaleString('en-IN')}`, trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '💵', color: 'info' },
+    { label: 'Active Vehicles', value: activeVehicles.toLocaleString(), trend: '-', trendDir: 'none', icon: '🚛', color: 'purple' },
+    { label: 'Weight Moved', value: `${weightMoved.toFixed(1)} MT`, trend: period !== 'all' ? 'Filtered' : '-', trendDir: 'none', icon: '⚖️', color: 'accent' },
+  ]
 
   const expenseColors: Record<string, string> = {
     FUEL: 'var(--color-accent)',
