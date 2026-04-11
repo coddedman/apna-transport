@@ -48,16 +48,28 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
 
   return (
     <form action={handleSubmit}>
-      <div className="form-group">
-        <label className="form-label">Trip Date</label>
-        <input 
-          name="date" 
-          type="date" 
-          className="form-input" 
-          defaultValue={today}
-          max={today}
-          required 
-        />
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Trip Date</label>
+          <input 
+            name="date" 
+            type="date" 
+            className="form-input" 
+            defaultValue={today}
+            max={today}
+            required 
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Trip Time</label>
+          <input 
+            name="time" 
+            type="time" 
+            className="form-input" 
+            defaultValue={new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+            required 
+          />
+        </div>
       </div>
 
       <div className="form-row">

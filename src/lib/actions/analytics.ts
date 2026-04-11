@@ -416,7 +416,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     topProjects,
     recentTrips: recentTripsData.map(t => ({
       id: t.id,
-      date: new Date(t.date).toLocaleDateString(),
+      date: new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }),
       vehicle: t.vehicle.plateNo,
       project: t.project.projectName,
       weight: t.weight,

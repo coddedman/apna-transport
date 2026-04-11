@@ -14,12 +14,19 @@ export async function createTrip(formData: FormData) {
   const weight = parseFloat(formData.get('weight') as string)
   const ratePerTon = parseFloat(formData.get('ratePerTon') as string)
   const dateStr = formData.get('date') as string
+  const timeStr = formData.get('time') as string
 
   if (!vehicleId || !projectId || isNaN(weight) || isNaN(ratePerTon)) {
     throw new Error('Missing or invalid required fields')
   }
 
-  const tripDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
+  // Combine date and time
+  let tripDate = new Date()
+  if (dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number)
+    const [hours, minutes] = (timeStr || '00:00').split(':').map(Number)
+    tripDate = new Date(year, month - 1, day, hours, minutes)
+  }
 
   const trip = await prisma.trip.create({
     data: {

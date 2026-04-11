@@ -26,7 +26,14 @@ export default async function TripsPage() {
   // Format the data dynamically
   const trips = tripsData.map(t => ({
     id: t.id,
-    date: new Date(t.date).toLocaleDateString(),
+    date: new Date(t.date).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }),
     vehicle: t.vehicle.plateNo,
     project: t.project.projectName,
     weight: t.weight,
