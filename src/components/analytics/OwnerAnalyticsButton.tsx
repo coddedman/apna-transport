@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import Modal from '../Modal'
+import { deleteOwnerAdvance, updateOwnerAdvance } from '@/lib/actions/ownerAdvances'
+import toast from 'react-hot-toast'
 
 interface OwnerAnalyticsProps {
   owner: any
@@ -9,10 +11,13 @@ interface OwnerAnalyticsProps {
 
 export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [localAdvances, setLocalAdvances] = useState<any[]>(owner.advances || [])
+  const [isPending, startTransition] = useTransition()
 
   // Calcs
   const vehicles = owner.vehicles || []
-  const advances = owner.advances || []
+  const advances = localAdvances
   let totalTrips = 0
   let totalRevenue = 0
   let totalExpenses = 0
@@ -153,16 +158,101 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
                     <th>Project</th>
                     <th>Remarks</th>
                     <th style={{ textAlign: 'right' }}>Amount</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {advances.map((a: any, idx: number) => (
-                    <tr key={idx}>
-                      <td>{new Date(a.date).toLocaleDateString()}</td>
-                      <td>{a.project?.projectName || '—'}</td>
-                      <td style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{a.remarks || '—'}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>₹{a.amount.toLocaleString('en-IN')}</td>
-                    </tr>
+                    <>
+                      <tr key={a.id || idx}>
+                        <td>{new Date(a.date).toLocaleDateString()}</td>
+                        <td>{a.project?.projectName || '—'}</td>
+                        <td style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{a.remarks || '—'}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>₹{a.amount.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ fontSize: '10px', padding: '2px 6px' }}
+                              onClick={() => setEditingId(editingId === (a.id || idx.toString()) ? null : (a.id || idx.toString()))}
+                            >✏️</button>
+                            <button
+                              className="btn btn-sm"
+                              style={{ fontSize: '10px', padding: '2px 6px', background: 'rgba(239,68,68,0.15)', color: 'var(--color-danger)', border: '1px solid rgba(239,68,68,0.3)' }}
+                              disabled={isPending}
+                              onClick={() => {
+                                if (!a.id) return toast.error('Cannot delete — refresh and try again')
+                                if (!confirm('Delete this advance?')) return
+                                startTransition(async () => {
+                                  try {
+                                    await deleteOwnerAdvance(a.id)
+                                    setLocalAdvances(prev => prev.filter(x => x.id !== a.id))
+                                    toast.success('Advance deleted')
+                                  } catch (err: any) {
+                                    toast.error(err.message || 'Failed to delete')
+                                  }
+                                })
+                              }}
+                            >🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                      {editingId === (a.id || idx.toString()) && (
+                        <tr key={`edit-${a.id || idx}`}>
+                          <td colSpan={5} style={{ padding: '12px', background: 'rgba(255,255,255,0.03)' }}>
+                            <form
+                              style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end' }}
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                const fd = new FormData(e.currentTarget)
+                                fd.set('advanceId', a.id)
+                                startTransition(async () => {
+                                  try {
+                                    await updateOwnerAdvance(fd)
+                                    setLocalAdvances(prev => prev.map(x => x.id === a.id ? {
+                                      ...x,
+                                      amount: parseFloat(fd.get('amount') as string),
+                                      remarks: fd.get('remarks') as string,
+                                      date: fd.get('date') as string,
+                                    } : x))
+                                    toast.success('Advance updated')
+                                    setEditingId(null)
+                                  } catch (err: any) {
+                                    toast.error(err.message || 'Failed to update')
+                                  }
+                                })
+                              }}
+                            >
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <label style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Date</label>
+                                <input className="form-input" name="date" type="date"
+                                  defaultValue={new Date(a.date).toISOString().split('T')[0]}
+                                  style={{ padding: '4px 8px', fontSize: '12px', width: '130px' }} />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <label style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Amount (₹)</label>
+                                <input className="form-input" name="amount" type="number" step="0.01" min="1"
+                                  defaultValue={a.amount}
+                                  style={{ padding: '4px 8px', fontSize: '12px', width: '100px' }} required />
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <label style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Remarks</label>
+                                <input className="form-input" name="remarks" type="text"
+                                  defaultValue={a.remarks || ''} placeholder="Remarks"
+                                  style={{ padding: '4px 8px', fontSize: '12px', width: '150px' }} />
+                              </div>
+                              <button type="submit" className="btn btn-primary btn-sm" disabled={isPending}
+                                style={{ fontSize: '11px', padding: '4px 10px' }}>
+                                {isPending ? '...' : 'Save'}
+                              </button>
+                              <button type="button" className="btn btn-secondary btn-sm"
+                                style={{ fontSize: '11px', padding: '4px 10px' }}
+                                onClick={() => setEditingId(null)}>Cancel</button>
+                            </form>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>

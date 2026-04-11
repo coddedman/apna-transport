@@ -214,6 +214,7 @@ export default async function OwnersPage() {
                               finalPayout: s.finalPayout
                             })),
                             advances: (ownersData.find(od => od.id === owner.id)?.advances || []).map((a: any) => ({
+                              id: a.id,
                               amount: a.amount,
                               date: a.date,
                               remarks: a.remarks,
