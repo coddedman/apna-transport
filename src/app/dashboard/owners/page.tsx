@@ -80,6 +80,10 @@ export default async function OwnersPage() {
           </div>
         </div>
         <div className="page-header-right">
+          <OwnerAdvanceButton
+            owners={owners.map(o => ({ id: o.id, ownerName: o.name }))}
+            projects={projects}
+          />
           <AddOwnerButton />
         </div>
       </header>
@@ -188,11 +192,7 @@ export default async function OwnersPage() {
                         {owner.pending}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', maxWidth: '180px' }}>
-                          <OwnerAdvanceButton
-                            owner={{ id: owner.id, ownerName: owner.name }}
-                            projects={projects}
-                          />
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                           <OwnerAnalyticsButton owner={{
                             ownerName: owner.name,
                             vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({

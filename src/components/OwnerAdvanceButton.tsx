@@ -6,23 +6,22 @@ import { createOwnerAdvance } from '@/lib/actions/ownerAdvances'
 import toast from 'react-hot-toast'
 
 interface OwnerAdvanceButtonProps {
-  owner: { id: string; ownerName: string }
+  owners: { id: string; ownerName: string }[]
   projects: { id: string; projectName: string }[]
 }
 
-export default function OwnerAdvanceButton({ owner, projects }: OwnerAdvanceButtonProps) {
+export default function OwnerAdvanceButton({ owners, projects }: OwnerAdvanceButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
-    formData.set('ownerId', owner.id)
 
     startTransition(async () => {
       try {
         await createOwnerAdvance(formData)
-        toast.success(`Advance logged for ${owner.ownerName}`)
+        toast.success('Owner advance logged successfully')
         setIsOpen(false)
       } catch (err: any) {
         toast.error(err.message || 'Failed to log advance')
@@ -33,17 +32,24 @@ export default function OwnerAdvanceButton({ owner, projects }: OwnerAdvanceButt
   return (
     <>
       <button
-        className="btn btn-secondary btn-sm"
+        className="btn btn-secondary"
         onClick={() => setIsOpen(true)}
-        title="Log Owner Advance"
-        style={{ fontSize: '11px', padding: '4px 8px' }}
       >
-        💰 Advance
+        💰 Log Advance
       </button>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`Log Advance — ${owner.ownerName}`}>
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Log Owner Advance">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <input type="hidden" name="ownerId" value={owner.id} />
+
+          <div className="form-group">
+            <label className="form-label">Owner *</label>
+            <select className="form-select" name="ownerId" required>
+              <option value="">— Select Owner —</option>
+              {owners.map(o => (
+                <option key={o.id} value={o.id}>{o.ownerName}</option>
+              ))}
+            </select>
+          </div>
 
           <div className="form-group">
             <label className="form-label">Amount (₹) *</label>
