@@ -37,13 +37,18 @@ export default async function TripsPage() {
     vehicle: t.vehicle.plateNo,
     project: t.project.projectName,
     weight: t.weight,
-    rate: t.ratePerTon,
-    amount: t.totalAmount,
+    partyRate: t.partyRate,
+    ownerRate: t.ownerRate,
+    partyAmount: t.partyFreightAmount,
+    ownerAmount: t.ownerFreightAmount,
+    profit: t.partyFreightAmount - t.ownerFreightAmount,
     driver: 'Unknown' // Not in schema yet, keep generic
   }))
 
   const totalWeight = trips.reduce((a, t) => a + t.weight, 0)
-  const totalAmount = trips.reduce((a, t) => a + t.amount, 0)
+  const totalRevenue = trips.reduce((a, t) => a + t.partyAmount, 0)
+  const totalOwnerFreight = trips.reduce((a, t) => a + t.ownerAmount, 0)
+  const totalProfit = totalRevenue - totalOwnerFreight
 
   return (
     <>
@@ -80,15 +85,15 @@ export default async function TripsPage() {
             <div className="stat-card-header">
               <div className="stat-card-icon info">💰</div>
             </div>
-            <div className="stat-card-value">₹{totalAmount.toLocaleString('en-IN')}</div>
-            <div className="stat-card-label">Total Freight</div>
+            <div className="stat-card-value">₹{totalRevenue.toLocaleString('en-IN')}</div>
+            <div className="stat-card-label">Total Revenue</div>
           </div>
           <div className="stat-card purple">
             <div className="stat-card-header">
               <div className="stat-card-icon purple">📊</div>
             </div>
-            <div className="stat-card-value">₹{trips.length > 0 ? Math.round(totalAmount / trips.length).toLocaleString('en-IN') : 0}</div>
-            <div className="stat-card-label">Avg per Trip</div>
+            <div className="stat-card-value">₹{totalProfit.toLocaleString('en-IN')}</div>
+            <div className="stat-card-label">Net Trip Profit</div>
           </div>
         </div>
 
@@ -116,15 +121,18 @@ export default async function TripsPage() {
                   <th>Date</th>
                   <th>Vehicle No.</th>
                   <th>Project</th>
-                  <th>Weight (MT)</th>
-                  <th>Rate/MT</th>
-                  <th>Amount</th>
+                  <th>WT (MT)</th>
+                  <th>Party Rate</th>
+                  <th>Owner Rate</th>
+                  <th>Revenue</th>
+                  <th>Cost</th>
+                  <th>Profit</th>
                 </tr>
               </thead>
               <tbody>
                 {trips.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
+                    <td colSpan={9} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
                       No trips recorded yet.
                     </td>
                   </tr>
@@ -135,8 +143,11 @@ export default async function TripsPage() {
                       <td><strong>{trip.vehicle}</strong></td>
                       <td>{trip.project}</td>
                       <td style={{ fontWeight: 600 }}>{trip.weight}</td>
-                      <td>₹{trip.rate}</td>
-                      <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.amount.toLocaleString('en-IN')}</td>
+                      <td>₹{trip.partyRate}</td>
+                      <td>₹{trip.ownerRate}</td>
+                      <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
+                      <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.ownerAmount.toLocaleString('en-IN')}</td>
+                      <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>₹{trip.profit.toLocaleString('en-IN')}</td>
                     </tr>
                   ))
                 )}
@@ -145,8 +156,10 @@ export default async function TripsPage() {
                 <tr>
                   <td colSpan={3} style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>Totals</td>
                   <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{totalWeight.toFixed(1)}</td>
-                  <td>—</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>₹{totalAmount.toLocaleString('en-IN')}</td>
+                  <td colSpan={2}>—</td>
+                  <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{totalRevenue.toLocaleString('en-IN')}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--color-warning)' }}>₹{totalOwnerFreight.toLocaleString('en-IN')}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>₹{totalProfit.toLocaleString('en-IN')}</td>
                 </tr>
               </tfoot>
             </table>

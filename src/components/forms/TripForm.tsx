@@ -16,7 +16,6 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
   const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
   const [weight, setWeight] = useState('')
-  const [rate, setRate] = useState('')
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
@@ -42,7 +41,7 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
     })
   }
 
-  const calculatedTotal = (parseFloat(weight) || 0) * (parseFloat(rate) || 0)
+
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -108,34 +107,19 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Rate per Ton (₹)</label>
+          <label className="form-label">Party Rate (₹ / Ton)</label>
           <input 
-            name="ratePerTon" 
+            name="partyRate" 
             type="number" 
             step="0.01"
             className="form-input" 
             placeholder="0.00" 
             required 
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
           />
+          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+            Owner rate is auto-calculated from the Project.
+          </p>
         </div>
-      </div>
-
-      <div style={{ 
-        background: 'rgba(245,158,11,0.05)', 
-        border: '1px solid rgba(245,158,11,0.1)', 
-        padding: '12px 16px', 
-        borderRadius: 'var(--radius-md)',
-        marginBottom: '20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Calculated Total:</span>
-        <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-accent)' }}>
-          ₹{calculatedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-        </span>
       </div>
       
       {error && <p style={{ color: 'var(--color-danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}

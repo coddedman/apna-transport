@@ -24,7 +24,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
   
   vehicles.forEach((v: any) => {
     totalTrips += v.trips?.length || 0
-    totalRevenue += v.trips?.reduce((acc: number, t: any) => acc + t.totalAmount, 0) || 0
+    totalRevenue += v.trips?.reduce((acc: number, t: any) => acc + t.ownerFreightAmount, 0) || 0
     totalExpenses += v.expenses?.reduce((acc: number, e: any) => acc + e.amount, 0) || 0
   })
 
@@ -42,7 +42,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
       const pId = t.projectId
       const pName = t.project?.projectName || 'General'
       if (!projectStats[pId]) projectStats[pId] = { name: pName, revenue: 0, expenses: 0, trips: 0 }
-      projectStats[pId].revenue += t.totalAmount
+      projectStats[pId].revenue += t.ownerFreightAmount
       projectStats[pId].trips += 1
     })
     v.expenses?.forEach((e: any) => {
@@ -128,7 +128,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
             </thead>
             <tbody>
               {vehicles.map((v: any) => {
-                const rev = v.trips?.reduce((a: number, t: any) => a + t.totalAmount, 0) || 0
+                const rev = v.trips?.reduce((a: number, t: any) => a + t.ownerFreightAmount, 0) || 0
                 const exp = v.expenses?.reduce((a: number, e: any) => a + e.amount, 0) || 0
                 return (
                   <tr key={v.id}>

@@ -54,7 +54,7 @@ export default async function OwnerPortalPage() {
   // Calculate totals
   const totalTrips = owner.vehicles.reduce((acc, v) => acc + v.trips.length, 0)
   const totalRevenue = owner.vehicles.reduce((acc, v) => 
-    acc + v.trips.reduce((a, t) => a + t.totalAmount, 0), 0)
+    acc + v.trips.reduce((a, t) => a + t.ownerFreightAmount, 0), 0)
   const totalExpenses = owner.vehicles.reduce((acc, v) => 
     acc + v.expenses.reduce((a, e) => a + e.amount, 0), 0)
   const netPending = totalRevenue - totalExpenses
@@ -141,7 +141,7 @@ export default async function OwnerPortalPage() {
           owner.vehicles.map(vehicle => {
             const vTrips = vehicle.trips
             const vExpenses = vehicle.expenses
-            const vRevenue = vTrips.reduce((a, t) => a + t.totalAmount, 0)
+            const vRevenue = vTrips.reduce((a, t) => a + t.ownerFreightAmount, 0)
             const vExpTotal = vExpenses.reduce((a, e) => a + e.amount, 0)
 
             return (
@@ -189,8 +189,8 @@ export default async function OwnerPortalPage() {
                               <td>{new Date(trip.date).toLocaleDateString('en-IN')}</td>
                               <td>{trip.project.projectName}</td>
                               <td>{trip.weight}</td>
-                              <td>₹{trip.ratePerTon}</td>
-                              <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{trip.totalAmount.toLocaleString('en-IN')}</td>
+                              <td>₹{trip.ownerRate}</td>
+                              <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{trip.ownerFreightAmount.toLocaleString('en-IN')}</td>
                             </tr>
                           ))}
                         </tbody>

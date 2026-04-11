@@ -14,7 +14,7 @@ export default function VehicleAnalyticsButton({ vehicle }: VehicleAnalyticsProp
   const trips = vehicle.trips || []
   const expenses = vehicle.expenses || []
   
-  const totalRevenue = trips.reduce((acc: number, t: any) => acc + t.totalAmount, 0)
+  const totalRevenue = trips.reduce((acc: number, t: any) => acc + t.ownerFreightAmount, 0)
   const totalExpenses = expenses.reduce((acc: number, e: any) => acc + e.amount, 0)
   const profit = totalRevenue - totalExpenses
 
@@ -25,7 +25,7 @@ export default function VehicleAnalyticsButton({ vehicle }: VehicleAnalyticsProp
     const pId = t.projectId
     const pName = t.project?.projectName || 'General'
     if (!projectStats[pId]) projectStats[pId] = { name: pName, revenue: 0, expenses: 0, tripsCount: 0 }
-    projectStats[pId].revenue += t.totalAmount
+    projectStats[pId].revenue += t.ownerFreightAmount
     projectStats[pId].tripsCount += 1
   })
 

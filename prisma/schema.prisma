@@ -52,6 +52,8 @@ model Project {
   id            String         @id @default(cuid())
   projectName   String
   location      String
+  partyRate     Float          @default(0) // Rate we get from client
+  ownerRate     Float          @default(0) // Rate we pay the owner
   transporterId String
   transporter   Transporter    @relation(fields: [transporterId], references: [id])
   trips         Trip[]
@@ -92,9 +94,11 @@ model Trip {
   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id])
-  weight      Float    // MT (Metric Tons)
-  ratePerTon  Float
-  totalAmount Float    // weight * ratePerTon
+  weight             Float    // MT (Metric Tons)
+  partyRate          Float    @default(0) // Actual rate from client
+  ownerRate          Float    @default(0) // Rate given to vehicle owner
+  partyFreightAmount Float    @default(0) // weight * partyRate
+  ownerFreightAmount Float    @default(0) // weight * ownerRate
 }
 
 model Expense {

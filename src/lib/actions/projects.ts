@@ -27,6 +27,7 @@ export async function createProject(formData: FormData) {
 
   const projectName = formData.get('projectName') as string
   const location = formData.get('location') as string
+  const ownerRate = parseFloat(formData.get('ownerRate') as string) || 0
 
   if (!projectName || !location) {
     throw new Error('Missing required fields')
@@ -36,6 +37,7 @@ export async function createProject(formData: FormData) {
     data: {
       projectName,
       location,
+      ownerRate,
       transporterId
     }
   })
