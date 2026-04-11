@@ -429,14 +429,14 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalRevenue.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Total Revenue</div>
+                  <div className="analytics-kpi-label">Gross Revenue</div>
                 </div>
               </div>
               <div className="analytics-kpi danger">
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalExpenses.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Total Expenses</div>
+                  <div className="analytics-kpi-label">Operational Costs</div>
                 </div>
               </div>
               <div className={`analytics-kpi ${data.netProfit >= 0 ? 'success' : 'loss'}`}>
@@ -489,7 +489,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
               <div className="analytics-mini-kpi">
                 <span className="analytics-mini-icon">💰</span>
                 <span className="analytics-mini-value">₹{Math.round(data.avgRevenuePerTrip).toLocaleString('en-IN')}</span>
-                <span className="analytics-mini-label">Avg/Trip</span>
+                <span className="analytics-mini-label">Revenue/Trip</span>
               </div>
               <div className="analytics-mini-kpi">
                 <span className="analytics-mini-icon">⚖️</span>
@@ -645,14 +645,14 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalRevenue.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Total Revenue</div>
+                  <div className="analytics-kpi-label">Gross Billings</div>
                 </div>
               </div>
               <div className="analytics-kpi info">
                 <div className="analytics-kpi-icon">📊</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{Math.round(data.avgRevenuePerTrip).toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Avg Revenue/Trip</div>
+                  <div className="analytics-kpi-label">Avg Billings/Trip</div>
                 </div>
               </div>
               <div className="analytics-kpi success">
@@ -719,7 +719,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalExpenses.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Total Expenses</div>
+                  <div className="analytics-kpi-label">Total Outgoings</div>
                 </div>
               </div>
               <div className="analytics-kpi purple">
@@ -997,7 +997,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.revenueByOwner.length > 0 ? Math.round(data.totalRevenue / data.revenueByOwner.length).toLocaleString('en-IN') : 0}</div>
-                  <div className="analytics-kpi-label">Avg Revenue/Owner</div>
+                  <div className="analytics-kpi-label">Avg Earnings/Owner</div>
                 </div>
               </div>
               <div className="analytics-kpi danger">
@@ -1043,7 +1043,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                     <tr>
                       <th>Owner</th>
                       <th onClick={() => handleSort('trips')} className="sortable-th" style={{ textAlign: 'right' }}>Trips <SortIcon field="trips" /></th>
-                      <th onClick={() => handleSort('revenue')} className="sortable-th" style={{ textAlign: 'right' }}>Revenue <SortIcon field="revenue" /></th>
+                      <th onClick={() => handleSort('revenue')} className="sortable-th" style={{ textAlign: 'right' }}>Owner Earnings <SortIcon field="revenue" /></th>
                       <th onClick={() => handleSort('expenses')} className="sortable-th" style={{ textAlign: 'right' }}>Expenses <SortIcon field="expenses" /></th>
                       <th onClick={() => handleSort('profit')} className="sortable-th" style={{ textAlign: 'right' }}>Net Payable <SortIcon field="profit" /></th>
                     </tr>
