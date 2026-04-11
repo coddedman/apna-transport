@@ -50,9 +50,9 @@ export default async function TripsPage() {
   }))
 
   const totalWeight = trips.reduce((a, t) => a + t.weight, 0)
-  const totalRevenue = trips.reduce((a, t) => a + t.partyAmount, 0)
-  const totalOwnerFreight = trips.reduce((a, t) => a + t.ownerAmount, 0)
-  const totalProfit = totalRevenue - totalOwnerFreight
+  const totalRevenue = trips.reduce((a, t) => a + t.ownerAmount, 0)
+  const totalPayout = trips.reduce((a, t) => a + t.partyAmount, 0)
+  const totalProfit = totalRevenue - totalPayout
 
   return (
     <>
@@ -170,8 +170,8 @@ export default async function TripsPage() {
                   <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{totalWeight.toFixed(1)}</td>
                   <td colSpan={2}>—</td>
                   <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{totalRevenue.toLocaleString('en-IN')}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-warning)' }}>₹{totalOwnerFreight.toLocaleString('en-IN')}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-accent)' }}>₹{totalProfit.toLocaleString('en-IN')}</td>
+                  <td style={{ fontWeight: 700, color: 'var(--color-warning)' }}>₹{totalPayout.toLocaleString('en-IN')}</td>
+                  <td style={{ fontWeight: 700, color: totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{totalProfit.toLocaleString('en-IN')}</td>
                 </tr>
               </tfoot>
             </table>
