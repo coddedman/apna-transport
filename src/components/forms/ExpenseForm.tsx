@@ -25,9 +25,23 @@ export default function ExpenseForm({ vehicles, onSuccess }: ExpenseFormProps) {
     }
   }
 
+  const today = new Date().toISOString().split('T')[0]
+
   return (
     <form action={handleSubmit}>
-      <div className="form-group">
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Expense Date</label>
+          <input 
+            name="date" 
+            type="date" 
+            className="form-input" 
+            defaultValue={today}
+            max={today}
+            required 
+          />
+        </div>
+        <div className="form-group">
         <label className="form-label">Vehicle</label>
         <select name="vehicleId" className="form-select" required defaultValue="">
           <option value="" disabled>Select vehicle</option>

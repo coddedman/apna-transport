@@ -30,8 +30,22 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
 
   const calculatedTotal = (parseFloat(weight) || 0) * (parseFloat(rate) || 0)
 
+  const today = new Date().toISOString().split('T')[0]
+
   return (
     <form action={handleSubmit}>
+      <div className="form-group">
+        <label className="form-label">Trip Date</label>
+        <input 
+          name="date" 
+          type="date" 
+          className="form-input" 
+          defaultValue={today}
+          max={today}
+          required 
+        />
+      </div>
+
       <div className="form-row">
         <div className="form-group">
           <label className="form-label">Vehicle</label>
