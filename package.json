@@ -10,6 +10,8 @@
     "postinstall": "prisma generate",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:push": "npx prisma db push",
+    "db:push:prod": "npx prisma db push",
+    "db:push:neon": "neonctl connection-string main --prisma --project-id snowy-brook-02058180 | xargs -I {} env DATABASE_URL={} DIRECT_URL={} npx prisma db push",
     "db:studio": "npx prisma studio"
   },
   "prisma": {

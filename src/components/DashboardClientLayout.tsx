@@ -1,3 +1,4 @@
+'use client'
 import { SidebarProvider, useSidebar } from '@/lib/context/SidebarContext'
 import Sidebar from '@/components/Sidebar'
 

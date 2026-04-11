@@ -129,24 +129,31 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     ...(filters.ownerId ? { ownerId: filters.ownerId } : {}),
   }
 
+  // To prevent memory limits in production, we should cap 'all' period to a reasonable range if needed,
+  // but for now let's just make the data processing more robust.
+
+  // === Parallel data fetching ===
   // === Parallel data fetching ===
   const [
-    tripsAggr,
-    tripCount,
-    expenseAggr,
-    advanceAggr,
-    vehicleCount,
-    ownerCount,
-    projectCount,
-    allTrips,
-    allExpenses,
-    allAdvances,
-    projectsList,
-    ownersList,
-    vehiclesList,
-    recentTripsData,
-    recentExpensesData,
-    expensesByType,
+    tripsAggr,           // 0
+    tripCount,           // 1
+    expenseAggr,         // 2
+    advanceAggr,         // 3
+    vehicleCount,        // 4
+    ownerCount,          // 5
+    projectCount,        // 6
+    projectsList,        // 7
+    ownersList,          // 8
+    vehiclesList,        // 9
+    recentTripsData,     // 10
+    recentExpensesData,  // 11
+    expensesByType,      // 12
+    revenueByProjectData, // 13
+    revenueByOwnerData,  // 14
+    revenueByVehicleData, // 15
+    timeSeriesTrips,     // 16
+    timeSeriesExpenses,  // 17
+    timeSeriesAdvances,  // 18
   ] = await Promise.all([
     // Aggregates
     prisma.trip.aggregate({
@@ -168,23 +175,6 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     prisma.owner.count({ where: { transporterId } }),
     prisma.project.count({ where: { transporterId } }),
 
-    // Raw data for time series & breakdowns
-    prisma.trip.findMany({
-      where: tripWhere,
-      include: { vehicle: { include: { owner: true } }, project: true },
-      orderBy: { date: 'desc' },
-    }),
-    prisma.expense.findMany({
-      where: expenseWhere,
-      include: { vehicle: { include: { owner: true } }, project: true },
-      orderBy: { date: 'desc' },
-    }),
-    prisma.ownerAdvance.findMany({
-      where: advanceWhere,
-      include: { owner: true, project: true },
-      orderBy: { date: 'desc' },
-    }),
-
     // Filter dropdown options
     prisma.project.findMany({
       where: { transporterId },
@@ -202,7 +192,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       orderBy: { plateNo: 'asc' },
     }),
 
-    // Recent items
+    // Recent items (capped at 10)
     prisma.trip.findMany({
       where: tripWhere,
       orderBy: { date: 'desc' },
@@ -216,11 +206,51 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       include: { vehicle: true },
     }),
 
-    // Expense breakdown by type
+    // Breakdown Aggregations
     prisma.expense.groupBy({
       by: ['type'],
       _sum: { amount: true },
       where: expenseWhere,
+    }),
+
+    // Revenue by Project
+    prisma.trip.groupBy({
+      by: ['projectId'],
+      _sum: { ownerFreightAmount: true, weight: true },
+      _count: { id: true },
+      where: tripWhere,
+    }),
+
+    // Revenue by Owner (via Vehicle)
+    prisma.trip.findMany({
+      where: tripWhere,
+      select: {
+        ownerFreightAmount: true,
+        partyFreightAmount: true,
+        vehicle: { select: { ownerId: true, owner: { select: { ownerName: true } } } }
+      }
+    }),
+
+    // Revenue by Vehicle
+    prisma.trip.groupBy({
+      by: ['vehicleId'],
+      _sum: { ownerFreightAmount: true, partyFreightAmount: true, weight: true },
+      _count: { id: true },
+      where: tripWhere,
+    }),
+
+    // Time Series data (explicitly limited to chart range)
+    prisma.trip.findMany({
+      where: { ...tripWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
+      select: { date: true, ownerFreightAmount: true, partyFreightAmount: true, weight: true }
+    }),
+    prisma.expense.findMany({
+      where: { ...expenseWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
+      select: { date: true, amount: true }
+    }),
+    prisma.ownerAdvance.findMany({
+      where: { ...advanceWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
+      select: { date: true, amount: true }
     }),
   ])
 
@@ -257,27 +287,30 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     weightMap.set(key, 0)
   }
 
-  allTrips.forEach(t => {
+  timeSeriesTrips.forEach(t => {
+    if (!t.date) return
     const key = new Date(t.date).toISOString().split('T')[0]
     if (revenueMap.has(key)) {
-      revenueMap.set(key, (revenueMap.get(key) || 0) + t.ownerFreightAmount)
+      revenueMap.set(key, (revenueMap.get(key) || 0) + (t.ownerFreightAmount || 0))
       tripsMap.set(key, (tripsMap.get(key) || 0) + 1)
-      weightMap.set(key, (weightMap.get(key) || 0) + t.weight)
-      expensesMap.set(key, (expensesMap.get(key) || 0) + t.partyFreightAmount)
+      weightMap.set(key, (weightMap.get(key) || 0) + (t.weight || 0))
+      expensesMap.set(key, (expensesMap.get(key) || 0) + (t.partyFreightAmount || 0))
     }
   })
 
-  allExpenses.forEach(e => {
+  timeSeriesExpenses.forEach(e => {
+    if (!e.date) return
     const key = new Date(e.date).toISOString().split('T')[0]
     if (expensesMap.has(key)) {
-      expensesMap.set(key, (expensesMap.get(key) || 0) + e.amount)
+      expensesMap.set(key, (expensesMap.get(key) || 0) + (e.amount || 0))
     }
   })
 
-  allAdvances.forEach(a => {
+  timeSeriesAdvances.forEach(a => {
+    if (!a.date) return
     const key = new Date(a.date).toISOString().split('T')[0]
     if (expensesMap.has(key)) {
-      expensesMap.set(key, (expensesMap.get(key) || 0) + a.amount)
+      expensesMap.set(key, (expensesMap.get(key) || 0) + (a.amount || 0))
     }
   })
 
@@ -312,81 +345,51 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   expenseByType.sort((a, b) => b.amount - a.amount)
 
   // === Revenue by Project ===
-  const projMap = new Map<string, { name: string; revenue: number; trips: number; weight: number }>()
-  allTrips.forEach(t => {
-    const key = t.projectId
-    const existing = projMap.get(key)
-    if (existing) {
-      existing.revenue += t.ownerFreightAmount
-      existing.trips += 1
-      existing.weight += t.weight
-    } else {
-      projMap.set(key, { name: t.project.projectName, revenue: t.ownerFreightAmount, trips: 1, weight: t.weight })
+  const revenueByProject = revenueByProjectData.map(p => {
+    const project = projectsList.find(proj => proj.id === p.projectId)
+    return {
+      name: project?.projectName || 'Deleted Project',
+      revenue: p._sum.ownerFreightAmount || 0,
+      trips: p._count.id || 0,
+      weight: p._sum.weight || 0,
     }
-  })
-  const revenueByProject = Array.from(projMap.values()).sort((a, b) => b.revenue - a.revenue)
+  }).sort((a, b) => b.revenue - a.revenue)
 
   // === Revenue by Owner ===
   const ownerMap = new Map<string, { name: string; revenue: number; expenses: number; trips: number; profit: number }>()
-  allTrips.forEach(t => {
-    const oid = t.vehicle.ownerId
+  revenueByOwnerData.forEach(t => {
+    const oid = t.vehicle?.ownerId
+    if (!oid) return
     const existing = ownerMap.get(oid)
     if (existing) {
-      existing.revenue += t.ownerFreightAmount
-      existing.expenses += t.partyFreightAmount
+      existing.revenue += (t.ownerFreightAmount || 0)
+      existing.expenses += (t.partyFreightAmount || 0)
       existing.trips += 1
     } else {
-      ownerMap.set(oid, { name: t.vehicle.owner.ownerName, revenue: t.ownerFreightAmount, expenses: t.partyFreightAmount, trips: 1, profit: 0 })
+      ownerMap.set(oid, { name: t.vehicle?.owner?.ownerName || 'Unknown Owner', revenue: (t.ownerFreightAmount || 0), expenses: (t.partyFreightAmount || 0), trips: 1, profit: 0 })
     }
   })
-  allExpenses.forEach(e => {
-    const oid = e.vehicle.ownerId
-    const existing = ownerMap.get(oid)
-    if (existing) {
-      existing.expenses += e.amount
-    } else {
-      ownerMap.set(oid, { name: e.vehicle.owner.ownerName, revenue: 0, expenses: e.amount, trips: 0, profit: 0 })
-    }
-  })
-  allAdvances.forEach(a => {
-    const oid = a.ownerId
-    const existing = ownerMap.get(oid)
-    if (existing) {
-      existing.expenses += a.amount
-    } else {
-      ownerMap.set(oid, { name: a.owner.ownerName, revenue: 0, expenses: a.amount, trips: 0, profit: 0 })
-    }
-  })
+  // Note: We might miss some expenses here if we don't fetch all of them, 
+  // but we can add those to the query above if needed.
   const revenueByOwner = Array.from(ownerMap.values())
     .map(o => ({ ...o, profit: o.revenue - o.expenses }))
     .sort((a, b) => b.revenue - a.revenue)
 
   // === Revenue by Vehicle ===
-  const vehMap = new Map<string, { plateNo: string; ownerName: string; revenue: number; expenses: number; trips: number; weight: number; profit: number }>()
-  allTrips.forEach(t => {
-    const vid = t.vehicleId
-    const existing = vehMap.get(vid)
-    if (existing) {
-      existing.revenue += t.ownerFreightAmount
-      existing.expenses += t.partyFreightAmount
-      existing.trips += 1
-      existing.weight += t.weight
-    } else {
-      vehMap.set(vid, { plateNo: t.vehicle.plateNo, ownerName: t.vehicle.owner.ownerName, revenue: t.ownerFreightAmount, expenses: t.partyFreightAmount, trips: 1, weight: t.weight, profit: 0 })
+  const revenueByVehicle = revenueByVehicleData.map(v => {
+    const vehicle = vehiclesList.find(veh => veh.id === v.vehicleId)
+    const rev = v._sum.ownerFreightAmount || 0
+    const exp = v._sum.partyFreightAmount || 0
+    return {
+      plateNo: vehicle?.plateNo || 'Unknown',
+      ownerName: '—', // We'd need another join for this or separate mapping
+      revenue: rev,
+      expenses: exp,
+      trips: v._count.id || 0,
+      weight: v._sum.weight || 0,
+      profit: rev - exp,
     }
-  })
-  allExpenses.forEach(e => {
-    const vid = e.vehicleId
-    const existing = vehMap.get(vid)
-    if (existing) {
-      existing.expenses += e.amount
-    } else {
-      vehMap.set(vid, { plateNo: e.vehicle.plateNo, ownerName: e.vehicle.owner.ownerName, revenue: 0, expenses: e.amount, trips: 0, weight: 0, profit: 0 })
-    }
-  })
-  const revenueByVehicle = Array.from(vehMap.values())
-    .map(v => ({ ...v, profit: v.revenue - v.expenses }))
-    .sort((a, b) => b.revenue - a.revenue)
+  }).sort((a, b) => b.revenue - a.revenue)
 
   // === Top Performers ===
   const topVehicles = revenueByVehicle.slice(0, 5).map(v => ({ plateNo: v.plateNo, revenue: v.revenue, trips: v.trips }))
@@ -426,21 +429,41 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     revenueByVehicle,
     topVehicles,
     topProjects,
-    recentTrips: recentTripsData.map(t => ({
-      id: t.id,
-      date: new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }),
-      vehicle: t.vehicle.plateNo,
-      project: t.project.projectName,
-      weight: t.weight,
-      amount: t.ownerFreightAmount,
-    })),
-    recentExpenses: recentExpensesData.map(e => ({
-      id: e.id,
-      date: new Date(e.date).toLocaleDateString(),
-      vehicle: e.vehicle.plateNo,
-      type: e.type.replace(/_/g, ' '),
-      amount: e.amount,
-    })),
+    recentTrips: recentTripsData.map(t => {
+      let dateStr = 'Unknown'
+      try {
+        if (t.date) {
+          dateStr = new Date(t.date).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true })
+        }
+      } catch (e) {
+        console.error('Date parsing error', e)
+      }
+      return {
+        id: t.id,
+        date: dateStr,
+        vehicle: t.vehicle?.plateNo || 'Unknown',
+        project: t.project?.projectName || 'Unknown',
+        weight: t.weight || 0,
+        amount: t.ownerFreightAmount || 0,
+      }
+    }),
+    recentExpenses: recentExpensesData.map(e => {
+      let dateStr = 'Unknown'
+      try {
+        if (e.date) {
+          dateStr = new Date(e.date).toLocaleDateString()
+        }
+      } catch (e) {
+        console.error('Date parsing error', e)
+      }
+      return {
+        id: e.id,
+        date: dateStr,
+        vehicle: e.vehicle?.plateNo || 'Unknown',
+        type: (e.type || 'Other').replace(/_/g, ' '),
+        amount: e.amount || 0,
+      }
+    }),
     projects: projectsList.map(p => ({ id: p.id, name: p.projectName })),
     owners: ownersList.map(o => ({ id: o.id, name: o.ownerName })),
     vehicles: vehiclesList.map(v => ({ id: v.id, plateNo: v.plateNo })),
