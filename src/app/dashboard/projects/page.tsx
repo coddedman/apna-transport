@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import AddProjectButton from '@/components/AddProjectButton'
+import EditProjectButton from '@/components/EditProjectButton'
 
 export default async function ProjectsPage() {
   const session = await auth()
@@ -26,7 +27,8 @@ export default async function ProjectsPage() {
       location: p.location,
       trips: totalTrips,
       revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
-      status: 'active'
+      status: 'active',
+      ownerRate: p.ownerRate
     }
   })
 
@@ -97,9 +99,12 @@ export default async function ProjectsPage() {
                       </h3>
                       <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>📍 {project.location}</p>
                     </div>
-                    <span className={`badge ${project.status}`}>
-                      {project.status === 'active' ? '● Active' : '○ Inactive'}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                      <span className={`badge ${project.status}`}>
+                        {project.status === 'active' ? '● Active' : '○ Inactive'}
+                      </span>
+                      <EditProjectButton project={project} />
+                    </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '14px', borderTop: '1px solid var(--color-border)' }}>

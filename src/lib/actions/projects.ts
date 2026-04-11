@@ -46,3 +46,33 @@ export async function createProject(formData: FormData) {
   revalidatePath('/dashboard')
   return project
 }
+
+export async function updateProject(projectId: string, formData: FormData) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const projectName = formData.get('projectName') as string
+  const location = formData.get('location') as string
+  const ownerRate = parseFloat(formData.get('ownerRate') as string) || 0
+
+  if (!projectName || !location) {
+    throw new Error('Missing required fields')
+  }
+
+  const project = await prisma.project.update({
+    where: { 
+      id: projectId,
+      transporterId: transporterId // Security check
+    },
+    data: {
+      projectName,
+      location,
+      ownerRate,
+    }
+  })
+
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard')
+  return project
+}

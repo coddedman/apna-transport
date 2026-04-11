@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getVehicles } from '@/lib/actions/vehicles'
 import { getProjects } from '@/lib/actions/projects'
 import AddTripButton from '@/components/AddTripButton'
+import EditTripButton from '@/components/EditTripButton'
 
 export default async function TripsPage() {
   const session = await auth()
@@ -42,7 +43,10 @@ export default async function TripsPage() {
     partyAmount: t.partyFreightAmount,
     ownerAmount: t.ownerFreightAmount,
     profit: t.partyFreightAmount - t.ownerFreightAmount,
-    driver: 'Unknown' // Not in schema yet, keep generic
+    driver: 'Unknown', // Not in schema yet, keep generic
+    rawDate: t.date.toISOString(),
+    vehicleId: t.vehicleId,
+    projectId: t.projectId
   }))
 
   const totalWeight = trips.reduce((a, t) => a + t.weight, 0)
@@ -127,6 +131,7 @@ export default async function TripsPage() {
                   <th>Revenue</th>
                   <th>Cost</th>
                   <th>Profit</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,6 +153,13 @@ export default async function TripsPage() {
                       <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
                       <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.ownerAmount.toLocaleString('en-IN')}</td>
                       <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>₹{trip.profit.toLocaleString('en-IN')}</td>
+                      <td>
+                        <EditTripButton 
+                          trip={trip} 
+                          vehicles={vehicles} 
+                          projects={projects.map(p => ({ id: p.id, projectName: p.projectName }))} 
+                        />
+                      </td>
                     </tr>
                   ))
                 )}
