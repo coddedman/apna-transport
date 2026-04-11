@@ -188,7 +188,7 @@ export default async function OwnersPage() {
                         {owner.pending}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flexWrap: 'wrap', maxWidth: '180px' }}>
                           <OwnerAdvanceButton
                             owner={{ id: owner.id, ownerName: owner.name }}
                             projects={projects}
