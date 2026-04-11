@@ -35,9 +35,12 @@ const navItems = [
   },
 ]
 
+import { useSidebar } from '@/lib/context/SidebarContext'
+
 export default function Sidebar() {
   const pathname = usePathname()
   const { setLoading } = useLoading()
+  const { isOpen, close } = useSidebar()
 
   const handleSignOut = () => {
     setLoading(true)
@@ -45,7 +48,11 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="sidebar" id="sidebar">
+    <aside className={`sidebar${isOpen ? ' mobile-open' : ''}`} id="sidebar">
+      {/* Mobile Close */}
+      <button className="mobile-menu-btn" style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 60 }} onClick={close}>
+        ✕
+      </button>
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">HT</div>

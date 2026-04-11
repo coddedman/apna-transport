@@ -6,6 +6,8 @@ export const metadata = {
   title: 'Dashboard — Hyva Transport',
 }
 
+import DashboardClientLayout from '@/components/DashboardClientLayout'
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -28,11 +30,8 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="app-layout">
-      <Sidebar />
-      <div className="main-content">
-        {children}
-      </div>
-    </div>
+    <DashboardClientLayout>
+      {children}
+    </DashboardClientLayout>
   )
 }

@@ -5,6 +5,7 @@ import EditOwnerButton from '@/components/EditOwnerButton'
 import DeleteOwnerButton from '@/components/DeleteOwnerButton'
 import OwnerAnalyticsButton from '@/components/analytics/OwnerAnalyticsButton'
 import OwnerAdvanceButton from '@/components/OwnerAdvanceButton'
+import PageHeader from '@/components/PageHeader'
 
 export default async function OwnersPage() {
   const session = await auth()
@@ -72,21 +73,16 @@ export default async function OwnersPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Vehicle Owners</h1>
-            <p className="page-subtitle">Manage 3rd party vehicle owners and their details</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <OwnerAdvanceButton
-            owners={owners.map(o => ({ id: o.id, ownerName: o.name }))}
-            projects={projects}
-          />
-          <AddOwnerButton />
-        </div>
-      </header>
+      <PageHeader 
+        title="Vehicle Owners" 
+        subtitle="Manage 3rd party vehicle owners and their details"
+      >
+        <OwnerAdvanceButton
+          owners={owners.map(o => ({ id: o.id, ownerName: o.name }))}
+          projects={projects}
+        />
+        <AddOwnerButton />
+      </PageHeader>
 
       <div className="page-body">
         {/* Stats */}

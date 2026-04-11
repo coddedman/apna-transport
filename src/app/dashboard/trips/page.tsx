@@ -4,6 +4,7 @@ import { getVehicles } from '@/lib/actions/vehicles'
 import { getProjects } from '@/lib/actions/projects'
 import AddTripButton from '@/components/AddTripButton'
 import EditTripButton from '@/components/EditTripButton'
+import PageHeader from '@/components/PageHeader'
 
 export default async function TripsPage() {
   const session = await auth()
@@ -56,17 +57,12 @@ export default async function TripsPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Trip Logger</h1>
-            <p className="page-subtitle">Daily trip entries with automated freight calculation</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <AddTripButton vehicles={vehicles} projects={projects} />
-        </div>
-      </header>
+      <PageHeader 
+        title="Trip Logger" 
+        subtitle="Daily trip entries with automated freight calculation"
+      >
+        <AddTripButton vehicles={vehicles} projects={projects} />
+      </PageHeader>
 
       <div className="page-body">
         {/* Stats */}

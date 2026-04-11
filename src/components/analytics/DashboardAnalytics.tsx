@@ -3,6 +3,7 @@
 import { useState, useTransition, useCallback } from 'react'
 import { fetchAnalytics, type AnalyticsData, type AnalyticsFilters } from '@/lib/actions/analytics'
 import { useLoading } from '@/lib/context/LoadingContext'
+import { useSidebar } from '@/lib/context/SidebarContext'
 
 // ============================================
 // Mini Chart Components (Pure CSS, no library)
@@ -199,6 +200,7 @@ interface Props {
 
 export default function DashboardAnalytics({ initialData }: Props) {
   const { setLoading } = useLoading()
+  const { toggle } = useSidebar()
   const [data, setData] = useState<AnalyticsData>(initialData)
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
@@ -315,6 +317,13 @@ export default function DashboardAnalytics({ initialData }: Props) {
       {/* ===== HEADER ===== */}
       <header className="analytics-header">
         <div className="analytics-header-left">
+          <button 
+            className="mobile-menu-btn" 
+            onClick={toggle}
+            style={{ marginRight: '12px' }}
+          >
+            ☰
+          </button>
           <h1 className="analytics-title">
             <span className="analytics-title-icon">📊</span>
             Analytics Hub
