@@ -3,6 +3,8 @@
 import { deleteOwner } from '@/lib/actions/owners'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 interface DeleteOwnerButtonProps {
   ownerId: string
   ownerName: string
@@ -17,12 +19,18 @@ export default function DeleteOwnerButton({ ownerId, ownerName, vehicleCount }: 
   async function handleDelete() {
     setLoading(true)
     setError(null)
-    try {
-      await deleteOwner(ownerId)
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete')
-      setLoading(false)
-    }
+    
+    toast.promise(
+      deleteOwner(ownerId),
+      {
+        loading: 'Deleting owner...',
+        success: 'Owner deleted globally',
+        error: (err) => {
+          setError(err.message || 'Failed to delete')
+          return err.message || 'Failed to delete'
+        }
+      }
+    ).catch(() => {}).finally(() => setLoading(false))
   }
 
   if (error) {

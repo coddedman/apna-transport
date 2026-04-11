@@ -3,6 +3,8 @@
 import { createVehicle } from '@/lib/actions/vehicles'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 interface VehicleFormProps {
   owners: { id: string, ownerName: string }[]
   projects: { id: string, projectName: string }[]
@@ -16,14 +18,21 @@ export default function VehicleForm({ owners, projects, onSuccess }: VehicleForm
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await createVehicle(formData)
-      onSuccess()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      createVehicle(formData),
+      {
+        loading: 'Registering vehicle...',
+        success: () => {
+          onSuccess()
+          return 'Vehicle registered successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Something went wrong')
+          return err.message || 'Failed to register vehicle'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   return (

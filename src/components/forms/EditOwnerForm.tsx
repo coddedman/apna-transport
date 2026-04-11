@@ -3,6 +3,8 @@
 import { updateOwner } from '@/lib/actions/owners'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 interface EditOwnerFormProps {
   owner: {
     id: string
@@ -23,14 +25,21 @@ export default function EditOwnerForm({ owner, onSuccess }: EditOwnerFormProps) 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await updateOwner(formData)
-      onSuccess()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      updateOwner(formData),
+      {
+        loading: 'Saving changes...',
+        success: () => {
+          onSuccess()
+          return 'Owner updated successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Something went wrong')
+          return err.message || 'Failed to update owner'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   return (

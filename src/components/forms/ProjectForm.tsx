@@ -3,6 +3,8 @@
 import { createProject } from '@/lib/actions/projects'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 export default function ProjectForm({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -10,14 +12,21 @@ export default function ProjectForm({ onSuccess }: { onSuccess: () => void }) {
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await createProject(formData)
-      onSuccess()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      createProject(formData),
+      {
+        loading: 'Creating project...',
+        success: () => {
+          onSuccess()
+          return 'Project created successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Something went wrong')
+          return err.message || 'Failed to create project'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   return (

@@ -3,6 +3,8 @@
 import { createTrip } from '@/lib/actions/trips'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 interface TripFormProps {
   vehicles: { id: string, plateNo: string }[]
   projects: { id: string, projectName: string }[]
@@ -18,14 +20,21 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await createTrip(formData)
-      onSuccess()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      createTrip(formData),
+      {
+        loading: 'Logging trip...',
+        success: () => {
+          onSuccess()
+          return 'Trip logged successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Something went wrong')
+          return err.message || 'Failed to log trip'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   const calculatedTotal = (parseFloat(weight) || 0) * (parseFloat(rate) || 0)

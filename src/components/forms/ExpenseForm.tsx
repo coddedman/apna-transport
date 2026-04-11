@@ -3,6 +3,8 @@
 import { createExpense } from '@/lib/actions/expenses'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 interface ExpenseFormProps {
   vehicles: { id: string, plateNo: string }[]
   onSuccess: () => void
@@ -15,14 +17,21 @@ export default function ExpenseForm({ vehicles, onSuccess }: ExpenseFormProps) {
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await createExpense(formData)
-      onSuccess()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      createExpense(formData),
+      {
+        loading: 'Logging expense...',
+        success: () => {
+          onSuccess()
+          return 'Expense logged successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Something went wrong')
+          return err.message || 'Failed to log expense'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   const today = new Date().toISOString().split('T')[0]

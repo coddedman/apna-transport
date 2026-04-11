@@ -4,6 +4,8 @@ import { generateSettlement } from '@/lib/actions/settlements'
 import { useState } from 'react'
 import Modal from './Modal'
 
+import toast from 'react-hot-toast'
+
 interface GenerateSettlementButtonProps {
   owners: { id: string, ownerName: string }[]
 }
@@ -20,14 +22,21 @@ export default function GenerateSettlementButton({ owners }: GenerateSettlementB
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await generateSettlement(formData)
-      setIsOpen(false)
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      generateSettlement(formData),
+      {
+        loading: 'Generating settlement...',
+        success: () => {
+          setIsOpen(false)
+          return 'Settlement generated successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Failed to generate')
+          return err.message || 'Failed to generate'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   return (

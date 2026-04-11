@@ -7,6 +7,8 @@ export const metadata: Metadata = {
     "Multi-tenant SaaS platform for transport companies to manage hired vehicle operations, trip logging, weight-based revenue calculation, and owner settlement.",
 };
 
+import { Toaster } from 'react-hot-toast'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -14,7 +16,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Toaster 
+          position="top-center" 
+          toastOptions={{
+            style: {
+              background: '#1a1a1a',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }
+          }} 
+        />
+        {children}
+      </body>
     </html>
   );
 }

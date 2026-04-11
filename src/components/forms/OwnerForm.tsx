@@ -3,6 +3,8 @@
 import { createOwner } from '@/lib/actions/owners'
 import { useState } from 'react'
 
+import toast from 'react-hot-toast'
+
 export default function OwnerForm({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,14 +20,21 @@ export default function OwnerForm({ onSuccess }: { onSuccess: () => void }) {
   async function handleSubmit(formData: FormData) {
     setLoading(true)
     setError(null)
-    try {
-      await createOwner(formData)
-      onSuccess()
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+    
+    toast.promise(
+      createOwner(formData),
+      {
+        loading: 'Registering owner...',
+        success: () => {
+          onSuccess()
+          return 'Owner added successfully!'
+        },
+        error: (err) => {
+          setError(err.message || 'Something went wrong')
+          return err.message || 'Failed to add owner'
+        }
+      }
+    ).finally(() => setLoading(false))
   }
 
   return (
