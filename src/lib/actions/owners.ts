@@ -27,10 +27,10 @@ export async function createOwner(formData: FormData) {
   const transporterId = (session?.user as any)?.transporterId
   if (!transporterId) throw new Error('Unauthorized')
 
-  const ownerName = formData.get('ownerName') as string
-  const phone = formData.get('phone') as string
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
+  const ownerName = (formData.get('ownerName') as string)?.trim()
+  const phone = (formData.get('phone') as string)?.trim()
+  const email = (formData.get('email') as string)?.trim()
+  const password = (formData.get('password') as string)?.trim()
 
   if (!ownerName || !phone) {
     throw new Error('Owner name and phone are required')
@@ -164,6 +164,36 @@ export async function updateOwner(formData: FormData) {
       ...(resetPassword ? { defaultPassword: resetPassword } : {}),
     }
   })
+
+  revalidatePath('/dashboard/owners')
+  revalidatePath('/dashboard/vehicles')
+}
+
+export async function deleteOwner(ownerId: string) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const owner = await prisma.owner.findUnique({
+    where: { id: ownerId },
+    include: { vehicles: true }
+  })
+
+  if (!owner || owner.transporterId !== transporterId) {
+    throw new Error('Owner not found')
+  }
+
+  if (owner.vehicles.length > 0) {
+    throw new Error(`Cannot delete: ${owner.ownerName} has ${owner.vehicles.length} vehicle(s) linked. Remove them first.`)
+  }
+
+  // Delete linked user account if exists
+  if (owner.userId) {
+    await prisma.owner.delete({ where: { id: ownerId } })
+    await prisma.user.delete({ where: { id: owner.userId } })
+  } else {
+    await prisma.owner.delete({ where: { id: ownerId } })
+  }
 
   revalidatePath('/dashboard/owners')
   revalidatePath('/dashboard/vehicles')

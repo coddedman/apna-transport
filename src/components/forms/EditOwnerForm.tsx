@@ -9,6 +9,7 @@ interface EditOwnerFormProps {
     ownerName: string
     phone: string
     defaultPassword: string | null
+    mustChangePassword: boolean | null
     user: { email: string } | null
   }
   onSuccess: () => void
@@ -102,11 +103,23 @@ export default function EditOwnerForm({ owner, onSuccess }: EditOwnerFormProps) 
             }}>
               {owner.defaultPassword}
             </code>
-          ) : (
+          ) : owner.user && owner.mustChangePassword === false ? (
             <span style={{ 
               fontSize: '12px', fontWeight: 600, color: 'var(--color-success)', fontStyle: 'italic' 
             }}>
-              null — Owner has set their own password ✓
+              Owner has set their own password ✓
+            </span>
+          ) : owner.user && owner.mustChangePassword === true ? (
+            <span style={{ 
+              fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)', fontStyle: 'italic' 
+            }}>
+              Not yet changed
+            </span>
+          ) : (
+            <span style={{ 
+              fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)', fontStyle: 'italic' 
+            }}>
+              No login credentials
             </span>
           )}
         </div>

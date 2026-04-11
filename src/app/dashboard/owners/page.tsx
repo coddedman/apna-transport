@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import AddOwnerButton from '@/components/AddOwnerButton'
 import EditOwnerButton from '@/components/EditOwnerButton'
+import DeleteOwnerButton from '@/components/DeleteOwnerButton'
 
 export default async function OwnersPage() {
   const session = await auth()
@@ -167,13 +168,21 @@ export default async function OwnersPage() {
                         {owner.pending}
                       </td>
                       <td>
-                        <EditOwnerButton owner={{
-                          id: owner.id,
-                          ownerName: owner.name,
-                          phone: owner.phone,
-                          defaultPassword: owner.defaultPassword,
-                          user: owner.user,
-                        }} />
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <EditOwnerButton owner={{
+                            id: owner.id,
+                            ownerName: owner.name,
+                            phone: owner.phone,
+                            defaultPassword: owner.defaultPassword,
+                            mustChangePassword: owner.mustChangePassword,
+                            user: owner.user,
+                          }} />
+                          <DeleteOwnerButton
+                            ownerId={owner.id}
+                            ownerName={owner.name}
+                            vehicleCount={owner.vehicles}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))

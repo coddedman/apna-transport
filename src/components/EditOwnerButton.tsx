@@ -10,6 +10,7 @@ interface EditOwnerButtonProps {
     ownerName: string
     phone: string
     defaultPassword: string | null
+    mustChangePassword: boolean | null
     user: { email: string } | null
   }
 }
