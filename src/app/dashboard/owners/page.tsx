@@ -12,7 +12,7 @@ export default async function OwnersPage() {
   const ownersData = await prisma.owner.findMany({
     where: { transporterId },
     include: {
-      user: { select: { email: true } },
+      user: { select: { email: true, mustChangePassword: true } },
       vehicles: {
         include: {
           trips: true,
@@ -39,6 +39,7 @@ export default async function OwnersPage() {
       phone: o.phone,
       email: o.user?.email || null,
       defaultPassword: o.defaultPassword,
+      mustChangePassword: o.user?.mustChangePassword ?? null,
       user: o.user,
       vehicles: totalVehicles,
       status: totalVehicles > 0 ? 'active' : 'inactive',
@@ -149,9 +150,13 @@ export default async function OwnersPage() {
                           }}>
                             {owner.defaultPassword}
                           </code>
-                        ) : owner.email ? (
+                        ) : owner.email && owner.mustChangePassword === false ? (
                           <span style={{ fontSize: '11px', color: 'var(--color-success)', fontStyle: 'italic' }}>
                             Changed ✓
+                          </span>
+                        ) : owner.email && owner.mustChangePassword === true ? (
+                          <span style={{ fontSize: '11px', color: 'var(--color-accent)', fontStyle: 'italic' }}>
+                            Not yet changed
                           </span>
                         ) : (
                           <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>—</span>
