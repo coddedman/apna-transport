@@ -2,7 +2,7 @@
 
 import { createVehicle } from '@/lib/actions/vehicles'
 import { useState } from 'react'
-
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 interface VehicleFormProps {
@@ -13,10 +13,12 @@ interface VehicleFormProps {
 
 export default function VehicleForm({ owners, projects, onSuccess }: VehicleFormProps) {
   const [loading, setLoading] = useState(false)
+  const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
+    setGlobalLoading(true)
     setError(null)
     
     toast.promise(
@@ -32,7 +34,10 @@ export default function VehicleForm({ owners, projects, onSuccess }: VehicleForm
           return err.message || 'Failed to register vehicle'
         }
       }
-    ).finally(() => setLoading(false))
+    ).finally(() => {
+      setLoading(false)
+      setGlobalLoading(false)
+    })
   }
 
   return (

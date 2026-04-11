@@ -8,6 +8,8 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from 'react-hot-toast'
+import PageLoader from '@/components/PageLoader'
+import { LoadingProvider } from '@/lib/context/LoadingContext'
 
 export default function RootLayout({
   children,
@@ -17,17 +19,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Toaster 
-          position="top-center" 
-          toastOptions={{
-            style: {
-              background: '#1a1a1a',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.1)'
-            }
-          }} 
-        />
-        {children}
+        <LoadingProvider>
+          <PageLoader />
+          <Toaster 
+            position="top-center" 
+            toastOptions={{
+              style: {
+                background: '#1a1a1a',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }
+            }} 
+          />
+          {children}
+        </LoadingProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import { createTrip } from '@/lib/actions/trips'
 import { useState } from 'react'
-
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 interface TripFormProps {
@@ -13,12 +13,14 @@ interface TripFormProps {
 
 export default function TripForm({ vehicles, projects, onSuccess }: TripFormProps) {
   const [loading, setLoading] = useState(false)
+  const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
   const [weight, setWeight] = useState('')
   const [rate, setRate] = useState('')
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
+    setGlobalLoading(true)
     setError(null)
     
     toast.promise(
@@ -34,7 +36,10 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
           return err.message || 'Failed to log trip'
         }
       }
-    ).finally(() => setLoading(false))
+    ).finally(() => {
+      setLoading(false)
+      setGlobalLoading(false)
+    })
   }
 
   const calculatedTotal = (parseFloat(weight) || 0) * (parseFloat(rate) || 0)

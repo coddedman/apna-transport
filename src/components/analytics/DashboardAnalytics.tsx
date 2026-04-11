@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useCallback } from 'react'
 import { fetchAnalytics, type AnalyticsData, type AnalyticsFilters } from '@/lib/actions/analytics'
+import { useLoading } from '@/lib/context/LoadingContext'
 
 // ============================================
 // Mini Chart Components (Pure CSS, no library)
@@ -197,6 +198,7 @@ interface Props {
 }
 
 export default function DashboardAnalytics({ initialData }: Props) {
+  const { setLoading } = useLoading()
   const [data, setData] = useState<AnalyticsData>(initialData)
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
@@ -210,15 +212,18 @@ export default function DashboardAnalytics({ initialData }: Props) {
 
   const loadData = useCallback((newFilters: AnalyticsFilters) => {
     setFilters(newFilters)
+    setLoading(true)
     startTransition(async () => {
       try {
         const result = await fetchAnalytics(newFilters)
         setData(result)
       } catch (e) {
         console.error('Failed to load analytics', e)
+      } finally {
+        setLoading(false)
       }
     })
-  }, [])
+  }, [setLoading])
 
   const handlePeriodChange = (period: string) => {
     if (period === 'custom') {

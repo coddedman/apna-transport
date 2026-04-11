@@ -2,15 +2,17 @@
 
 import { createProject } from '@/lib/actions/projects'
 import { useState } from 'react'
-
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 export default function ProjectForm({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
+  const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
+    setGlobalLoading(true)
     setError(null)
     
     toast.promise(
@@ -26,7 +28,10 @@ export default function ProjectForm({ onSuccess }: { onSuccess: () => void }) {
           return err.message || 'Failed to create project'
         }
       }
-    ).finally(() => setLoading(false))
+    ).finally(() => {
+      setLoading(false)
+      setGlobalLoading(false)
+    })
   }
 
   return (

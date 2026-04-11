@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { useLoading } from '@/lib/context/LoadingContext'
 
 const navItems = [
   {
@@ -36,6 +37,12 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { setLoading } = useLoading()
+
+  const handleSignOut = () => {
+    setLoading(true)
+    signOut({ callbackUrl: '/login' })
+  }
 
   return (
     <aside className="sidebar" id="sidebar">
@@ -77,7 +84,7 @@ export default function Sidebar() {
           </div>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={handleSignOut}
           className="btn btn-secondary btn-sm"
           style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
         >

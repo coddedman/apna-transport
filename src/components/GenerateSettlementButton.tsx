@@ -3,7 +3,7 @@
 import { generateSettlement } from '@/lib/actions/settlements'
 import { useState } from 'react'
 import Modal from './Modal'
-
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 interface GenerateSettlementButtonProps {
@@ -13,14 +13,16 @@ interface GenerateSettlementButtonProps {
 export default function GenerateSettlementButton({ owners }: GenerateSettlementButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
 
-  // Default dates: start of current month to today
+  // ... (keeping existing date logic)
   const today = new Date().toISOString().split('T')[0]
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
+    setGlobalLoading(true)
     setError(null)
     
     toast.promise(
@@ -36,7 +38,10 @@ export default function GenerateSettlementButton({ owners }: GenerateSettlementB
           return err.message || 'Failed to generate'
         }
       }
-    ).finally(() => setLoading(false))
+    ).finally(() => {
+      setLoading(false)
+      setGlobalLoading(false)
+    })
   }
 
   return (

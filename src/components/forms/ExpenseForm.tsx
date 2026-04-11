@@ -2,7 +2,7 @@
 
 import { createExpense } from '@/lib/actions/expenses'
 import { useState } from 'react'
-
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 interface ExpenseFormProps {
@@ -13,10 +13,12 @@ interface ExpenseFormProps {
 
 export default function ExpenseForm({ vehicles, projects, onSuccess }: ExpenseFormProps) {
   const [loading, setLoading] = useState(false)
+  const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
+    setGlobalLoading(true)
     setError(null)
     
     toast.promise(
@@ -32,7 +34,10 @@ export default function ExpenseForm({ vehicles, projects, onSuccess }: ExpenseFo
           return err.message || 'Failed to log expense'
         }
       }
-    ).finally(() => setLoading(false))
+    ).finally(() => {
+      setLoading(false)
+      setGlobalLoading(false)
+    })
   }
 
   const today = new Date().toISOString().split('T')[0]

@@ -2,11 +2,12 @@
 
 import { createOwner } from '@/lib/actions/owners'
 import { useState } from 'react'
-
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 export default function OwnerForm({ onSuccess }: { onSuccess: () => void }) {
   const [loading, setLoading] = useState(false)
+  const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
   const [generatedPassword, setGeneratedPassword] = useState('')
 
@@ -19,6 +20,7 @@ export default function OwnerForm({ onSuccess }: { onSuccess: () => void }) {
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
+    setGlobalLoading(true)
     setError(null)
     
     toast.promise(
@@ -34,7 +36,10 @@ export default function OwnerForm({ onSuccess }: { onSuccess: () => void }) {
           return err.message || 'Failed to add owner'
         }
       }
-    ).finally(() => setLoading(false))
+    ).finally(() => {
+      setLoading(false)
+      setGlobalLoading(false)
+    })
   }
 
   return (

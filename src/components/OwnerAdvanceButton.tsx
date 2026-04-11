@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Modal from './Modal'
 import { createOwnerAdvance } from '@/lib/actions/ownerAdvances'
+import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
 interface OwnerAdvanceButtonProps {
@@ -13,12 +14,14 @@ interface OwnerAdvanceButtonProps {
 export default function OwnerAdvanceButton({ owners, projects }: OwnerAdvanceButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const { setLoading: setGlobalLoading } = useLoading()
   const today = new Date().toISOString().split('T')[0]
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
 
+    setGlobalLoading(true)
     startTransition(async () => {
       try {
         await createOwnerAdvance(formData)
@@ -26,6 +29,8 @@ export default function OwnerAdvanceButton({ owners, projects }: OwnerAdvanceBut
         setIsOpen(false)
       } catch (err: any) {
         toast.error(err.message || 'Failed to log advance')
+      } finally {
+        setGlobalLoading(false)
       }
     })
   }
