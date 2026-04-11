@@ -43,6 +43,9 @@ export default async function ExpensesPage() {
 
   const totalExpense = expenses.reduce((a, e) => a + e.amount, 0)
 
+  const simpleVehicles = vehicles.map(v => ({ id: v.id, plateNo: v.plateNo }))
+  const simpleProjects = projects.map(p => ({ id: p.id, projectName: p.projectName }))
+
   return (
     <>
       <header className="page-header">
@@ -53,7 +56,7 @@ export default async function ExpensesPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <AddExpenseButton vehicles={vehicles} projects={projects} />
+          <AddExpenseButton vehicles={simpleVehicles} projects={simpleProjects} />
         </div>
       </header>
 

@@ -175,7 +175,7 @@ export default async function OwnersPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <OwnerAnalyticsButton owner={ownersData.find(od => od.id === owner.id)} />
+                          <OwnerAnalyticsButton owner={JSON.parse(JSON.stringify(ownersData.find(od => od.id === owner.id)))} />
                           <EditOwnerButton owner={{
                             id: owner.id,
                             ownerName: owner.name,

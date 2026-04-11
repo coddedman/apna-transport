@@ -21,6 +21,9 @@ export default async function VehiclesPage() {
     { label: 'Upcoming Renewals', value: upcomingRenewals.toString(), icon: '⚠️', color: 'purple' },
   ]
 
+  const simpleOwners = owners.map(o => ({ id: o.id, ownerName: o.ownerName }))
+  const simpleProjects = projects.map(p => ({ id: p.id, projectName: p.projectName }))
+
   return (
     <>
       <header className="page-header">
@@ -31,7 +34,7 @@ export default async function VehiclesPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <AddVehicleButton owners={owners} projects={projects} />
+          <AddVehicleButton owners={simpleOwners} projects={simpleProjects} />
         </div>
       </header>
 
@@ -94,7 +97,7 @@ export default async function VehiclesPage() {
                         <span className="badge active">● Active</span>
                       </td>
                       <td>
-                        <VehicleAnalyticsButton vehicle={v} />
+                        <VehicleAnalyticsButton vehicle={JSON.parse(JSON.stringify(v))} />
                       </td>
                     </tr>
                   ))
