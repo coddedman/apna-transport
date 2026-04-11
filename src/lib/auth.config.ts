@@ -7,7 +7,9 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user
       const isDashboard = nextUrl.pathname.startsWith('/dashboard')
       const isPlatform = nextUrl.pathname.startsWith('/platform')
-      const isProtected = isDashboard || isPlatform
+      const isOwnerPortal = nextUrl.pathname.startsWith('/owner')
+      const isChangePassword = nextUrl.pathname === '/change-password'
+      const isProtected = isDashboard || isPlatform || isOwnerPortal || isChangePassword
 
       if (isProtected) {
         if (isLoggedIn) return true
@@ -17,6 +19,9 @@ export const authConfig = {
         const role = (auth?.user as any)?.role
         if (role === 'SUPER_ADMIN') {
           return Response.redirect(new URL('/platform', nextUrl))
+        }
+        if (role === 'OWNER') {
+          return Response.redirect(new URL('/owner', nextUrl))
         }
         return Response.redirect(new URL('/dashboard', nextUrl))
       }
@@ -28,6 +33,8 @@ export const authConfig = {
         token.role = (user as any).role
         token.transporterId = (user as any).transporterId
         token.transporterName = (user as any).transporterName
+        token.mustChangePassword = (user as any).mustChangePassword
+        token.ownerId = (user as any).ownerId
       }
       return token
     },
@@ -37,6 +44,8 @@ export const authConfig = {
         ;(session.user as any).role = token.role
         ;(session.user as any).transporterId = token.transporterId
         ;(session.user as any).transporterName = token.transporterName
+        ;(session.user as any).mustChangePassword = token.mustChangePassword
+        ;(session.user as any).ownerId = token.ownerId
       }
       return session
     },

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Simple proxy for now to fix build errors, we'll handle auth in layouts
+// Proxy handles low-level request routing.
+// Auth checks and mustChangePassword redirects are handled in layouts.
 export function proxy(request: NextRequest) {
   return NextResponse.next()
 }

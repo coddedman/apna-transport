@@ -42,13 +42,14 @@ export default function ExpenseForm({ vehicles, onSuccess }: ExpenseFormProps) {
           />
         </div>
         <div className="form-group">
-        <label className="form-label">Vehicle</label>
-        <select name="vehicleId" className="form-select" required defaultValue="">
-          <option value="" disabled>Select vehicle</option>
-          {vehicles.map(v => (
-            <option key={v.id} value={v.id}>{v.plateNo}</option>
-          ))}
-        </select>
+          <label className="form-label">Vehicle</label>
+          <select name="vehicleId" className="form-select" required defaultValue="">
+            <option value="" disabled>Select vehicle</option>
+            {vehicles.map(v => (
+              <option key={v.id} value={v.id}>{v.plateNo}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="form-row">

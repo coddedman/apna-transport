@@ -15,6 +15,7 @@ enum Role {
   SUPER_ADMIN    // Platform Owner
   ORG_ADMIN      // Transporter Admin
   FIELD_MANAGER  // Site Supervisor
+  OWNER          // Vehicle Owner (read-only access to own data)
 }
 
 enum ExpenseType {
@@ -36,12 +37,14 @@ model Transporter {
 }
 
 model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
-  password      String
-  role          Role         @default(ORG_ADMIN)
-  transporterId String?
-  transporter   Transporter? @relation(fields: [transporterId], references: [id])
+  id                 String       @id @default(cuid())
+  email              String       @unique
+  password           String
+  role               Role         @default(ORG_ADMIN)
+  mustChangePassword Boolean      @default(false)
+  transporterId      String?
+  transporter        Transporter? @relation(fields: [transporterId], references: [id])
+  owner              Owner?
 }
 
 model Project {
@@ -60,6 +63,8 @@ model Owner {
   phone         String
   transporterId String
   transporter   Transporter @relation(fields: [transporterId], references: [id])
+  userId        String?     @unique
+  user          User?       @relation(fields: [userId], references: [id])
   vehicles      Vehicle[]
 }
 
