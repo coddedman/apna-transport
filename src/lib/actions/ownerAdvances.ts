@@ -13,6 +13,7 @@ export async function createOwnerAdvance(formData: FormData) {
   const amount    = parseFloat(formData.get('amount') as string)
   const remarks   = formData.get('remarks') as string
   const projectId = formData.get('projectId') as string
+  const dateStr   = formData.get('date') as string
 
   if (!ownerId || isNaN(amount) || amount <= 0) {
     throw new Error('Owner and a valid amount are required')
@@ -24,12 +25,15 @@ export async function createOwnerAdvance(formData: FormData) {
   })
   if (!owner) throw new Error('Owner not found')
 
+  const advanceDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
+
   await prisma.ownerAdvance.create({
     data: {
       ownerId,
       amount,
       remarks: remarks || null,
       projectId: projectId || null,
+      date: advanceDate,
     }
   })
 

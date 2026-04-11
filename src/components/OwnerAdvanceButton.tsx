@@ -13,6 +13,7 @@ interface OwnerAdvanceButtonProps {
 export default function OwnerAdvanceButton({ owners, projects }: OwnerAdvanceButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const today = new Date().toISOString().split('T')[0]
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -40,6 +41,18 @@ export default function OwnerAdvanceButton({ owners, projects }: OwnerAdvanceBut
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Log Owner Advance">
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          <div className="form-group">
+            <label className="form-label">Date *</label>
+            <input
+              className="form-input"
+              name="date"
+              type="date"
+              defaultValue={today}
+              max={today}
+              required
+            />
+          </div>
 
           <div className="form-group">
             <label className="form-label">Owner *</label>
