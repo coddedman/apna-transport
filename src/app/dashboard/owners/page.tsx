@@ -175,7 +175,27 @@ export default async function OwnersPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <OwnerAnalyticsButton owner={JSON.parse(JSON.stringify(ownersData.find(od => od.id === owner.id)))} />
+                          <OwnerAnalyticsButton owner={{
+                            ownerName: owner.name,
+                            vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({
+                              id: v.id,
+                              plateNo: v.plateNo,
+                              trips: (v.trips || []).map((t: any) => ({
+                                projectId: t.projectId,
+                                project: t.project ? { projectName: t.project.projectName } : null,
+                                totalAmount: t.totalAmount
+                              })),
+                              expenses: (v.expenses || []).map((e: any) => ({
+                                projectId: e.projectId,
+                                project: e.project ? { projectName: e.project.projectName } : null,
+                                amount: e.amount
+                              }))
+                            })),
+                            settlements: (ownersData.find(od => od.id === owner.id)?.settlements || []).map((s: any) => ({
+                              status: s.status,
+                              finalPayout: s.finalPayout
+                            }))
+                          }} />
                           <EditOwnerButton owner={{
                             id: owner.id,
                             ownerName: owner.name,

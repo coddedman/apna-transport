@@ -97,7 +97,19 @@ export default async function VehiclesPage() {
                         <span className="badge active">● Active</span>
                       </td>
                       <td>
-                        <VehicleAnalyticsButton vehicle={JSON.parse(JSON.stringify(v))} />
+                        <VehicleAnalyticsButton vehicle={{
+                          plateNo: v.plateNo,
+                          trips: (v.trips || []).map((t: any) => ({
+                            projectId: t.projectId,
+                            project: t.project ? { projectName: t.project.projectName } : null,
+                            totalAmount: t.totalAmount
+                          })),
+                          expenses: (v.expenses || []).map((e: any) => ({
+                            projectId: e.projectId,
+                            project: e.project ? { projectName: e.project.projectName } : null,
+                            amount: e.amount
+                          }))
+                        }} />
                       </td>
                     </tr>
                   ))
