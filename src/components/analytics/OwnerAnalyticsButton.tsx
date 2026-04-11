@@ -24,7 +24,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
   
   vehicles.forEach((v: any) => {
     totalTrips += v.trips?.length || 0
-    totalRevenue += v.trips?.reduce((acc: number, t: any) => acc + t.ownerFreightAmount, 0) || 0
+    totalRevenue += v.trips?.reduce((acc: number, t: any) => acc + t.partyFreightAmount, 0) || 0
     totalExpenses += v.expenses?.reduce((acc: number, e: any) => acc + e.amount, 0) || 0
   })
 
@@ -42,7 +42,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
       const pId = t.projectId
       const pName = t.project?.projectName || 'General'
       if (!projectStats[pId]) projectStats[pId] = { name: pName, revenue: 0, expenses: 0, trips: 0 }
-      projectStats[pId].revenue += t.ownerFreightAmount
+      projectStats[pId].revenue += t.partyFreightAmount
       projectStats[pId].trips += 1
     })
     v.expenses?.forEach((e: any) => {

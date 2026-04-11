@@ -107,7 +107,7 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
           />
         </div>
         <div className="form-group">
-          <label className="form-label">Party Rate (₹ / Ton)</label>
+          <label className="form-label">Owner Payout Rate (₹ / Ton)</label>
           <input 
             name="partyRate" 
             type="number" 
@@ -117,7 +117,7 @@ export default function TripForm({ vehicles, projects, onSuccess }: TripFormProp
             required 
           />
           <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-            Owner rate is auto-calculated from the Project.
+            Revenue rate is fixed per Project.
           </p>
         </div>
       </div>

@@ -225,12 +225,12 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   ])
 
   // === Calculate KPIs ===
-  const totalRevenue = tripsAggr._sum.partyFreightAmount || 0
-  const ownerFreight = tripsAggr._sum.ownerFreightAmount || 0
+  const totalRevenue = tripsAggr._sum.ownerFreightAmount || 0
+  const vehiclePayoutCost = tripsAggr._sum.partyFreightAmount || 0
   const totalWeight = tripsAggr._sum.weight || 0
   const totalExpenses = (expenseAggr._sum.amount || 0)
   const totalAdvances = advanceAggr._sum.amount || 0
-  const totalCombinedExpense = totalExpenses + totalAdvances + ownerFreight
+  const totalCombinedExpense = totalExpenses + totalAdvances + vehiclePayoutCost
   const netProfit = totalRevenue - totalCombinedExpense
   const avgRevenuePerTrip = tripCount > 0 ? totalRevenue / tripCount : 0
   const avgWeightPerTrip = tripCount > 0 ? totalWeight / tripCount : 0
@@ -260,11 +260,10 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   allTrips.forEach(t => {
     const key = new Date(t.date).toISOString().split('T')[0]
     if (revenueMap.has(key)) {
-      revenueMap.set(key, (revenueMap.get(key) || 0) + t.partyFreightAmount)
+      revenueMap.set(key, (revenueMap.get(key) || 0) + t.ownerFreightAmount)
       tripsMap.set(key, (tripsMap.get(key) || 0) + 1)
       weightMap.set(key, (weightMap.get(key) || 0) + t.weight)
-      // We can also add ownerFreight to expensesMap for daily view
-      expensesMap.set(key, (expensesMap.get(key) || 0) + t.ownerFreightAmount)
+      expensesMap.set(key, (expensesMap.get(key) || 0) + t.partyFreightAmount)
     }
   })
 
@@ -295,11 +294,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     pct: Math.round(((e._sum.amount || 0) / totalExpenseForPct) * 100),
   }))
 
-  if (ownerFreight > 0) {
+  if (vehiclePayoutCost > 0) {
     expenseByType.push({
-      type: 'OWNER FREIGHT',
-      amount: ownerFreight,
-      pct: Math.round((ownerFreight / totalExpenseForPct) * 100),
+      type: 'VEHICLE PAYOUT',
+      amount: vehiclePayoutCost,
+      pct: Math.round((vehiclePayoutCost / totalExpenseForPct) * 100),
     })
   }
 
@@ -318,11 +317,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     const key = t.projectId
     const existing = projMap.get(key)
     if (existing) {
-      existing.revenue += t.partyFreightAmount
+      existing.revenue += t.ownerFreightAmount
       existing.trips += 1
       existing.weight += t.weight
     } else {
-      projMap.set(key, { name: t.project.projectName, revenue: t.partyFreightAmount, trips: 1, weight: t.weight })
+      projMap.set(key, { name: t.project.projectName, revenue: t.ownerFreightAmount, trips: 1, weight: t.weight })
     }
   })
   const revenueByProject = Array.from(projMap.values()).sort((a, b) => b.revenue - a.revenue)
@@ -333,11 +332,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     const oid = t.vehicle.ownerId
     const existing = ownerMap.get(oid)
     if (existing) {
-      existing.revenue += t.partyFreightAmount
-      existing.expenses += t.ownerFreightAmount
+      existing.revenue += t.ownerFreightAmount
+      existing.expenses += t.partyFreightAmount
       existing.trips += 1
     } else {
-      ownerMap.set(oid, { name: t.vehicle.owner.ownerName, revenue: t.partyFreightAmount, expenses: t.ownerFreightAmount, trips: 1, profit: 0 })
+      ownerMap.set(oid, { name: t.vehicle.owner.ownerName, revenue: t.ownerFreightAmount, expenses: t.partyFreightAmount, trips: 1, profit: 0 })
     }
   })
   allExpenses.forEach(e => {
@@ -368,12 +367,12 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     const vid = t.vehicleId
     const existing = vehMap.get(vid)
     if (existing) {
-      existing.revenue += t.partyFreightAmount
-      existing.expenses += t.ownerFreightAmount
+      existing.revenue += t.ownerFreightAmount
+      existing.expenses += t.partyFreightAmount
       existing.trips += 1
       existing.weight += t.weight
     } else {
-      vehMap.set(vid, { plateNo: t.vehicle.plateNo, ownerName: t.vehicle.owner.ownerName, revenue: t.partyFreightAmount, expenses: t.ownerFreightAmount, trips: 1, weight: t.weight, profit: 0 })
+      vehMap.set(vid, { plateNo: t.vehicle.plateNo, ownerName: t.vehicle.owner.ownerName, revenue: t.ownerFreightAmount, expenses: t.partyFreightAmount, trips: 1, weight: t.weight, profit: 0 })
     }
   })
   allExpenses.forEach(e => {
@@ -433,7 +432,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       vehicle: t.vehicle.plateNo,
       project: t.project.projectName,
       weight: t.weight,
-      amount: t.partyFreightAmount,
+      amount: t.ownerFreightAmount,
     })),
     recentExpenses: recentExpensesData.map(e => ({
       id: e.id,

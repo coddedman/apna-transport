@@ -37,7 +37,7 @@ export default async function OwnersPage() {
     const totalAdvances = o.advances.reduce((acc: number, a: any) => acc + a.amount, 0)
     
     o.vehicles.forEach(v => {
-      const vehicleRevenue = v.trips.reduce((acc: number, t: any) => acc + t.ownerFreightAmount, 0)
+      const vehicleRevenue = v.trips.reduce((acc: number, t: any) => acc + t.partyFreightAmount, 0)
       const vehicleExpenses = v.expenses.reduce((acc: number, e: any) => acc + e.amount, 0)
       pendingPayout += (vehicleRevenue - vehicleExpenses)
     })
@@ -64,7 +64,7 @@ export default async function OwnersPage() {
   const totalPendingOverall = ownersData.reduce((acc, o) => {
     let pending = 0
     o.vehicles.forEach(v => {
-      pending += v.trips.reduce((a: number, t: any) => a + t.ownerFreightAmount, 0) - v.expenses.reduce((a: number, e: any) => a + e.amount, 0)
+      pending += v.trips.reduce((a: number, t: any) => a + t.partyFreightAmount, 0) - v.expenses.reduce((a: number, e: any) => a + e.amount, 0)
     })
     const advances = o.advances.reduce((a: number, adv: any) => a + adv.amount, 0)
     return acc + Math.max(0, pending - advances)
@@ -201,7 +201,7 @@ export default async function OwnersPage() {
                               trips: (v.trips || []).map((t: any) => ({
                                 projectId: t.projectId,
                                 project: t.project ? { projectName: t.project.projectName } : null,
-                                ownerFreightAmount: t.ownerFreightAmount
+                                partyFreightAmount: t.partyFreightAmount
                               })),
                               expenses: (v.expenses || []).map((e: any) => ({
                                 projectId: e.projectId,

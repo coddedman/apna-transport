@@ -102,7 +102,7 @@ export default async function VehiclesPage() {
                           trips: (v.trips || []).map((t: any) => ({
                             projectId: t.projectId,
                             project: t.project ? { projectName: t.project.projectName } : null,
-                            ownerFreightAmount: t.ownerFreightAmount
+                            partyFreightAmount: t.partyFreightAmount
                           })),
                           expenses: (v.expenses || []).map((e: any) => ({
                             projectId: e.projectId,

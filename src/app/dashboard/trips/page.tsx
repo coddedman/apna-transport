@@ -42,7 +42,7 @@ export default async function TripsPage() {
     ownerRate: t.ownerRate,
     partyAmount: t.partyFreightAmount,
     ownerAmount: t.ownerFreightAmount,
-    profit: t.partyFreightAmount - t.ownerFreightAmount,
+    profit: t.ownerFreightAmount - t.partyFreightAmount,
     driver: 'Unknown', // Not in schema yet, keep generic
     rawDate: t.date.toISOString(),
     vehicleId: t.vehicleId,
@@ -126,11 +126,11 @@ export default async function TripsPage() {
                   <th>Vehicle No.</th>
                   <th>Project</th>
                   <th>WT (MT)</th>
-                  <th>Party Rate</th>
-                  <th>Owner Rate</th>
-                  <th>Revenue</th>
-                  <th>Cost</th>
-                  <th>Profit</th>
+                  <th>Revenue Rate</th>
+                  <th>Payout Rate</th>
+                  <th>Total Revenue</th>
+                  <th>Total Payout</th>
+                  <th>Margin</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -148,10 +148,10 @@ export default async function TripsPage() {
                       <td><strong>{trip.vehicle}</strong></td>
                       <td>{trip.project}</td>
                       <td style={{ fontWeight: 600 }}>{trip.weight}</td>
-                      <td>₹{trip.partyRate}</td>
                       <td>₹{trip.ownerRate}</td>
-                      <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
-                      <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.ownerAmount.toLocaleString('en-IN')}</td>
+                      <td>₹{trip.partyRate}</td>
+                      <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.ownerAmount.toLocaleString('en-IN')}</td>
+                      <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
                       <td style={{ color: trip.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 700 }}>₹{trip.profit.toLocaleString('en-IN')}</td>
                       <td>
                         <EditTripButton 

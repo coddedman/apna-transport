@@ -19,7 +19,7 @@ export default async function ProjectsPage() {
   // Calculate aggregates based on DB real trips
   const projects = projectsData.map(p => {
     const totalTrips = p.trips.length
-    const totalRevenue = p.trips.reduce((acc, t) => acc + t.partyFreightAmount, 0)
+    const totalRevenue = p.trips.reduce((acc, t) => acc + t.ownerFreightAmount, 0)
     
     return {
       id: p.id,
@@ -34,7 +34,7 @@ export default async function ProjectsPage() {
 
   const totalTripsOverall = projectsData.reduce((acc, p) => acc + p.trips.length, 0)
   const totalRevenueOverall = projectsData.reduce((acc, p) => 
-    acc + p.trips.reduce((tAcc, t) => tAcc + t.partyFreightAmount, 0)
+    acc + p.trips.reduce((tAcc, t) => tAcc + t.ownerFreightAmount, 0)
   , 0)
 
   return (

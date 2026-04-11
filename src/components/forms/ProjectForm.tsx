@@ -58,7 +58,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Owner Rate (₹ / Ton)</label>
+        <label className="form-label">Project Revenue Rate (₹ / Ton)</label>
         <input 
           name="ownerRate" 
           type="number" 
@@ -68,7 +68,7 @@ export default function ProjectForm({ onSuccess }: { onSuccess: () => void }) {
           required 
         />
         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-          Standard rate to pay the vehicle owner for this project.
+          Fixed rate received from the Project Company.
         </p>
       </div>
       

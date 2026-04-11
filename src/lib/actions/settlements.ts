@@ -52,7 +52,7 @@ export async function generateSettlement(formData: FormData) {
 
   owner.vehicles.forEach((v: any) => {
     tripsCount += v.trips.length
-    totalRevenue += v.trips.reduce((acc: number, t: any) => acc + t.ownerFreightAmount, 0)
+    totalRevenue += v.trips.reduce((acc: number, t: any) => acc + t.partyFreightAmount, 0)
 
     v.expenses.forEach((e: any) => {
       switch (e.type) {

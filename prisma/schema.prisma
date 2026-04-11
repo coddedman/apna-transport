@@ -88,17 +88,17 @@ model Vehicle {
 }
 
 model Trip {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  vehicleId   String
-  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id])
+  id                 String   @id @default(cuid())
+  date               DateTime @default(now())
+  vehicleId          String
+  vehicle            Vehicle  @relation(fields: [vehicleId], references: [id])
+  projectId          String
+  project            Project  @relation(fields: [projectId], references: [id])
   weight             Float    // MT (Metric Tons)
-  partyRate          Float    @default(0) // Actual rate from client
-  ownerRate          Float    @default(0) // Rate given to vehicle owner
-  partyFreightAmount Float    @default(0) // weight * partyRate
+  ownerRate          Float    @default(0) // Revenue: Rate charged to the project/client
+  partyRate          Float    @default(0) // Cost: Default rate to pay vehicle owners
   ownerFreightAmount Float    @default(0) // weight * ownerRate
+  partyFreightAmount Float    @default(0) // weight * partyRate
 }
 
 model Expense {
