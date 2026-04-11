@@ -49,27 +49,29 @@ model User {
 }
 
 model Project {
-  id            String      @id @default(cuid())
+  id            String         @id @default(cuid())
   projectName   String
   location      String
   transporterId String
-  transporter   Transporter @relation(fields: [transporterId], references: [id])
+  transporter   Transporter    @relation(fields: [transporterId], references: [id])
   trips         Trip[]
   vehicles      Vehicle[]
   expenses      Expense[]
+  advances      OwnerAdvance[]
 }
 
 model Owner {
-  id              String      @id @default(cuid())
+  id              String          @id @default(cuid())
   ownerName       String
   phone           String
-  defaultPassword String?     // Visible to admin until owner changes password
+  defaultPassword String?         // Visible to admin until owner changes password
   transporterId   String
-  transporter     Transporter @relation(fields: [transporterId], references: [id])
-  userId          String?      @unique
-  user            User?        @relation(fields: [userId], references: [id])
+  transporter     Transporter     @relation(fields: [transporterId], references: [id])
+  userId          String?         @unique
+  user            User?           @relation(fields: [userId], references: [id])
   vehicles        Vehicle[]
   settlements     Settlement[]
+  advances        OwnerAdvance[]
 }
 
 model Vehicle {
@@ -129,4 +131,15 @@ model Settlement {
   status        SettlementStatus @default(PENDING)
   settledAt     DateTime?
   createdAt     DateTime         @default(now())
+}
+
+model OwnerAdvance {
+  id        String   @id @default(cuid())
+  date      DateTime @default(now())
+  ownerId   String
+  owner     Owner    @relation(fields: [ownerId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  amount    Float
+  remarks   String?
 }

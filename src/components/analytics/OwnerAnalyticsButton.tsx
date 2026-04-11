@@ -12,6 +12,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
 
   // Calcs
   const vehicles = owner.vehicles || []
+  const advances = owner.advances || []
   let totalTrips = 0
   let totalRevenue = 0
   let totalExpenses = 0
@@ -22,6 +23,7 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
     totalExpenses += v.expenses?.reduce((acc: number, e: any) => acc + e.amount, 0) || 0
   })
 
+  const totalAdvances = advances.reduce((acc: number, a: any) => acc + a.amount, 0)
   const settlements = owner.settlements || []
   const settledAmount = settlements
     .filter((s: any) => s.status === 'SETTLED')
@@ -67,13 +69,13 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
             <div className="stat-card-label">Total Expenses</div>
             <div className="stat-card-value" style={{ fontSize: '20px' }}>₹{totalExpenses.toLocaleString('en-IN')}</div>
           </div>
-          <div className="stat-card success" style={{ padding: '16px' }}>
-            <div className="stat-card-label">Net Profit</div>
-            <div className="stat-card-value" style={{ fontSize: '20px' }}>₹{(totalRevenue - totalExpenses).toLocaleString('en-IN')}</div>
+          <div className="stat-card advance" style={{ padding: '16px' }}>
+            <div className="stat-card-label">Owner Advances</div>
+            <div className="stat-card-value" style={{ fontSize: '20px' }}>₹{totalAdvances.toLocaleString('en-IN')}</div>
           </div>
-          <div className="stat-card info" style={{ padding: '16px' }}>
-            <div className="stat-card-label">Vehicles / Trips</div>
-            <div className="stat-card-value" style={{ fontSize: '20px' }}>{vehicles.length} / {totalTrips}</div>
+          <div className={`stat-card ${totalRevenue - totalExpenses - totalAdvances >= 0 ? 'success' : 'danger'}`} style={{ padding: '16px' }}>
+            <div className="stat-card-label">Net Payable</div>
+            <div className="stat-card-value" style={{ fontSize: '20px' }}>₹{(totalRevenue - totalExpenses - totalAdvances).toLocaleString('en-IN')}</div>
           </div>
         </div>
 
@@ -139,6 +141,34 @@ export default function OwnerAnalyticsButton({ owner }: OwnerAnalyticsProps) {
             </tbody>
           </table>
         </div>
+
+        {advances.length > 0 && (
+          <>
+            <h3 style={{ fontSize: '14px', marginBottom: '12px', color: 'var(--color-text-primary)', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>Advances Given</h3>
+            <div className="data-table-wrapper" style={{ marginBottom: '24px' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Project</th>
+                    <th>Remarks</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {advances.map((a: any, idx: number) => (
+                    <tr key={idx}>
+                      <td>{new Date(a.date).toLocaleDateString()}</td>
+                      <td>{a.project?.projectName || '—'}</td>
+                      <td style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>{a.remarks || '—'}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-accent)' }}>₹{a.amount.toLocaleString('en-IN')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="modal-footer" style={{ padding: '0', border: 'none' }}>
           <button className="btn btn-primary" onClick={() => setIsOpen(false)} style={{ width: '100%', justifyContent: 'center' }}>

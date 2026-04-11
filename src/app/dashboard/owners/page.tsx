@@ -4,6 +4,7 @@ import AddOwnerButton from '@/components/AddOwnerButton'
 import EditOwnerButton from '@/components/EditOwnerButton'
 import DeleteOwnerButton from '@/components/DeleteOwnerButton'
 import OwnerAnalyticsButton from '@/components/analytics/OwnerAnalyticsButton'
+import OwnerAdvanceButton from '@/components/OwnerAdvanceButton'
 
 export default async function OwnersPage() {
   const session = await auth()
@@ -11,34 +12,37 @@ export default async function OwnersPage() {
 
   if (!transporterId) return <div>Unauthorized</div>
 
-  const ownersData = await prisma.owner.findMany({
-    where: { transporterId },
-    include: {
-      user: { select: { email: true, mustChangePassword: true } },
-      settlements: true,
-      vehicles: {
-        include: {
-          trips: {
-            include: { project: true }
-          },
-          expenses: {
-            include: { project: true }
+  const [ownersData, projects] = await Promise.all([
+    prisma.owner.findMany({
+      where: { transporterId },
+      include: {
+        user: { select: { email: true, mustChangePassword: true } },
+        settlements: true,
+        advances: { include: { project: true } },
+        vehicles: {
+          include: {
+            trips: { include: { project: true } },
+            expenses: { include: { project: true } }
           }
         }
       }
-    }
-  })
+    }),
+    prisma.project.findMany({ where: { transporterId }, select: { id: true, projectName: true } })
+  ])
 
   // Calculate dynamic stats
   const owners = ownersData.map(o => {
     let pendingPayout = 0
-    let totalVehicles = o.vehicles.length
+    const totalVehicles = o.vehicles.length
+    const totalAdvances = o.advances.reduce((acc: number, a: any) => acc + a.amount, 0)
     
     o.vehicles.forEach(v => {
       const vehicleRevenue = v.trips.reduce((acc: number, t: any) => acc + t.totalAmount, 0)
       const vehicleExpenses = v.expenses.reduce((acc: number, e: any) => acc + e.amount, 0)
       pendingPayout += (vehicleRevenue - vehicleExpenses)
     })
+    // Deduct advances already given from pending payout
+    const netPending = Math.max(0, pendingPayout - totalAdvances)
 
     return {
       id: o.id,
@@ -50,17 +54,20 @@ export default async function OwnersPage() {
       user: o.user,
       vehicles: totalVehicles,
       status: totalVehicles > 0 ? 'active' : 'inactive',
-      pending: `₹${Math.max(0, pendingPayout).toLocaleString('en-IN')}`
+      pending: `₹${netPending.toLocaleString('en-IN')}`,
+      totalAdvances
     }
   })
 
   const totalVehiclesCount = ownersData.reduce((acc, o) => acc + o.vehicles.length, 0)
+  const totalAdvancesGiven = ownersData.reduce((acc, o) => acc + o.advances.reduce((a: number, adv: any) => a + adv.amount, 0), 0)
   const totalPendingOverall = ownersData.reduce((acc, o) => {
     let pending = 0
     o.vehicles.forEach(v => {
       pending += v.trips.reduce((a: number, t: any) => a + t.totalAmount, 0) - v.expenses.reduce((a: number, e: any) => a + e.amount, 0)
     })
-    return acc + Math.max(0, pending)
+    const advances = o.advances.reduce((a: number, adv: any) => a + adv.amount, 0)
+    return acc + Math.max(0, pending - advances)
   }, 0)
 
   return (
@@ -106,7 +113,14 @@ export default async function OwnersPage() {
               <div className="stat-card-icon purple">💸</div>
             </div>
             <div className="stat-card-value">₹{totalPendingOverall.toLocaleString('en-IN')}</div>
-            <div className="stat-card-label">Total Pending</div>
+            <div className="stat-card-label">Net Pending Payout</div>
+          </div>
+          <div className="stat-card advance">
+            <div className="stat-card-header">
+              <div className="stat-card-icon advance">💰</div>
+            </div>
+            <div className="stat-card-value">₹{totalAdvancesGiven.toLocaleString('en-IN')}</div>
+            <div className="stat-card-label">Advances Given</div>
           </div>
         </div>
 
@@ -175,6 +189,10 @@ export default async function OwnersPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <OwnerAdvanceButton
+                            owner={{ id: owner.id, ownerName: owner.name }}
+                            projects={projects}
+                          />
                           <OwnerAnalyticsButton owner={{
                             ownerName: owner.name,
                             vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({
@@ -194,6 +212,12 @@ export default async function OwnersPage() {
                             settlements: (ownersData.find(od => od.id === owner.id)?.settlements || []).map((s: any) => ({
                               status: s.status,
                               finalPayout: s.finalPayout
+                            })),
+                            advances: (ownersData.find(od => od.id === owner.id)?.advances || []).map((a: any) => ({
+                              amount: a.amount,
+                              date: a.date,
+                              remarks: a.remarks,
+                              project: a.project ? { projectName: a.project.projectName } : null
                             }))
                           }} />
                           <EditOwnerButton owner={{
