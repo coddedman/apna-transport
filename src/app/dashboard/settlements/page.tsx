@@ -1,5 +1,7 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import GenerateSettlementButton from '@/components/GenerateSettlementButton'
+import MarkSettledButton from '@/components/MarkSettledButton'
 
 export default async function SettlementsPage() {
   const session = await auth()
@@ -7,54 +9,31 @@ export default async function SettlementsPage() {
 
   if (!transporterId) return <div>Unauthorized</div>
 
-  const ownersData = await prisma.owner.findMany({
+  // Get owners for the generate dropdown
+  const owners = await prisma.owner.findMany({
     where: { transporterId },
-    include: {
-      vehicles: {
-        include: {
-          trips: true,
-          expenses: true
-        }
-      }
-    }
+    select: { id: true, ownerName: true },
+    orderBy: { ownerName: 'asc' }
   })
 
-  // Prepare dynamic settlements array based on DB records per owner
-  const settlements = ownersData.map(o => {
-    let revenue = 0
-    let fuel = 0
-    let advances = 0
-    let maintenance = 0
-    let tolls = 0
-    let tripsCount = 0
+  // Get all settlements for this transporter's owners
+  const settlements = await prisma.settlement.findMany({
+    where: {
+      owner: { transporterId }
+    },
+    include: {
+      owner: { select: { ownerName: true, vehicles: { select: { id: true } } } }
+    },
+    orderBy: { createdAt: 'desc' }
+  })
 
-    o.vehicles.forEach(v => {
-      tripsCount += v.trips.length
-      revenue += v.trips.reduce((acc, t) => acc + t.totalAmount, 0)
-      
-      v.expenses.forEach(e => {
-        if (e.type === 'FUEL') fuel += e.amount
-        else if (e.type === 'DRIVER_ADVANCE') advances += e.amount
-        else if (e.type === 'MAINTENANCE') maintenance += e.amount
-        else if (e.type === 'TOLL') tolls += e.amount
-        // OTHER excluded or mapped separately if needed
-      })
-    })
+  const totalPending = settlements
+    .filter(s => s.status === 'PENDING')
+    .reduce((acc, s) => acc + s.finalPayout, 0)
 
-    return {
-      id: o.id,
-      owner: o.ownerName,
-      period: 'All Time (Active)',
-      vehicles: o.vehicles.length,
-      trips: tripsCount,
-      revenue,
-      fuel,
-      advances,
-      maintenance,
-      tolls,
-      status: revenue > 0 || tripsCount > 0 ? 'pending' : 'no_activity'
-    }
-  }).filter(s => s.status !== 'no_activity') // Only show those with activity
+  const totalSettled = settlements
+    .filter(s => s.status === 'SETTLED')
+    .reduce((acc, s) => acc + s.finalPayout, 0)
 
   return (
     <>
@@ -66,7 +45,7 @@ export default async function SettlementsPage() {
           </div>
         </div>
         <div className="page-header-right">
-          <button className="btn btn-primary">+ Generate Settlement</button>
+          <GenerateSettlementButton owners={owners} />
         </div>
       </header>
 
@@ -92,16 +71,49 @@ export default async function SettlementsPage() {
           </div>
         </div>
 
+        {/* Stats */}
+        <div className="stats-grid" style={{ marginBottom: '20px' }}>
+          <div className="stat-card accent">
+            <div className="stat-card-header">
+              <div className="stat-card-icon accent">📋</div>
+            </div>
+            <div className="stat-card-value">{settlements.length}</div>
+            <div className="stat-card-label">Total Settlements</div>
+          </div>
+          <div className="stat-card success">
+            <div className="stat-card-header">
+              <div className="stat-card-icon success">✅</div>
+            </div>
+            <div className="stat-card-value">{settlements.filter(s => s.status === 'SETTLED').length}</div>
+            <div className="stat-card-label">Settled</div>
+          </div>
+          <div className="stat-card purple">
+            <div className="stat-card-header">
+              <div className="stat-card-icon purple">⏳</div>
+            </div>
+            <div className="stat-card-value">₹{totalPending.toLocaleString('en-IN')}</div>
+            <div className="stat-card-label">Pending Payout</div>
+          </div>
+          <div className="stat-card info">
+            <div className="stat-card-header">
+              <div className="stat-card-icon info">💰</div>
+            </div>
+            <div className="stat-card-value">₹{totalSettled.toLocaleString('en-IN')}</div>
+            <div className="stat-card-label">Total Settled</div>
+          </div>
+        </div>
+
         {/* Settlement Cards */}
         {settlements.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '50px' }}>
-            No trip or expense activity found to generate settlements.
+          <div className="card">
+            <div className="card-body" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '50px' }}>
+              No settlements generated yet. Click "+ Generate Settlement" to create one.
+            </div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {settlements.map((s) => {
-              const totalDeductions = s.fuel + s.advances + s.maintenance + s.tolls
-              const payout = s.revenue - totalDeductions
+              const totalDeductions = s.totalFuel + s.totalAdvances + s.totalMaint + s.totalTolls + s.totalOther
 
               return (
                 <div key={s.id} className="card animate-in">
@@ -110,16 +122,21 @@ export default async function SettlementsPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
                       <div>
                         <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}>
-                          {s.owner}
+                          {s.owner.ownerName}
                         </h3>
                         <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                          📅 {s.period} · {s.vehicles} vehicles · {s.trips} trips
+                          📅 {new Date(s.periodStart).toLocaleDateString('en-IN')} — {new Date(s.periodEnd).toLocaleDateString('en-IN')} · {s.owner.vehicles.length} vehicles · {s.tripsCount} trips
                         </p>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <span className={`badge ${s.status === 'settled' ? 'active' : 'fuel'}`}>
-                          {s.status === 'settled' ? '✓ Settled' : '◷ Pending'}
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span className={`badge ${s.status === 'SETTLED' ? 'active' : 'fuel'}`}>
+                          {s.status === 'SETTLED' ? '✓ Settled' : '◷ Pending'}
                         </span>
+                        {s.status === 'SETTLED' && s.settledAt && (
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                            {new Date(s.settledAt).toLocaleDateString('en-IN')}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -137,31 +154,31 @@ export default async function SettlementsPage() {
                       <div>
                         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Trip Revenue</p>
                         <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-success)', letterSpacing: '-0.02em' }}>
-                          ₹{s.revenue.toLocaleString('en-IN')}
+                          ₹{s.totalRevenue.toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
                         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Fuel</p>
                         <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-danger)' }}>
-                          -₹{s.fuel.toLocaleString('en-IN')}
+                          -₹{s.totalFuel.toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
                         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Advances</p>
                         <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-danger)' }}>
-                          -₹{s.advances.toLocaleString('en-IN')}
+                          -₹{s.totalAdvances.toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
                         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Maintenance</p>
                         <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-danger)' }}>
-                          -₹{s.maintenance.toLocaleString('en-IN')}
+                          -₹{s.totalMaint.toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div>
                         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Tolls & Others</p>
                         <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--color-danger)' }}>
-                          -₹{s.tolls.toLocaleString('en-IN')}
+                          -₹{(s.totalTolls + s.totalOther).toLocaleString('en-IN')}
                         </p>
                       </div>
                     </div>
@@ -172,9 +189,9 @@ export default async function SettlementsPage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '14px 18px',
-                      background: payout > 0 ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
+                      background: s.finalPayout > 0 ? 'rgba(16,185,129,.06)' : 'rgba(239,68,68,.06)',
                       borderRadius: 'var(--radius-md)',
-                      border: `1px solid ${payout > 0 ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}`,
+                      border: `1px solid ${s.finalPayout > 0 ? 'rgba(16,185,129,.15)' : 'rgba(239,68,68,.15)'}`,
                     }}>
                       <div>
                         <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '2px' }}>
@@ -183,17 +200,16 @@ export default async function SettlementsPage() {
                         <p style={{
                           fontSize: '24px',
                           fontWeight: 800,
-                          color: payout > 0 ? 'var(--color-success)' : 'var(--color-danger)',
+                          color: s.finalPayout > 0 ? 'var(--color-success)' : 'var(--color-danger)',
                           letterSpacing: '-0.03em',
                         }}>
-                          ₹{payout.toLocaleString('en-IN')}
+                          ₹{s.finalPayout.toLocaleString('en-IN')}
                         </p>
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        {s.status !== 'settled' && (
-                          <button className="btn btn-primary btn-sm">Mark as Settled</button>
+                        {s.status === 'PENDING' && (
+                          <MarkSettledButton settlementId={s.id} />
                         )}
-                        <button className="btn btn-secondary btn-sm">📄 Export PDF</button>
                       </div>
                     </div>
                   </div>

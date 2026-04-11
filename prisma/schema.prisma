@@ -64,9 +64,10 @@ model Owner {
   defaultPassword String?     // Visible to admin until owner changes password
   transporterId   String
   transporter     Transporter @relation(fields: [transporterId], references: [id])
-  userId          String?     @unique
-  user            User?       @relation(fields: [userId], references: [id])
+  userId          String?      @unique
+  user            User?        @relation(fields: [userId], references: [id])
   vehicles        Vehicle[]
+  settlements     Settlement[]
 }
 
 model Vehicle {
@@ -100,4 +101,28 @@ model Expense {
   amount    Float
   type      ExpenseType
   remarks   String?
+}
+
+enum SettlementStatus {
+  PENDING
+  SETTLED
+}
+
+model Settlement {
+  id            String           @id @default(cuid())
+  ownerId       String
+  owner         Owner            @relation(fields: [ownerId], references: [id])
+  periodStart   DateTime
+  periodEnd     DateTime
+  totalRevenue  Float
+  totalFuel     Float            @default(0)
+  totalAdvances Float            @default(0)
+  totalMaint    Float            @default(0)
+  totalTolls    Float            @default(0)
+  totalOther    Float            @default(0)
+  finalPayout   Float
+  tripsCount    Int              @default(0)
+  status        SettlementStatus @default(PENDING)
+  settledAt     DateTime?
+  createdAt     DateTime         @default(now())
 }
