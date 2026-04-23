@@ -3,6 +3,7 @@ import { getOwners } from '@/lib/actions/owners'
 import { getProjects } from '@/lib/actions/projects'
 import AddVehicleButton from '@/components/AddVehicleButton'
 import VehicleAnalyticsButton from '@/components/analytics/VehicleAnalyticsButton'
+import PageHeader from '@/components/PageHeader'
 
 export default async function VehiclesPage() {
   const [vehicles, owners, projects] = await Promise.all([
@@ -11,8 +12,8 @@ export default async function VehiclesPage() {
     getProjects()
   ])
 
-  const activeCount = vehicles.length // Or some other logic
-  const upcomingRenewals = 0 // In real system, query by renewal date
+  const activeCount = vehicles.length
+  const upcomingRenewals = 0
   
   const stats = [
     { label: 'Total Vehicles', value: vehicles.length.toLocaleString(), icon: '🚛', color: 'accent' },
@@ -26,20 +27,11 @@ export default async function VehiclesPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Vehicles</h1>
-            <p className="page-subtitle">Fleet registry with operational tracking</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <AddVehicleButton owners={simpleOwners} projects={simpleProjects} />
-        </div>
-      </header>
+      <PageHeader title="Vehicles" subtitle="Fleet registry with operational tracking">
+        <AddVehicleButton owners={simpleOwners} projects={simpleProjects} />
+      </PageHeader>
 
       <div className="page-body">
-        {/* Stats */}
         <div className="stats-grid">
           {stats.map((stat) => (
             <div key={stat.label} className={`stat-card ${stat.color}`}>
@@ -52,70 +44,122 @@ export default async function VehiclesPage() {
           ))}
         </div>
 
-        {/* Table */}
         <div className="card">
           <div className="card-header">
             <span className="card-title">All Vehicles</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="btn btn-secondary btn-sm">Filter by Owner</button>
-              <button className="btn btn-secondary btn-sm">🔍 Search</button>
-            </div>
           </div>
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Vehicle No.</th>
-                  <th>Owner</th>
-                  <th>Assigned Project</th>
-                  <th>Total Trips</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vehicles.length === 0 ? (
+
+          {/* Desktop table */}
+          <div className="desktop-only-table">
+            <div className="data-table-wrapper">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
-                      No vehicles found. Start by registering one.
-                    </td>
+                    <th>Vehicle No.</th>
+                    <th>Owner</th>
+                    <th>Assigned Project</th>
+                    <th>Total Trips</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  vehicles.map((v) => (
-                    <tr key={v.id}>
-                      <td><strong>{v.plateNo}</strong></td>
-                      <td>{v.owner.ownerName}</td>
-                      <td>
-                        {v.project ? (
-                          <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{v.project.projectName}</span>
-                        ) : (
-                          <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Not Assigned</span>
-                        )}
-                      </td>
-                      <td>{v.trips.length}</td>
-                      <td>
-                        <span className="badge active">● Active</span>
-                      </td>
-                      <td>
-                        <VehicleAnalyticsButton vehicle={{
-                          plateNo: v.plateNo,
-                          trips: (v.trips || []).map((t: any) => ({
-                            projectId: t.projectId,
-                            project: t.project ? { projectName: t.project.projectName } : null,
-                            partyFreightAmount: t.partyFreightAmount
-                          })),
-                          expenses: (v.expenses || []).map((e: any) => ({
-                            projectId: e.projectId,
-                            project: e.project ? { projectName: e.project.projectName } : null,
-                            amount: e.amount
-                          }))
-                        }} />
+                </thead>
+                <tbody>
+                  {vehicles.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
+                        No vehicles found. Start by registering one.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    vehicles.map((v) => (
+                      <tr key={v.id}>
+                        <td><strong>{v.plateNo}</strong></td>
+                        <td>{v.owner.ownerName}</td>
+                        <td>
+                          {v.project ? (
+                            <span style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{v.project.projectName}</span>
+                          ) : (
+                            <span style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>Not Assigned</span>
+                          )}
+                        </td>
+                        <td>{v.trips.length}</td>
+                        <td><span className="badge active">● Active</span></td>
+                        <td>
+                          <VehicleAnalyticsButton vehicle={{
+                            plateNo: v.plateNo,
+                            trips: (v.trips || []).map((t: any) => ({
+                              projectId: t.projectId,
+                              project: t.project ? { projectName: t.project.projectName } : null,
+                              partyFreightAmount: t.partyFreightAmount
+                            })),
+                            expenses: (v.expenses || []).map((e: any) => ({
+                              projectId: e.projectId,
+                              project: e.project ? { projectName: e.project.projectName } : null,
+                              amount: e.amount
+                            }))
+                          }} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="mobile-only-cards">
+            {vehicles.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px 20px' }}>
+                No vehicles found. Start by registering one.
+              </div>
+            ) : (
+              <div className="mobile-card-list">
+                {vehicles.map((v) => (
+                  <div key={v.id} className="mobile-record-card">
+                    <div className="mobile-card-header">
+                      <div className="mobile-card-title">
+                        <span>🚛</span>
+                        <span className="vehicle-plate">{v.plateNo}</span>
+                      </div>
+                      <span className="badge active" style={{ fontSize: '10px' }}>● Active</span>
+                    </div>
+                    <div className="mobile-card-body">
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Owner</span>
+                        <span className="mobile-card-field-value">{v.owner.ownerName}</span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Trips</span>
+                        <span className="mobile-card-field-value highlight">{v.trips.length}</span>
+                      </div>
+                      <div className="mobile-card-field" style={{ gridColumn: '1 / -1' }}>
+                        <span className="mobile-card-field-label">Project</span>
+                        <span className="mobile-card-field-value" style={{ color: v.project ? 'var(--color-accent)' : 'var(--color-text-muted)' }}>
+                          {v.project ? v.project.projectName : 'Not Assigned'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mobile-card-footer">
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{v.trips.length} trips logged</span>
+                      <VehicleAnalyticsButton vehicle={{
+                        plateNo: v.plateNo,
+                        trips: (v.trips || []).map((t: any) => ({
+                          projectId: t.projectId,
+                          project: t.project ? { projectName: t.project.projectName } : null,
+                          partyFreightAmount: t.partyFreightAmount
+                        })),
+                        expenses: (v.expenses || []).map((e: any) => ({
+                          projectId: e.projectId,
+                          project: e.project ? { projectName: e.project.projectName } : null,
+                          amount: e.amount
+                        }))
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

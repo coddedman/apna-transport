@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getVehicles } from '@/lib/actions/vehicles'
 import AddExpenseButton from '@/components/AddExpenseButton'
 import EditExpenseButton from '@/components/EditExpenseButton'
+import PageHeader from '@/components/PageHeader'
 import { ExpenseType, Prisma } from '@prisma/client'
 
 interface ExpensesPageProps {
@@ -56,6 +57,15 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     CASH_PAYMENT: 'other',
   }
 
+  const typeIcons: Record<string, string> = {
+    FUEL: '⛽',
+    DRIVER_ADVANCE: '🧑‍✈️',
+    OWNER_ADVANCE: '👤',
+    MAINTENANCE: '🔧',
+    TOLL: '🛤️',
+    CASH_PAYMENT: '💵',
+  }
+
   // Stats always computed from full unfiltered set for accuracy
   const allExpenses = await prisma.expense.findMany({
     where: { vehicle: { owner: { transporterId } } },
@@ -73,17 +83,12 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Expenses</h1>
-            <p className="page-subtitle">Log and track operational costs</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <AddExpenseButton vehicles={simpleVehicles} projects={simpleProjects} />
-        </div>
-      </header>
+      <PageHeader 
+        title="Expenses" 
+        subtitle="Log and track operational costs"
+      >
+        <AddExpenseButton vehicles={simpleVehicles} projects={simpleProjects} />
+      </PageHeader>
 
       <div className="page-body">
         {/* Stats */}
@@ -112,7 +117,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
 
         {/* Filter Bar — server-side via GET form */}
         <div className="card" style={{ marginBottom: '16px' }}>
-          <form method="GET" action="/dashboard/expenses" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', padding: '4px 0' }}>
+          <form className="expense-filter-form" method="GET" action="/dashboard/expenses" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', padding: '14px 16px' }}>
             <div className="form-group" style={{ minWidth: '140px', marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '11px' }}>Category</label>
               <select className="form-select" name="type" style={{ padding: '6px 10px', fontSize: '12px' }} defaultValue={type || ''}>
@@ -145,14 +150,14 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '11px' }}>From</label>
-              <input className="form-input" name="from" type="date" defaultValue={from || ''} style={{ padding: '6px 10px', fontSize: '12px', width: '130px' }} />
+              <input className="form-input" name="from" type="date" defaultValue={from || ''} style={{ padding: '6px 10px', fontSize: '12px' }} />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ fontSize: '11px' }}>To</label>
-              <input className="form-input" name="to" type="date" defaultValue={to || ''} style={{ padding: '6px 10px', fontSize: '12px', width: '130px' }} />
+              <input className="form-input" name="to" type="date" defaultValue={to || ''} style={{ padding: '6px 10px', fontSize: '12px' }} />
             </div>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 14px', alignSelf: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '6px', width: '100%', maxWidth: '280px' }}>
+              <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 14px', alignSelf: 'flex-end', flex: 1 }}>
                 🔍 Filter
               </button>
               {hasFilter && (
@@ -179,63 +184,136 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
               Total: <strong style={{ color: 'var(--color-text-primary)' }}>₹{expensesData.reduce((a, e) => a + e.amount, 0).toLocaleString('en-IN')}</strong>
             </span>
           </div>
-          {/* Scrollable table wrapper */}
-          <div className="data-table-wrapper" style={{ maxHeight: '520px', overflowY: 'auto' }}>
-            <table className="data-table">
-              <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                <tr>
-                  <th>Date</th>
-                  <th>Vehicle No.</th>
-                  <th>Project</th>
-                  <th>Category</th>
-                  <th>Description</th>
-                  <th style={{ textAlign: 'right' }}>Amount</th>
-                  <th style={{ textAlign: 'center' }}>Edit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expensesData.length === 0 ? (
+
+          {/* Desktop Table */}
+          <div className="desktop-only-table">
+            <div className="data-table-wrapper" style={{ maxHeight: '520px', overflowY: 'auto' }}>
+              <table className="data-table">
+                <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px' }}>
-                      No expenses found{hasFilter ? ' for selected filters.' : '.'}
-                    </td>
+                    <th>Date</th>
+                    <th>Vehicle No.</th>
+                    <th>Project</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th style={{ textAlign: 'right' }}>Amount</th>
+                    <th style={{ textAlign: 'center' }}>Edit</th>
                   </tr>
-                ) : (
-                  expensesData.map((exp) => (
-                    <tr key={exp.id}>
-                      <td>{new Date(exp.date).toLocaleDateString()}</td>
-                      <td><strong>{exp.vehicle.plateNo}</strong></td>
-                      <td>{exp.project?.projectName || '—'}</td>
-                      <td>
-                        <span className={`badge ${typeColors[exp.type] || 'other'}`}>
-                          {exp.type.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>{exp.remarks || '—'}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text-primary)' }}>₹{exp.amount.toLocaleString('en-IN')}</td>
-                      <td style={{ textAlign: 'center' }}>
-                        <EditExpenseButton
-                          expense={{
-                            id: exp.id,
-                            date: new Date(exp.date).toLocaleDateString(),
-                            rawDate: new Date(exp.date).toISOString().split('T')[0],
-                            vehicleId: exp.vehicleId,
-                            vehicle: exp.vehicle.plateNo,
-                            projectId: exp.projectId || null,
-                            project: exp.project?.projectName || '—',
-                            type: exp.type,
-                            amount: exp.amount,
-                            description: exp.remarks || exp.type,
-                          }}
-                          vehicles={simpleVehicles}
-                          projects={simpleProjects}
-                        />
+                </thead>
+                <tbody>
+                  {expensesData.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px' }}>
+                        No expenses found{hasFilter ? ' for selected filters.' : '.'}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    expensesData.map((exp) => (
+                      <tr key={exp.id}>
+                        <td>{new Date(exp.date).toLocaleDateString()}</td>
+                        <td><strong>{exp.vehicle.plateNo}</strong></td>
+                        <td>{exp.project?.projectName || '—'}</td>
+                        <td>
+                          <span className={`badge ${typeColors[exp.type] || 'other'}`}>
+                            {exp.type.replace(/_/g, ' ')}
+                          </span>
+                        </td>
+                        <td style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>{exp.remarks || '—'}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text-primary)' }}>₹{exp.amount.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <EditExpenseButton
+                            expense={{
+                              id: exp.id,
+                              date: new Date(exp.date).toLocaleDateString(),
+                              rawDate: new Date(exp.date).toISOString().split('T')[0],
+                              vehicleId: exp.vehicleId,
+                              vehicle: exp.vehicle.plateNo,
+                              projectId: exp.projectId || null,
+                              project: exp.project?.projectName || '—',
+                              type: exp.type,
+                              amount: exp.amount,
+                              description: exp.remarks || exp.type,
+                            }}
+                            vehicles={simpleVehicles}
+                            projects={simpleProjects}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="mobile-only-cards">
+            {expensesData.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px 20px' }}>
+                No expenses found{hasFilter ? ' for selected filters.' : '.'}
+              </div>
+            ) : (
+              <div className="mobile-card-list">
+                {expensesData.map((exp) => (
+                  <div key={exp.id} className="mobile-record-card">
+                    <div className="mobile-card-header">
+                      <div className="mobile-card-title">
+                        <span>{typeIcons[exp.type] || '💰'}</span>
+                        <span className="vehicle-plate">{exp.vehicle.plateNo}</span>
+                      </div>
+                      <span className="mobile-card-date">{new Date(exp.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                    </div>
+                    <div className="mobile-card-body">
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Category</span>
+                        <span className="mobile-card-field-value">
+                          <span className={`badge ${typeColors[exp.type] || 'other'}`}>
+                            {exp.type.replace(/_/g, ' ')}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Amount</span>
+                        <span className="mobile-card-field-value highlight" style={{ fontSize: '15px' }}>₹{exp.amount.toLocaleString('en-IN')}</span>
+                      </div>
+                      {exp.project && (
+                        <div className="mobile-card-field">
+                          <span className="mobile-card-field-label">Project</span>
+                          <span className="mobile-card-field-value">{exp.project.projectName}</span>
+                        </div>
+                      )}
+                      {exp.remarks && (
+                        <div className="mobile-card-field">
+                          <span className="mobile-card-field-label">Remarks</span>
+                          <span className="mobile-card-field-value">{exp.remarks}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mobile-card-footer">
+                      <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                        {new Date(exp.date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </span>
+                      <EditExpenseButton
+                        expense={{
+                          id: exp.id,
+                          date: new Date(exp.date).toLocaleDateString(),
+                          rawDate: new Date(exp.date).toISOString().split('T')[0],
+                          vehicleId: exp.vehicleId,
+                          vehicle: exp.vehicle.plateNo,
+                          projectId: exp.projectId || null,
+                          project: exp.project?.projectName || '—',
+                          type: exp.type,
+                          amount: exp.amount,
+                          description: exp.remarks || exp.type,
+                        }}
+                        vehicles={simpleVehicles}
+                        projects={simpleProjects}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

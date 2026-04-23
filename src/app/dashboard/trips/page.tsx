@@ -116,67 +116,155 @@ export default async function TripsPage() {
             <span className="card-title">Trip Records</span>
             <button className="btn btn-secondary btn-sm">📥 Export CSV</button>
           </div>
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>INVOICE NO. (Trip ID)</th>
-                  <th>VEHICLE NO.</th>
-                  <th>LR NO. (Yellow Sl No)</th>
-                  <th>Project</th>
-                  <th>NET WT (MT)</th>
-                  <th>Revenue Rate</th>
-                  <th>Payout Rate</th>
-                  <th>Total Revenue</th>
-                  <th>Total Payout</th>
-                  <th>Margin</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {trips.length === 0 ? (
+
+          {/* Mobile totals summary */}
+          <div className="mobile-totals-bar">
+            <div className="mobile-totals-grid">
+              <div className="mobile-total-item">
+                <span className="mobile-total-label">Revenue</span>
+                <span className="mobile-total-value" style={{ color: 'var(--color-success)' }}>₹{totalRevenue.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="mobile-total-item">
+                <span className="mobile-total-label">Payout</span>
+                <span className="mobile-total-value" style={{ color: 'var(--color-accent)' }}>₹{totalPayout.toLocaleString('en-IN')}</span>
+              </div>
+              <div className="mobile-total-item">
+                <span className="mobile-total-label">Profit</span>
+                <span className="mobile-total-value" style={{ color: totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{totalProfit.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop table */}
+          <div className="desktop-only-table">
+            <div className="data-table-wrapper">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <td colSpan={12} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
-                      No trips recorded yet.
-                    </td>
+                    <th>Date</th>
+                    <th>INVOICE NO. (Trip ID)</th>
+                    <th>VEHICLE NO.</th>
+                    <th>LR NO. (Yellow Sl No)</th>
+                    <th>Project</th>
+                    <th>NET WT (MT)</th>
+                    <th>Revenue Rate</th>
+                    <th>Payout Rate</th>
+                    <th>Total Revenue</th>
+                    <th>Total Payout</th>
+                    <th>Margin</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  trips.map((trip) => (
-                    <tr key={trip.id}>
-                      <td>{trip.date}</td>
-                      <td><code className="invoice-badge">{trip.invoiceNo}</code></td>
-                      <td><strong>{trip.vehicle}</strong></td>
-                      <td>{trip.lrNo}</td>
-                      <td>{trip.project}</td>
-                      <td style={{ fontWeight: 600 }}>{trip.weight}</td>
-                      <td>₹{trip.ownerRate}</td>
-                      <td>₹{trip.partyRate}</td>
-                      <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.ownerAmount.toLocaleString('en-IN')}</td>
-                      <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
-                      <td style={{ color: trip.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 700 }}>₹{trip.profit.toLocaleString('en-IN')}</td>
-                      <td>
-                        <EditTripButton 
-                          trip={trip} 
-                          vehicles={vehicles} 
-                          projects={projects.map(p => ({ id: p.id, projectName: p.projectName }))} 
-                        />
+                </thead>
+                <tbody>
+                  {trips.length === 0 ? (
+                    <tr>
+                      <td colSpan={12} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
+                        No trips recorded yet.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={5} style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>Totals</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{totalWeight.toFixed(1)}</td>
-                  <td colSpan={2}>—</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{totalRevenue.toLocaleString('en-IN')}</td>
-                  <td style={{ fontWeight: 700, color: 'var(--color-warning)' }}>₹{totalPayout.toLocaleString('en-IN')}</td>
-                  <td style={{ fontWeight: 700, color: totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{totalProfit.toLocaleString('en-IN')}</td>
-                </tr>
-              </tfoot>
-            </table>
+                  ) : (
+                    trips.map((trip) => (
+                      <tr key={trip.id}>
+                        <td>{trip.date}</td>
+                        <td><code className="invoice-badge">{trip.invoiceNo}</code></td>
+                        <td><strong>{trip.vehicle}</strong></td>
+                        <td>{trip.lrNo}</td>
+                        <td>{trip.project}</td>
+                        <td style={{ fontWeight: 600 }}>{trip.weight}</td>
+                        <td>₹{trip.ownerRate}</td>
+                        <td>₹{trip.partyRate}</td>
+                        <td style={{ color: 'var(--color-success)', fontWeight: 700 }}>₹{trip.ownerAmount.toLocaleString('en-IN')}</td>
+                        <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
+                        <td style={{ color: trip.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 700 }}>₹{trip.profit.toLocaleString('en-IN')}</td>
+                        <td>
+                          <EditTripButton 
+                            trip={trip} 
+                            vehicles={vehicles} 
+                            projects={projects.map(p => ({ id: p.id, projectName: p.projectName }))} 
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan={5} style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>Totals</td>
+                    <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{totalWeight.toFixed(1)}</td>
+                    <td colSpan={2}>—</td>
+                    <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{totalRevenue.toLocaleString('en-IN')}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--color-warning)' }}>₹{totalPayout.toLocaleString('en-IN')}</td>
+                    <td style={{ fontWeight: 700, color: totalProfit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{totalProfit.toLocaleString('en-IN')}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="mobile-only-cards">
+            {trips.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px 20px' }}>
+                No trips recorded yet.
+              </div>
+            ) : (
+              <div className="mobile-card-list">
+                {trips.map((trip) => (
+                  <div key={trip.id} className="mobile-record-card">
+                    <div className="mobile-card-header">
+                      <div className="mobile-card-title">
+                        <span>🚛</span>
+                        <span className="vehicle-plate">{trip.vehicle}</span>
+                      </div>
+                      <span className="mobile-card-date">{trip.date}</span>
+                    </div>
+                    <div className="mobile-card-body">
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Project</span>
+                        <span className="mobile-card-field-value">{trip.project}</span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Weight</span>
+                        <span className="mobile-card-field-value highlight">{trip.weight} MT</span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Revenue</span>
+                        <span className="mobile-card-field-value success">₹{trip.ownerAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Payout</span>
+                        <span className="mobile-card-field-value warning">₹{trip.partyAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                      {trip.invoiceNo !== 'N/A' && (
+                        <div className="mobile-card-field">
+                          <span className="mobile-card-field-label">Invoice</span>
+                          <span className="mobile-card-field-value"><code className="invoice-badge">{trip.invoiceNo}</code></span>
+                        </div>
+                      )}
+                      {trip.lrNo !== 'N/A' && (
+                        <div className="mobile-card-field">
+                          <span className="mobile-card-field-label">LR No.</span>
+                          <span className="mobile-card-field-value">{trip.lrNo}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mobile-card-footer">
+                      <div>
+                        <span className="mobile-card-profit-label">Margin </span>
+                        <span className="mobile-card-profit" style={{ color: trip.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                          ₹{trip.profit.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <EditTripButton 
+                        trip={trip} 
+                        vehicles={vehicles} 
+                        projects={projects.map(p => ({ id: p.id, projectName: p.projectName }))} 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
