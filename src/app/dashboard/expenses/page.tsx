@@ -6,6 +6,11 @@ import EditExpenseButton from '@/components/EditExpenseButton'
 import PageHeader from '@/components/PageHeader'
 import { ExpenseType, Prisma } from '@prisma/client'
 
+export const metadata = {
+  title: 'Expenses — Hyva Transport',
+  description: 'Log and track operational costs across your fleet',
+}
+
 interface ExpensesPageProps {
   searchParams: Promise<{
     type?: string

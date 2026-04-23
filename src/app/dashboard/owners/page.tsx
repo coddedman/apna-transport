@@ -7,15 +7,37 @@ import OwnerAnalyticsButton from '@/components/analytics/OwnerAnalyticsButton'
 import OwnerAdvanceButton from '@/components/OwnerAdvanceButton'
 import PageHeader from '@/components/PageHeader'
 
-export default async function OwnersPage() {
+export const metadata = {
+  title: 'Vehicle Owners — Hyva Transport',
+  description: 'Manage 3rd party vehicle owners and their details',
+}
+
+interface OwnersPageProps {
+  searchParams: Promise<{
+    q?: string
+  }>
+}
+
+export default async function OwnersPage({ searchParams }: OwnersPageProps) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
 
   if (!transporterId) return <div>Unauthorized</div>
 
+  const params = await searchParams
+  const searchQuery = params.q || ''
+
   const [ownersData, projects] = await Promise.all([
     prisma.owner.findMany({
-      where: { transporterId },
+      where: {
+        transporterId,
+        ...(searchQuery ? {
+          OR: [
+            { ownerName: { contains: searchQuery, mode: 'insensitive' as const } },
+            { phone: { contains: searchQuery } },
+          ]
+        } : {}),
+      },
       include: {
         user: { select: { email: true, mustChangePassword: true } },
         settlements: true,
@@ -124,119 +146,248 @@ export default async function OwnersPage() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Search Bar */}
+        <div className="card" style={{ marginBottom: '16px' }}>
+          <form method="GET" action="/dashboard/owners" style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', padding: '14px 16px' }}>
+            <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>Search by Name or Phone</label>
+              <input
+                className="form-input"
+                name="q"
+                type="text"
+                placeholder="Type owner name or phone..."
+                defaultValue={searchQuery}
+                style={{ padding: '6px 12px', fontSize: '12px' }}
+              />
+            </div>
+            <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 14px' }}>
+              🔍 Search
+            </button>
+            {searchQuery && (
+              <a href="/dashboard/owners" className="btn btn-secondary btn-sm" style={{ padding: '6px 14px', textDecoration: 'none' }}>
+                ✕ Clear
+              </a>
+            )}
+          </form>
+        </div>
+
+        {/* Desktop Table */}
         <div className="card">
           <div className="card-header">
-            <span className="card-title">All Owners</span>
-            <button className="btn btn-secondary btn-sm">🔍 Search</button>
+            <span className="card-title">
+              All Owners
+              {searchQuery && (
+                <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-accent)', marginLeft: '8px' }}>
+                  ({owners.length} results for &quot;{searchQuery}&quot;)
+                </span>
+              )}
+            </span>
           </div>
-          <div className="data-table-wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Owner Name</th>
-                  <th>Contact</th>
-                  <th>Login Email</th>
-                  <th>Default Password</th>
-                  <th>Vehicles</th>
-                  <th>Pending Payout</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {owners.length === 0 ? (
+
+          <div className="desktop-only-table">
+            <div className="data-table-wrapper">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
-                      No owners registered yet. Add one!
-                    </td>
+                    <th>Owner Name</th>
+                    <th>Contact</th>
+                    <th>Login Email</th>
+                    <th>Default Password</th>
+                    <th>Vehicles</th>
+                    <th>Pending Payout</th>
+                    <th>Actions</th>
                   </tr>
-                ) : (
-                  owners.map((owner) => (
-                    <tr key={owner.id}>
-                      <td><strong>{owner.name}</strong></td>
-                      <td>{owner.phone}</td>
-                      <td>
-                        {owner.email ? (
-                          <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{owner.email}</span>
-                        ) : (
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No login</span>
-                        )}
-                      </td>
-                      <td>
-                        {owner.defaultPassword ? (
-                          <code style={{ 
-                            fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)',
-                            background: 'rgba(245,158,11,0.08)', padding: '2px 8px',
-                            borderRadius: '4px', letterSpacing: '0.5px',
-                          }}>
-                            {owner.defaultPassword}
-                          </code>
-                        ) : owner.email && owner.mustChangePassword === false ? (
-                          <span style={{ fontSize: '11px', color: 'var(--color-success)', fontStyle: 'italic' }}>
-                            Changed ✓
-                          </span>
-                        ) : owner.email && owner.mustChangePassword === true ? (
-                          <span style={{ fontSize: '11px', color: 'var(--color-accent)', fontStyle: 'italic' }}>
-                            Not yet changed
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>—</span>
-                        )}
-                      </td>
-                      <td>{owner.vehicles} trucks</td>
-                      <td style={{ color: owner.pending !== '₹0' ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: 600 }}>
-                        {owner.pending}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          <OwnerAnalyticsButton owner={{
-                            ownerName: owner.name,
-                            vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({
-                              id: v.id,
-                              plateNo: v.plateNo,
-                              trips: (v.trips || []).map((t: any) => ({
-                                projectId: t.projectId,
-                                project: t.project ? { projectName: t.project.projectName } : null,
-                                partyFreightAmount: t.partyFreightAmount
-                              })),
-                              expenses: (v.expenses || []).map((e: any) => ({
-                                projectId: e.projectId,
-                                project: e.project ? { projectName: e.project.projectName } : null,
-                                amount: e.amount
-                              }))
-                            })),
-                            settlements: (ownersData.find(od => od.id === owner.id)?.settlements || []).map((s: any) => ({
-                              status: s.status,
-                              finalPayout: s.finalPayout
-                            })),
-                            advances: (ownersData.find(od => od.id === owner.id)?.advances || []).map((a: any) => ({
-                              id: a.id,
-                              amount: a.amount,
-                              date: a.date,
-                              remarks: a.remarks,
-                              project: a.project ? { projectName: a.project.projectName } : null
-                            }))
-                          }} />
-                          <EditOwnerButton owner={{
-                            id: owner.id,
-                            ownerName: owner.name,
-                            phone: owner.phone,
-                            defaultPassword: owner.defaultPassword,
-                            mustChangePassword: owner.mustChangePassword,
-                            user: owner.user,
-                          }} />
-                          <DeleteOwnerButton
-                            ownerId={owner.id}
-                            ownerName={owner.name}
-                            vehicleCount={owner.vehicles}
-                          />
-                        </div>
+                </thead>
+                <tbody>
+                  {owners.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
+                        {searchQuery ? `No owners found for "${searchQuery}".` : 'No owners registered yet. Add one!'}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    owners.map((owner) => (
+                      <tr key={owner.id}>
+                        <td><strong>{owner.name}</strong></td>
+                        <td>{owner.phone}</td>
+                        <td>
+                          {owner.email ? (
+                            <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{owner.email}</span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No login</span>
+                          )}
+                        </td>
+                        <td>
+                          {owner.defaultPassword ? (
+                            <code style={{ 
+                              fontSize: '12px', fontWeight: 600, color: 'var(--color-accent)',
+                              background: 'rgba(245,158,11,0.08)', padding: '2px 8px',
+                              borderRadius: '4px', letterSpacing: '0.5px',
+                            }}>
+                              {owner.defaultPassword}
+                            </code>
+                          ) : owner.email && owner.mustChangePassword === false ? (
+                            <span style={{ fontSize: '11px', color: 'var(--color-success)', fontStyle: 'italic' }}>
+                              Changed ✓
+                            </span>
+                          ) : owner.email && owner.mustChangePassword === true ? (
+                            <span style={{ fontSize: '11px', color: 'var(--color-accent)', fontStyle: 'italic' }}>
+                              Not yet changed
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>—</span>
+                          )}
+                        </td>
+                        <td>{owner.vehicles} trucks</td>
+                        <td style={{ color: owner.pending !== '₹0' ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: 600 }}>
+                          {owner.pending}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <OwnerAnalyticsButton owner={{
+                              ownerName: owner.name,
+                              vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({
+                                id: v.id,
+                                plateNo: v.plateNo,
+                                trips: (v.trips || []).map((t: any) => ({
+                                  projectId: t.projectId,
+                                  project: t.project ? { projectName: t.project.projectName } : null,
+                                  partyFreightAmount: t.partyFreightAmount
+                                })),
+                                expenses: (v.expenses || []).map((e: any) => ({
+                                  projectId: e.projectId,
+                                  project: e.project ? { projectName: e.project.projectName } : null,
+                                  amount: e.amount
+                                }))
+                              })),
+                              settlements: (ownersData.find(od => od.id === owner.id)?.settlements || []).map((s: any) => ({
+                                status: s.status,
+                                finalPayout: s.finalPayout
+                              })),
+                              advances: (ownersData.find(od => od.id === owner.id)?.advances || []).map((a: any) => ({
+                                id: a.id,
+                                amount: a.amount,
+                                date: a.date,
+                                remarks: a.remarks,
+                                project: a.project ? { projectName: a.project.projectName } : null
+                              }))
+                            }} />
+                            <EditOwnerButton owner={{
+                              id: owner.id,
+                              ownerName: owner.name,
+                              phone: owner.phone,
+                              defaultPassword: owner.defaultPassword,
+                              mustChangePassword: owner.mustChangePassword,
+                              user: owner.user,
+                            }} />
+                            <DeleteOwnerButton
+                              ownerId={owner.id}
+                              ownerName={owner.name}
+                              vehicleCount={owner.vehicles}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="mobile-only-cards">
+            {owners.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px 20px' }}>
+                {searchQuery ? `No owners found for "${searchQuery}".` : 'No owners registered yet. Add one!'}
+              </div>
+            ) : (
+              <div className="mobile-card-list">
+                {owners.map((owner) => (
+                  <div key={owner.id} className="mobile-record-card">
+                    <div className="mobile-card-header">
+                      <div className="mobile-card-title">
+                        <span>👤</span>
+                        <span className="vehicle-plate">{owner.name}</span>
+                      </div>
+                      <span className={`badge ${owner.status === 'active' ? 'active' : ''}`} style={{ fontSize: '10px' }}>
+                        {owner.status === 'active' ? '● Active' : '○ Inactive'}
+                      </span>
+                    </div>
+                    <div className="mobile-card-body">
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Phone</span>
+                        <span className="mobile-card-field-value">{owner.phone}</span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Vehicles</span>
+                        <span className="mobile-card-field-value highlight">{owner.vehicles} trucks</span>
+                      </div>
+                      <div className="mobile-card-field">
+                        <span className="mobile-card-field-label">Pending</span>
+                        <span className="mobile-card-field-value" style={{ color: owner.pending !== '₹0' ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: 600 }}>
+                          {owner.pending}
+                        </span>
+                      </div>
+                      {owner.email && (
+                        <div className="mobile-card-field">
+                          <span className="mobile-card-field-label">Email</span>
+                          <span className="mobile-card-field-value" style={{ fontSize: '11px' }}>{owner.email}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="mobile-card-footer">
+                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                        Advances: ₹{owner.totalAdvances.toLocaleString('en-IN')}
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <OwnerAnalyticsButton owner={{
+                          ownerName: owner.name,
+                          vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({
+                            id: v.id,
+                            plateNo: v.plateNo,
+                            trips: (v.trips || []).map((t: any) => ({
+                              projectId: t.projectId,
+                              project: t.project ? { projectName: t.project.projectName } : null,
+                              partyFreightAmount: t.partyFreightAmount
+                            })),
+                            expenses: (v.expenses || []).map((e: any) => ({
+                              projectId: e.projectId,
+                              project: e.project ? { projectName: e.project.projectName } : null,
+                              amount: e.amount
+                            }))
+                          })),
+                          settlements: (ownersData.find(od => od.id === owner.id)?.settlements || []).map((s: any) => ({
+                            status: s.status,
+                            finalPayout: s.finalPayout
+                          })),
+                          advances: (ownersData.find(od => od.id === owner.id)?.advances || []).map((a: any) => ({
+                            id: a.id,
+                            amount: a.amount,
+                            date: a.date,
+                            remarks: a.remarks,
+                            project: a.project ? { projectName: a.project.projectName } : null
+                          }))
+                        }} />
+                        <EditOwnerButton owner={{
+                          id: owner.id,
+                          ownerName: owner.name,
+                          phone: owner.phone,
+                          defaultPassword: owner.defaultPassword,
+                          mustChangePassword: owner.mustChangePassword,
+                          user: owner.user,
+                        }} />
+                        <DeleteOwnerButton
+                          ownerId={owner.id}
+                          ownerName={owner.name}
+                          vehicleCount={owner.vehicles}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

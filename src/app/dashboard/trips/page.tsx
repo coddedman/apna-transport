@@ -4,17 +4,50 @@ import { getVehicles } from '@/lib/actions/vehicles'
 import { getProjects } from '@/lib/actions/projects'
 import AddTripButton from '@/components/AddTripButton'
 import EditTripButton from '@/components/EditTripButton'
+import DeleteTripButton from '@/components/DeleteTripButton'
+import ExportCSVButton from '@/components/ExportCSVButton'
 import PageHeader from '@/components/PageHeader'
+import { Prisma } from '@prisma/client'
 
-export default async function TripsPage() {
+export const metadata = {
+  title: 'Trip Logger — Hyva Transport',
+  description: 'Daily trip entries with automated freight calculation',
+}
+
+interface TripsPageProps {
+  searchParams: Promise<{
+    vehicleId?: string
+    projectId?: string
+    from?: string
+    to?: string
+  }>
+}
+
+export default async function TripsPage({ searchParams }: TripsPageProps) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
 
   if (!transporterId) return <div>Unauthorized</div>
 
+  const params = await searchParams
+  const { vehicleId, projectId, from, to } = params
+
+  // Build server-side filter
+  const where: Prisma.TripWhereInput = {
+    project: { transporterId },
+    ...(vehicleId ? { vehicleId } : {}),
+    ...(projectId ? { projectId } : {}),
+    ...(from || to ? {
+      date: {
+        ...(from ? { gte: new Date(from + 'T00:00:00') } : {}),
+        ...(to   ? { lte: new Date(to   + 'T23:59:59') } : {}),
+      }
+    } : {}),
+  }
+
   const [tripsData, vehicles, projects] = await Promise.all([
     prisma.trip.findMany({
-      where: { project: { transporterId } },
+      where,
       include: {
         vehicle: true,
         project: true
@@ -57,6 +90,25 @@ export default async function TripsPage() {
   const totalPayout = trips.reduce((a, t) => a + t.partyAmount, 0)
   const totalProfit = totalRevenue - totalPayout
 
+  const simpleVehicles = vehicles.map(v => ({ id: v.id, plateNo: v.plateNo }))
+  const simpleProjects = projects.map(p => ({ id: p.id, projectName: p.projectName }))
+
+  const hasFilter = vehicleId || projectId || from || to
+
+  const csvColumns = [
+    { key: 'date', label: 'Date' },
+    { key: 'invoiceNo', label: 'Invoice No.' },
+    { key: 'vehicle', label: 'Vehicle No.' },
+    { key: 'lrNo', label: 'LR No.' },
+    { key: 'project', label: 'Project' },
+    { key: 'weight', label: 'Net Wt (MT)' },
+    { key: 'ownerRate', label: 'Revenue Rate' },
+    { key: 'partyRate', label: 'Payout Rate' },
+    { key: 'ownerAmount', label: 'Total Revenue' },
+    { key: 'partyAmount', label: 'Total Payout' },
+    { key: 'profit', label: 'Margin' },
+  ]
+
   return (
     <>
       <PageHeader 
@@ -74,7 +126,7 @@ export default async function TripsPage() {
               <div className="stat-card-icon accent">🛣️</div>
             </div>
             <div className="stat-card-value">{trips.length}</div>
-            <div className="stat-card-label">Total Trips (All time)</div>
+            <div className="stat-card-label">Total Trips{hasFilter ? ' (filtered)' : ' (All time)'}</div>
           </div>
           <div className="stat-card success">
             <div className="stat-card-header">
@@ -99,22 +151,60 @@ export default async function TripsPage() {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filter Bar — server-side via GET form */}
         <div className="card" style={{ marginBottom: '16px' }}>
-          <div className="card-body" style={{ padding: '14px 20px' }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <button className="btn btn-secondary btn-sm">Filter by Range</button>
-              <button className="btn btn-secondary btn-sm">All Vehicles</button>
-              <button className="btn btn-secondary btn-sm">All Projects</button>
+          <form className="expense-filter-form" method="GET" action="/dashboard/trips" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', padding: '14px 16px' }}>
+            <div className="form-group" style={{ minWidth: '140px', marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>Vehicle</label>
+              <select className="form-select" name="vehicleId" style={{ padding: '6px 10px', fontSize: '12px' }} defaultValue={vehicleId || ''}>
+                <option value="">All Vehicles</option>
+                {simpleVehicles.map(v => (
+                  <option key={v.id} value={v.id}>{v.plateNo}</option>
+                ))}
+              </select>
             </div>
-          </div>
+            <div className="form-group" style={{ minWidth: '140px', marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>Project</label>
+              <select className="form-select" name="projectId" style={{ padding: '6px 10px', fontSize: '12px' }} defaultValue={projectId || ''}>
+                <option value="">All Projects</option>
+                {simpleProjects.map(p => (
+                  <option key={p.id} value={p.id}>{p.projectName}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>From</label>
+              <input className="form-input" name="from" type="date" defaultValue={from || ''} style={{ padding: '6px 10px', fontSize: '12px' }} />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ fontSize: '11px' }}>To</label>
+              <input className="form-input" name="to" type="date" defaultValue={to || ''} style={{ padding: '6px 10px', fontSize: '12px' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '6px', width: '100%', maxWidth: '280px' }}>
+              <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 14px', alignSelf: 'flex-end', flex: 1 }}>
+                🔍 Filter
+              </button>
+              {hasFilter && (
+                <a href="/dashboard/trips" className="btn btn-secondary btn-sm" style={{ padding: '6px 14px', alignSelf: 'flex-end', textDecoration: 'none' }}>
+                  ✕ Clear
+                </a>
+              )}
+            </div>
+          </form>
         </div>
 
         {/* Table */}
         <div className="card">
           <div className="card-header">
-            <span className="card-title">Trip Records</span>
-            <button className="btn btn-secondary btn-sm">📥 Export CSV</button>
+            <span className="card-title">
+              Trip Records
+              {hasFilter && (
+                <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--color-accent)', marginLeft: '8px' }}>
+                  ({trips.length} results)
+                </span>
+              )}
+            </span>
+            <ExportCSVButton data={trips} filename="trips_export" columns={csvColumns} />
           </div>
 
           {/* Mobile totals summary */}
@@ -159,7 +249,7 @@ export default async function TripsPage() {
                   {trips.length === 0 ? (
                     <tr>
                       <td colSpan={12} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
-                        No trips recorded yet.
+                        No trips {hasFilter ? 'found for selected filters.' : 'recorded yet.'}
                       </td>
                     </tr>
                   ) : (
@@ -177,11 +267,14 @@ export default async function TripsPage() {
                         <td style={{ color: 'var(--color-warning)', fontWeight: 700 }}>₹{trip.partyAmount.toLocaleString('en-IN')}</td>
                         <td style={{ color: trip.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)', fontWeight: 700 }}>₹{trip.profit.toLocaleString('en-IN')}</td>
                         <td>
-                          <EditTripButton 
-                            trip={trip} 
-                            vehicles={vehicles} 
-                            projects={projects.map(p => ({ id: p.id, projectName: p.projectName }))} 
-                          />
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <EditTripButton 
+                              trip={trip} 
+                              vehicles={vehicles} 
+                              projects={simpleProjects} 
+                            />
+                            <DeleteTripButton tripId={trip.id} vehiclePlate={trip.vehicle} />
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -205,7 +298,7 @@ export default async function TripsPage() {
           <div className="mobile-only-cards">
             {trips.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px 20px' }}>
-                No trips recorded yet.
+                No trips {hasFilter ? 'found for selected filters.' : 'recorded yet.'}
               </div>
             ) : (
               <div className="mobile-card-list">
@@ -255,11 +348,14 @@ export default async function TripsPage() {
                           ₹{trip.profit.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <EditTripButton 
-                        trip={trip} 
-                        vehicles={vehicles} 
-                        projects={projects.map(p => ({ id: p.id, projectName: p.projectName }))} 
-                      />
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <EditTripButton 
+                          trip={trip} 
+                          vehicles={vehicles} 
+                          projects={simpleProjects} 
+                        />
+                        <DeleteTripButton tripId={trip.id} vehiclePlate={trip.vehicle} />
+                      </div>
                     </div>
                   </div>
                 ))}

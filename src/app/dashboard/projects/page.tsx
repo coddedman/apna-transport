@@ -3,6 +3,11 @@ import { prisma } from '@/lib/db'
 import AddProjectButton from '@/components/AddProjectButton'
 import EditProjectButton from '@/components/EditProjectButton'
 
+export const metadata = {
+  title: 'Projects — Hyva Transport',
+  description: 'Manage project sites and hauling rates',
+}
+
 export default async function ProjectsPage() {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId

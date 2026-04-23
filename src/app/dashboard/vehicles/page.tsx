@@ -5,6 +5,11 @@ import AddVehicleButton from '@/components/AddVehicleButton'
 import VehicleAnalyticsButton from '@/components/analytics/VehicleAnalyticsButton'
 import PageHeader from '@/components/PageHeader'
 
+export const metadata = {
+  title: 'Vehicles — Hyva Transport',
+  description: 'Fleet registry with operational tracking',
+}
+
 export default async function VehiclesPage() {
   const [vehicles, owners, projects] = await Promise.all([
     getVehicles(),

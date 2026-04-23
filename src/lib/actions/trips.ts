@@ -119,3 +119,24 @@ export async function updateTrip(tripId: string, formData: FormData) {
   
   return trip
 }
+
+export async function deleteTrip(tripId: string) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  // Verify trip belongs to this transporter
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, project: { transporterId } }
+  })
+
+  if (!trip) throw new Error('Trip not found')
+
+  await prisma.trip.delete({ where: { id: tripId } })
+
+  revalidatePath('/dashboard/trips')
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard/vehicles')
+  revalidatePath('/dashboard/settlements')
+}

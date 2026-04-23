@@ -3,6 +3,11 @@ import { prisma } from '@/lib/db'
 import GenerateSettlementButton from '@/components/GenerateSettlementButton'
 import MarkSettledButton from '@/components/MarkSettledButton'
 
+export const metadata = {
+  title: 'Settlements — Hyva Transport',
+  description: 'Owner reconciliation and payout generation',
+}
+
 export default async function SettlementsPage() {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId

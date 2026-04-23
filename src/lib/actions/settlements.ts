@@ -20,22 +20,31 @@ export async function generateSettlement(formData: FormData) {
   const periodStart = new Date(periodStartStr + 'T00:00:00')
   const periodEnd = new Date(periodEndStr + 'T23:59:59')
 
-  // Verify owner belongs to this transporter
-  const owner = await prisma.owner.findUnique({
-    where: { id: ownerId },
-    include: {
-      vehicles: {
-        include: {
-          trips: {
-            where: { date: { gte: periodStart, lte: periodEnd } }
-          },
-          expenses: {
-            where: { date: { gte: periodStart, lte: periodEnd } }
+  // Verify owner belongs to this transporter + fetch vehicle data
+  const [owner, ownerAdvances] = await Promise.all([
+    prisma.owner.findUnique({
+      where: { id: ownerId },
+      include: {
+        vehicles: {
+          include: {
+            trips: {
+              where: { date: { gte: periodStart, lte: periodEnd } }
+            },
+            expenses: {
+              where: { date: { gte: periodStart, lte: periodEnd } }
+            }
           }
         }
       }
-    }
-  })
+    }),
+    // Also fetch dedicated OwnerAdvance records for same period
+    prisma.ownerAdvance.findMany({
+      where: {
+        ownerId,
+        date: { gte: periodStart, lte: periodEnd }
+      }
+    })
+  ])
 
   if (!owner || owner.transporterId !== transporterId) {
     throw new Error('Owner not found')
@@ -58,12 +67,17 @@ export async function generateSettlement(formData: FormData) {
       switch (e.type) {
         case 'FUEL': totalFuel += e.amount; break
         case 'DRIVER_ADVANCE': totalAdvances += e.amount; break
+        case 'OWNER_ADVANCE': totalAdvances += e.amount; break
         case 'MAINTENANCE': totalMaint += e.amount; break
         case 'TOLL': totalTolls += e.amount; break
         case 'CASH_PAYMENT': totalOther += e.amount; break
       }
     })
   })
+
+  // Include dedicated OwnerAdvance table records in advances total
+  const ownerAdvanceTotal = ownerAdvances.reduce((acc, a) => acc + a.amount, 0)
+  totalAdvances += ownerAdvanceTotal
 
   const totalDeductions = totalFuel + totalAdvances + totalMaint + totalTolls + totalOther
   const finalPayout = totalRevenue - totalDeductions
@@ -94,7 +108,18 @@ export async function generateSettlement(formData: FormData) {
 
 export async function markSettled(settlementId: string) {
   const session = await auth()
-  if (!session) throw new Error('Unauthorized')
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  // Verify settlement belongs to this transporter's owner
+  const settlement = await prisma.settlement.findUnique({
+    where: { id: settlementId },
+    include: { owner: { select: { transporterId: true } } }
+  })
+
+  if (!settlement || settlement.owner.transporterId !== transporterId) {
+    throw new Error('Settlement not found')
+  }
 
   await prisma.settlement.update({
     where: { id: settlementId },

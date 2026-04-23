@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useLoading } from '@/lib/context/LoadingContext'
 
 const navItems = [
@@ -37,10 +37,32 @@ const navItems = [
 
 import { useSidebar } from '@/lib/context/SidebarContext'
 
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+const roleLabels: Record<string, string> = {
+  SUPER_ADMIN: 'Super Admin',
+  ORG_ADMIN: 'Transporter Admin',
+  FIELD_MANAGER: 'Field Manager',
+  OWNER: 'Vehicle Owner',
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
   const { setLoading } = useLoading()
   const { isOpen, close } = useSidebar()
+  const { data: session } = useSession()
+
+  const user = session?.user as any
+  const userName = user?.name || user?.email?.split('@')[0] || 'User'
+  const userRole = roleLabels[user?.role] || 'User'
+  const transporterName = user?.transporterName || 'Hyva Transport'
 
   const handleSignOut = () => {
     setLoading(true)
@@ -55,9 +77,9 @@ export default function Sidebar() {
       </button>
       {/* Brand */}
       <div className="sidebar-brand">
-        <div className="sidebar-brand-icon">HT</div>
+        <div className="sidebar-brand-icon">{getInitials(transporterName)}</div>
         <div className="sidebar-brand-text">
-          <span className="sidebar-brand-name">Hyva Transport</span>
+          <span className="sidebar-brand-name">{transporterName}</span>
           <span className="sidebar-brand-tag">Fleet Management</span>
         </div>
       </div>
@@ -84,10 +106,10 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <div className="sidebar-user-avatar">RS</div>
+          <div className="sidebar-user-avatar">{getInitials(userName)}</div>
           <div className="sidebar-user-info">
-            <span className="sidebar-user-name">Raja Singh</span>
-            <span className="sidebar-user-role">Transporter Admin</span>
+            <span className="sidebar-user-name">{userName}</span>
+            <span className="sidebar-user-role">{userRole}</span>
           </div>
         </div>
         <button
