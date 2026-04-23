@@ -39,6 +39,8 @@ export default async function TripsPage() {
     vehicle: t.vehicle.plateNo,
     project: t.project.projectName,
     weight: t.weight,
+    invoiceNo: t.invoiceNo || 'N/A',
+    lrNo: t.lrNo || 'N/A',
     partyRate: t.partyRate,
     ownerRate: t.ownerRate,
     partyAmount: t.partyFreightAmount,
@@ -119,9 +121,11 @@ export default async function TripsPage() {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Vehicle No.</th>
+                  <th>INVOICE NO. (Trip ID)</th>
+                  <th>VEHICLE NO.</th>
+                  <th>LR NO. (Yellow Sl No)</th>
                   <th>Project</th>
-                  <th>WT (MT)</th>
+                  <th>NET WT (MT)</th>
                   <th>Revenue Rate</th>
                   <th>Payout Rate</th>
                   <th>Total Revenue</th>
@@ -133,7 +137,7 @@ export default async function TripsPage() {
               <tbody>
                 {trips.length === 0 ? (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
+                    <td colSpan={12} style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '30px' }}>
                       No trips recorded yet.
                     </td>
                   </tr>
@@ -141,7 +145,9 @@ export default async function TripsPage() {
                   trips.map((trip) => (
                     <tr key={trip.id}>
                       <td>{trip.date}</td>
+                      <td><code className="invoice-badge">{trip.invoiceNo}</code></td>
                       <td><strong>{trip.vehicle}</strong></td>
+                      <td>{trip.lrNo}</td>
                       <td>{trip.project}</td>
                       <td style={{ fontWeight: 600 }}>{trip.weight}</td>
                       <td>₹{trip.ownerRate}</td>
@@ -162,7 +168,7 @@ export default async function TripsPage() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={3} style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>Totals</td>
+                  <td colSpan={5} style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>Totals</td>
                   <td style={{ fontWeight: 700, color: 'var(--color-text-primary)' }}>{totalWeight.toFixed(1)}</td>
                   <td colSpan={2}>—</td>
                   <td style={{ fontWeight: 700, color: 'var(--color-success)' }}>₹{totalRevenue.toLocaleString('en-IN')}</td>

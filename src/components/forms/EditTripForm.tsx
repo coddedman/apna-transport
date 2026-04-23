@@ -74,7 +74,30 @@ export default function EditTripForm({ trip, vehicles, projects, onSuccess }: Ed
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Vehicle</label>
+          <label className="form-label">INVOICE NO. (Trip ID)</label>
+          <input 
+            name="invoiceNo" 
+            type="text" 
+            className="form-input" 
+            defaultValue={trip.invoiceNo || ''}
+            placeholder="e.g. 0241117"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">LR NO. (Yellow Sl No)</label>
+          <input 
+            name="lrNo" 
+            type="text" 
+            className="form-input" 
+            defaultValue={trip.lrNo || ''}
+            placeholder="e.g. 82351"
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">VEHICLE NO.</label>
           <select name="vehicleId" className="form-select" required defaultValue={trip.vehicleId}>
             <option value="" disabled>Select vehicle</option>
             {vehicles.map(v => (
@@ -95,7 +118,7 @@ export default function EditTripForm({ trip, vehicles, projects, onSuccess }: Ed
 
       <div className="form-row">
         <div className="form-group">
-          <label className="form-label">Weight (Metric Tons)</label>
+          <label className="form-label">NET WT (MT)</label>
           <input 
             name="weight" 
             type="number" 
@@ -107,21 +130,7 @@ export default function EditTripForm({ trip, vehicles, projects, onSuccess }: Ed
             onChange={(e) => setWeight(e.target.value)}
           />
         </div>
-        <div className="form-group">
-          <label className="form-label">Owner Payout Rate (₹ / Ton)</label>
-          <input 
-            name="partyRate" 
-            type="number" 
-            step="0.01"
-            className="form-input" 
-            placeholder="0.00" 
-            defaultValue={trip.partyRate}
-            required 
-          />
-          <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-            Revenue rate is fixed per Project.
-          </p>
-        </div>
+        <div className="form-group"></div>
       </div>
       
       {error && <p style={{ color: 'var(--color-danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}

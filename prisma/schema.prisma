@@ -90,6 +90,8 @@ model Vehicle {
 model Trip {
   id                 String   @id @default(cuid())
   date               DateTime @default(now())
+  invoiceNo          String?  // External Trip ID / Invoice Number
+  lrNo               String?  // Lorry Receipt Number / Yellow Sl No
   vehicleId          String
   vehicle            Vehicle  @relation(fields: [vehicleId], references: [id])
   projectId          String

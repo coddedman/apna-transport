@@ -12,11 +12,10 @@ export async function createTrip(formData: FormData) {
   const vehicleId = formData.get('vehicleId') as string
   const projectId = formData.get('projectId') as string
   const weight = parseFloat(formData.get('weight') as string)
-  const partyRate = parseFloat(formData.get('partyRate') as string)
   const dateStr = formData.get('date') as string
   const timeStr = formData.get('time') as string
 
-  if (!vehicleId || !projectId || isNaN(weight) || isNaN(partyRate)) {
+  if (!vehicleId || !projectId || isNaN(weight)) {
     throw new Error('Missing or invalid required fields')
   }
 
@@ -24,6 +23,7 @@ export async function createTrip(formData: FormData) {
   if (!project) throw new Error('Project not found')
 
   const ownerRate = project.ownerRate
+  const partyRate = project.partyRate || 0
 
   // Combine date and time
   let tripDate = new Date()
@@ -33,6 +33,9 @@ export async function createTrip(formData: FormData) {
     tripDate = new Date(year, month - 1, day, hours, minutes)
   }
 
+  const invoiceNo = formData.get('invoiceNo') as string
+  const lrNo = formData.get('lrNo') as string
+
   const trip = await prisma.trip.create({
     data: {
       vehicleId,
@@ -40,6 +43,8 @@ export async function createTrip(formData: FormData) {
       weight,
       partyRate,
       ownerRate,
+      invoiceNo,
+      lrNo,
       partyFreightAmount: weight * partyRate,
       ownerFreightAmount: weight * ownerRate,
       date: tripDate,
@@ -63,11 +68,10 @@ export async function updateTrip(tripId: string, formData: FormData) {
   const vehicleId = formData.get('vehicleId') as string
   const projectId = formData.get('projectId') as string
   const weight = parseFloat(formData.get('weight') as string)
-  const partyRate = parseFloat(formData.get('partyRate') as string)
   const dateStr = formData.get('date') as string
   const timeStr = formData.get('time') as string
 
-  if (!tripId || !vehicleId || !projectId || isNaN(weight) || isNaN(partyRate)) {
+  if (!tripId || !vehicleId || !projectId || isNaN(weight)) {
     throw new Error('Missing or invalid required fields')
   }
 
@@ -75,6 +79,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
   if (!project || project.transporterId !== transporterId) throw new Error('Project not found')
 
   const ownerRate = project.ownerRate
+  const partyRate = project.partyRate || 0
 
   // Combine date and time
   let tripDate = undefined
@@ -83,6 +88,9 @@ export async function updateTrip(tripId: string, formData: FormData) {
     const [hours, minutes] = timeStr.split(':').map(Number)
     tripDate = new Date(year, month - 1, day, hours, minutes)
   }
+
+  const invoiceNo = formData.get('invoiceNo') as string
+  const lrNo = formData.get('lrNo') as string
 
   const trip = await prisma.trip.update({
     where: { 
@@ -95,6 +103,8 @@ export async function updateTrip(tripId: string, formData: FormData) {
       weight,
       partyRate,
       ownerRate,
+      invoiceNo,
+      lrNo,
       partyFreightAmount: weight * partyRate,
       ownerFreightAmount: weight * ownerRate,
       ...(tripDate && { date: tripDate })
