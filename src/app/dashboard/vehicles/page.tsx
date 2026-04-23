@@ -18,13 +18,13 @@ export default async function VehiclesPage() {
   ])
 
   const activeCount = vehicles.length
-  const upcomingRenewals = 0
+  const totalExpenses = vehicles.reduce((acc, v) => acc + (v.expenses?.length || 0), 0)
   
   const stats = [
     { label: 'Total Vehicles', value: vehicles.length.toLocaleString(), icon: '🚛', color: 'accent' },
     { label: 'Active Fleet', value: activeCount.toLocaleString(), icon: '✅', color: 'success' },
     { label: 'Total Trips Logged', value: vehicles.reduce((acc, v) => acc + v.trips.length, 0).toLocaleString(), icon: '🛣️', color: 'info' },
-    { label: 'Upcoming Renewals', value: upcomingRenewals.toString(), icon: '⚠️', color: 'purple' },
+    { label: 'Total Owners', value: owners.length.toLocaleString(), icon: '👤', color: 'purple' },
   ]
 
   const simpleOwners = owners.map(o => ({ id: o.id, ownerName: o.ownerName }))
