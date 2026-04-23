@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import GenerateSettlementButton from '@/components/GenerateSettlementButton'
 import MarkSettledButton from '@/components/MarkSettledButton'
+import ExportCSVButton from '@/components/ExportCSVButton'
 
 export const metadata = {
   title: 'Settlements — Hyva Transport',
@@ -40,6 +41,34 @@ export default async function SettlementsPage() {
     .filter(s => s.status === 'SETTLED')
     .reduce((acc, s) => acc + s.finalPayout, 0)
 
+  const csvData = settlements.map(s => ({
+    owner: s.owner.ownerName,
+    period: `${new Date(s.periodStart).toLocaleDateString('en-IN')} — ${new Date(s.periodEnd).toLocaleDateString('en-IN')}`,
+    trips: s.tripsCount,
+    revenue: s.totalRevenue,
+    fuel: s.totalFuel,
+    advances: s.totalAdvances,
+    maintenance: s.totalMaint,
+    tolls: s.totalTolls,
+    other: s.totalOther,
+    payout: s.finalPayout,
+    status: s.status,
+  }))
+
+  const csvColumns = [
+    { key: 'owner', label: 'Owner' },
+    { key: 'period', label: 'Period' },
+    { key: 'trips', label: 'Trips' },
+    { key: 'revenue', label: 'Revenue (₹)' },
+    { key: 'fuel', label: 'Fuel (₹)' },
+    { key: 'advances', label: 'Advances (₹)' },
+    { key: 'maintenance', label: 'Maintenance (₹)' },
+    { key: 'tolls', label: 'Tolls (₹)' },
+    { key: 'other', label: 'Other (₹)' },
+    { key: 'payout', label: 'Final Payout (₹)' },
+    { key: 'status', label: 'Status' },
+  ]
+
   return (
     <>
       <header className="page-header">
@@ -49,7 +78,8 @@ export default async function SettlementsPage() {
             <p className="page-subtitle">Owner reconciliation and payout generation</p>
           </div>
         </div>
-        <div className="page-header-right">
+        <div className="page-header-right" style={{ display: 'flex', gap: '10px' }}>
+          <ExportCSVButton data={csvData} filename="settlements_export" columns={csvColumns} />
           <GenerateSettlementButton owners={owners} />
         </div>
       </header>

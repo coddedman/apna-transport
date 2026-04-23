@@ -1,5 +1,10 @@
 import Link from 'next/link'
 
+export const metadata = {
+  title: 'Hyva Transport — Fleet Management Platform',
+  description: 'Multi-tenant fleet management platform for transport companies. Manage vehicles, log trips, track expenses, and settle owners.',
+}
+
 export default function Home() {
   return (
     <div style={{

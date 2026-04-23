@@ -76,3 +76,29 @@ export async function updateProject(projectId: string, formData: FormData) {
   revalidatePath('/dashboard')
   return project
 }
+
+export async function deleteProject(projectId: string) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, transporterId },
+    include: { _count: { select: { trips: true, vehicles: true } } }
+  })
+
+  if (!project) throw new Error('Project not found')
+
+  if (project._count.trips > 0) {
+    throw new Error(`Cannot delete: ${project._count.trips} trip(s) are linked to this project`)
+  }
+
+  if (project._count.vehicles > 0) {
+    throw new Error(`Cannot delete: ${project._count.vehicles} vehicle(s) are assigned to this project`)
+  }
+
+  await prisma.project.delete({ where: { id: projectId } })
+
+  revalidatePath('/dashboard/projects')
+  revalidatePath('/dashboard')
+}

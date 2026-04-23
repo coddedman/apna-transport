@@ -2,6 +2,8 @@ import { getVehicles } from '@/lib/actions/vehicles'
 import { getOwners } from '@/lib/actions/owners'
 import { getProjects } from '@/lib/actions/projects'
 import AddVehicleButton from '@/components/AddVehicleButton'
+import EditVehicleButton from '@/components/EditVehicleButton'
+import DeleteVehicleButton from '@/components/DeleteVehicleButton'
 import VehicleAnalyticsButton from '@/components/analytics/VehicleAnalyticsButton'
 import PageHeader from '@/components/PageHeader'
 
@@ -90,19 +92,32 @@ export default async function VehiclesPage() {
                         <td>{v.trips.length}</td>
                         <td><span className="badge active">● Active</span></td>
                         <td>
-                          <VehicleAnalyticsButton vehicle={{
-                            plateNo: v.plateNo,
-                            trips: (v.trips || []).map((t: any) => ({
-                              projectId: t.projectId,
-                              project: t.project ? { projectName: t.project.projectName } : null,
-                              partyFreightAmount: t.partyFreightAmount
-                            })),
-                            expenses: (v.expenses || []).map((e: any) => ({
-                              projectId: e.projectId,
-                              project: e.project ? { projectName: e.project.projectName } : null,
-                              amount: e.amount
-                            }))
-                          }} />
+                          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                            <VehicleAnalyticsButton vehicle={{
+                              plateNo: v.plateNo,
+                              trips: (v.trips || []).map((t: any) => ({
+                                projectId: t.projectId,
+                                project: t.project ? { projectName: t.project.projectName } : null,
+                                partyFreightAmount: t.partyFreightAmount
+                              })),
+                              expenses: (v.expenses || []).map((e: any) => ({
+                                projectId: e.projectId,
+                                project: e.project ? { projectName: e.project.projectName } : null,
+                                amount: e.amount
+                              }))
+                            }} />
+                            <EditVehicleButton
+                              vehicle={{ id: v.id, plateNo: v.plateNo, ownerId: v.owner.id, projectId: v.projectId }}
+                              owners={simpleOwners}
+                              projects={simpleProjects}
+                            />
+                            <DeleteVehicleButton
+                              vehicleId={v.id}
+                              plateNo={v.plateNo}
+                              tripCount={v.trips.length}
+                              expenseCount={v.expenses?.length || 0}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -147,19 +162,32 @@ export default async function VehiclesPage() {
                     </div>
                     <div className="mobile-card-footer">
                       <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{v.trips.length} trips logged</span>
-                      <VehicleAnalyticsButton vehicle={{
-                        plateNo: v.plateNo,
-                        trips: (v.trips || []).map((t: any) => ({
-                          projectId: t.projectId,
-                          project: t.project ? { projectName: t.project.projectName } : null,
-                          partyFreightAmount: t.partyFreightAmount
-                        })),
-                        expenses: (v.expenses || []).map((e: any) => ({
-                          projectId: e.projectId,
-                          project: e.project ? { projectName: e.project.projectName } : null,
-                          amount: e.amount
-                        }))
-                      }} />
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <VehicleAnalyticsButton vehicle={{
+                          plateNo: v.plateNo,
+                          trips: (v.trips || []).map((t: any) => ({
+                            projectId: t.projectId,
+                            project: t.project ? { projectName: t.project.projectName } : null,
+                            partyFreightAmount: t.partyFreightAmount
+                          })),
+                          expenses: (v.expenses || []).map((e: any) => ({
+                            projectId: e.projectId,
+                            project: e.project ? { projectName: e.project.projectName } : null,
+                            amount: e.amount
+                          }))
+                        }} />
+                        <EditVehicleButton
+                          vehicle={{ id: v.id, plateNo: v.plateNo, ownerId: v.owner.id, projectId: v.projectId }}
+                          owners={simpleOwners}
+                          projects={simpleProjects}
+                        />
+                        <DeleteVehicleButton
+                          vehicleId={v.id}
+                          plateNo={v.plateNo}
+                          tripCount={v.trips.length}
+                          expenseCount={v.expenses?.length || 0}
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}

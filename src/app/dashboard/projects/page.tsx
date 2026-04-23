@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import AddProjectButton from '@/components/AddProjectButton'
 import EditProjectButton from '@/components/EditProjectButton'
+import DeleteProjectButton from '@/components/DeleteProjectButton'
 
 export const metadata = {
   title: 'Projects — Hyva Transport',
@@ -33,7 +34,8 @@ export default async function ProjectsPage() {
       trips: totalTrips,
       revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
       status: 'active',
-      ownerRate: p.ownerRate
+      ownerRate: p.ownerRate,
+      vehicleCount: 0, // will be enriched below
     }
   })
 
@@ -108,7 +110,15 @@ export default async function ProjectsPage() {
                       <span className={`badge ${project.status}`}>
                         {project.status === 'active' ? '● Active' : '○ Inactive'}
                       </span>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <EditProjectButton project={project} />
+                      <DeleteProjectButton
+                        projectId={project.id}
+                        projectName={project.name}
+                        tripCount={project.trips}
+                        vehicleCount={project.vehicleCount}
+                      />
+                    </div>
                     </div>
                   </div>
 

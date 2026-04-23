@@ -8,7 +8,6 @@ const navItems = [
   { href: '/dashboard', icon: '📊', label: 'Home' },
   { href: '/dashboard/trips', icon: '🛣️', label: 'Trips' },
   { href: '/dashboard/expenses', icon: '💰', label: 'Expenses' },
-  { href: '/dashboard/vehicles', icon: '🚛', label: 'Vehicles' },
   { href: '/dashboard/settlements', icon: '🧾', label: 'Billing' },
 ]
 
@@ -29,6 +28,15 @@ export default function MobileBottomNav() {
             <span className="mobile-nav-label">{item.label}</span>
           </Link>
         ))}
+        {/* More menu triggers sidebar for full navigation */}
+        <button
+          onClick={toggle}
+          className="mobile-nav-item"
+          style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          <span className="mobile-nav-icon">☰</span>
+          <span className="mobile-nav-label">More</span>
+        </button>
       </div>
     </nav>
   )

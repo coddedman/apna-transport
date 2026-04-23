@@ -347,12 +347,132 @@ Prisma handles SQL injection prevention. XSS sanitization is a lower priority si
 
 ---
 
+## 🆕 V2 Improvements (Second Review)
+
+### 34. Expense CSV Export Missing
+
+**Status:** ✅ DONE  
+**File:** `src/app/dashboard/expenses/page.tsx`
+
+**Fixed:** Wired `ExportCSVButton` into expenses page with date, vehicle, type, project, amount, remarks columns.
+
+---
+
+### 35. Delete Vehicle / Delete Project Missing
+
+**Status:** ✅ DONE  
+**Files:** `src/lib/actions/vehicles.ts`, `src/lib/actions/projects.ts`
+
+**Fixed:** Added `deleteVehicle` and `deleteProject` server actions with ownership verification and dependency checks (cannot delete if trips/expenses/vehicles exist). Created `DeleteVehicleButton` and `DeleteProjectButton` components. Wired into both pages.
+
+---
+
+### 36. Vehicle Edit Missing
+
+**Status:** ✅ DONE  
+**Files:** `src/lib/actions/vehicles.ts`, `src/components/EditVehicleButton.tsx`
+
+**Fixed:** Added `updateVehicle` server action and `EditVehicleButton` component with modal for changing owner and project assignment. Wired into vehicles page (desktop + mobile).
+
+---
+
+### 37. No Cross-Link "View Expenses for Vehicle"
+
+**Status:** 🟠 Not Done — Low priority UX enhancement  
+
+---
+
+### 38. Owner Portal — No Settlement/Advance History
+
+**Status:** 🟠 Not Done — Medium effort, deferred  
+
+---
+
+### 39. Owner Portal — No Mobile Responsive View
+
+**Status:** 🟠 Not Done — Medium effort, deferred  
+
+---
+
+### 40. Landing Page Missing SEO Metadata
+
+**Status:** ✅ DONE  
+**File:** `src/app/page.tsx`
+
+**Fixed:** Added `export const metadata` with title and description.
+
+---
+
+### 41. Login Page Missing SEO Metadata
+
+**Status:** ✅ DONE  
+**File:** `src/app/login/layout.tsx`
+
+**Fixed:** Created login layout with metadata (client component can't export metadata directly).
+
+---
+
+### 42. createExpense Missing Ownership Check
+
+**Status:** ✅ DONE  
+**File:** `src/lib/actions/expenses.ts`
+
+**Fixed:** Added vehicle ownership verification before creating expense — prevents cross-tenant expense injection.
+
+---
+
+### 43. createVehicle No Duplicate Plate Check
+
+**Status:** ✅ DONE  
+**File:** `src/lib/actions/vehicles.ts`
+
+**Fixed:** Added duplicate plate check within the same transporter with user-friendly error message.
+
+---
+
+### 44. Settlement Page Missing CSV Export
+
+**Status:** ✅ DONE  
+**File:** `src/app/dashboard/settlements/page.tsx`
+
+**Fixed:** Added `ExportCSVButton` with all financial columns (owner, period, revenue, fuel, advances, maintenance, tolls, other, payout, status).
+
+---
+
+### 45. Mobile Bottom Nav — Missing Owners Link
+
+**Status:** ✅ DONE  
+**File:** `src/components/MobileBottomNav.tsx`
+
+**Fixed:** Replaced Vehicles direct link with a "☰ More" button that opens the sidebar for full navigation (Owners, Vehicles, Projects, etc.).
+
+---
+
+## 📊 V2 Priority Matrix
+
+| Priority | Item | Status | Effort | Impact |
+|----------|------|--------|--------|--------|
+| **P0** | #42 createExpense ownership check | ✅ Done | Low | 🔴 Security |
+| **P1** | #34 Expense CSV export | ✅ Done | Low | Medium |
+| **P1** | #40–41 Missing SEO metadata | ✅ Done | Low | Low |
+| **P1** | #43 Duplicate plate check | ✅ Done | Low | Medium |
+| **P1** | #44 Settlement CSV export | ✅ Done | Low | High |
+| **P2** | #35 Delete vehicle/project | ✅ Done | Medium | Medium |
+| **P2** | #36 Edit vehicle | ✅ Done | Medium | Medium |
+| **P2** | #38–39 Owner portal improvements | 🟠 Pending | Medium | High |
+| **P3** | #45 Mobile nav improvements | ✅ Done | Low | Low |
+| **P3** | #37 Cross-link expenses | 🟠 Pending | Low | Low |
+
+---
+
 ## Summary
 
-- **✅ Done:** 16 items (P0-P2 critical + quick wins)
-- **🟠 Pending:** 17 items (schema migrations, performance optimizations, new features)
+- **✅ V1 Done:** 16 items
+- **✅ V2 Done:** 10 items
+- **Total Implemented:** 26 of 45 items
+- **🟠 Pending:** 19 items (schema migrations, owner portal, perf, new features)
 - **Build Status:** ✅ Compiles successfully
 
 ---
 
-*Document updated 23 April 2026 after implementation pass.*
+*Document updated 23 April 2026 — V2 implementation complete.*

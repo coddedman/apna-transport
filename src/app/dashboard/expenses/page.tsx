@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { getVehicles } from '@/lib/actions/vehicles'
 import AddExpenseButton from '@/components/AddExpenseButton'
 import EditExpenseButton from '@/components/EditExpenseButton'
+import ExportCSVButton from '@/components/ExportCSVButton'
 import PageHeader from '@/components/PageHeader'
 import { ExpenseType, Prisma } from '@prisma/client'
 
@@ -85,6 +86,24 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const simpleProjects = projects.map(p => ({ id: p.id, projectName: p.projectName }))
 
   const hasFilter = type || vehicleId || projectId || from || to
+
+  const csvData = expensesData.map(e => ({
+    date: new Date(e.date).toLocaleDateString('en-IN'),
+    vehicle: e.vehicle.plateNo,
+    type: e.type.replace(/_/g, ' '),
+    project: e.project?.projectName || '—',
+    amount: e.amount,
+    remarks: e.remarks || '',
+  }))
+
+  const csvColumns = [
+    { key: 'date', label: 'Date' },
+    { key: 'vehicle', label: 'Vehicle' },
+    { key: 'type', label: 'Category' },
+    { key: 'project', label: 'Project' },
+    { key: 'amount', label: 'Amount (₹)' },
+    { key: 'remarks', label: 'Remarks' },
+  ]
 
   return (
     <>
@@ -185,9 +204,12 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 </span>
               )}
             </span>
-            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-              Total: <strong style={{ color: 'var(--color-text-primary)' }}>₹{expensesData.reduce((a, e) => a + e.amount, 0).toLocaleString('en-IN')}</strong>
-            </span>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                Total: <strong style={{ color: 'var(--color-text-primary)' }}>₹{expensesData.reduce((a, e) => a + e.amount, 0).toLocaleString('en-IN')}</strong>
+              </span>
+              <ExportCSVButton data={csvData} filename="expenses_export" columns={csvColumns} />
+            </div>
           </div>
 
           {/* Desktop Table */}

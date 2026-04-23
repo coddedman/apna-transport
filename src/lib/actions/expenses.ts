@@ -21,6 +21,12 @@ export async function createExpense(formData: FormData) {
     throw new Error('Missing or invalid required fields')
   }
 
+  // Verify vehicle belongs to this transporter
+  const vehicle = await prisma.vehicle.findFirst({
+    where: { id: vehicleId, owner: { transporterId } }
+  })
+  if (!vehicle) throw new Error('Vehicle not found')
+
   const expenseDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date()
 
   const expense = await prisma.expense.create({
