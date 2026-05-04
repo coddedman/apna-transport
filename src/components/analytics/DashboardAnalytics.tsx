@@ -846,11 +846,11 @@ export default function DashboardAnalytics({ initialData }: Props) {
                   <div className="analytics-kpi-label">Avg Revenue/Vehicle</div>
                 </div>
               </div>
-              <div className="analytics-kpi info">
-                <div className="analytics-kpi-icon">🛣️</div>
+              <div className="analytics-kpi warning">
+                <div className="analytics-kpi-icon">⛽</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">{data.revenueByVehicle.length > 0 ? Math.round(data.totalTrips / data.revenueByVehicle.length) : 0}</div>
-                  <div className="analytics-kpi-label">Avg Trips/Vehicle</div>
+                  <div className="analytics-kpi-value">₹{data.revenueByVehicle.reduce((a, v) => a + v.fuel, 0).toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-label">Total Fuel Cost</div>
                 </div>
               </div>
               <div className="analytics-kpi purple">
@@ -862,53 +862,103 @@ export default function DashboardAnalytics({ initialData }: Props) {
               </div>
             </div>
 
-            <div className="analytics-card" style={{ marginBottom: 16 }}>
-              <div className="analytics-card-header">
-                <span className="analytics-card-title">🚛 Vehicle Revenue Comparison</span>
+            {/* Per-vehicle expense breakdown cards */}
+            {data.revenueByVehicle.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 12 }}>⛽ Per-Vehicle Expense Breakdown</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+                  {data.revenueByVehicle.map((v, i) => {
+                    const totalExp = v.fuel + v.maintenance + v.toll + v.driverAdvance + v.otherExp
+                    const maxBar = Math.max(v.fuel, v.maintenance, v.toll, v.driverAdvance, v.otherExp, 1)
+                    const expRows = [
+                      { label: '⛽ Fuel', value: v.fuel, color: '#f59e0b' },
+                      { label: '🔧 Maintenance', value: v.maintenance, color: '#ec4899' },
+                      { label: '🛣️ Toll', value: v.toll, color: '#10b981' },
+                      { label: '👤 Driver Advance', value: v.driverAdvance, color: '#3b82f6' },
+                      { label: '📦 Other', value: v.otherExp, color: '#64748b' },
+                    ].filter(r => r.value > 0)
+                    return (
+                      <div key={i} style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                          <div>
+                            <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text-primary)' }}>🚛 {v.plateNo}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{v.trips} trips · {v.weight.toFixed(1)} MT</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#10b981' }}>₹{v.revenue.toLocaleString('en-IN')}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>revenue</div>
+                          </div>
+                        </div>
+                        {expRows.length === 0 ? (
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>No expenses recorded</div>
+                        ) : expRows.map(row => (
+                          <div key={row.label} style={{ marginBottom: 6 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: 3 }}>
+                              <span style={{ color: 'var(--color-text-muted)' }}>{row.label}</span>
+                              <span style={{ fontWeight: 700, color: row.color }}>₹{row.value.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 100, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${(row.value / maxBar) * 100}%`, background: row.color, borderRadius: 100 }} />
+                            </div>
+                          </div>
+                        ))}
+                        {totalExp > 0 && (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+                            <div style={{ flex: 1, textAlign: 'center', background: 'rgba(245,158,11,0.06)', borderRadius: 8, padding: '6px 4px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#f59e0b' }}>{v.trips > 0 ? `₹${Math.round(v.fuel / v.trips).toLocaleString('en-IN')}` : '—'}</div>
+                              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: 1 }}>Fuel/Trip</div>
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'center', background: 'rgba(239,68,68,0.06)', borderRadius: 8, padding: '6px 4px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#ef4444' }}>{v.weight > 0 ? `₹${Math.round(totalExp / v.weight).toLocaleString('en-IN')}` : '—'}</div>
+                              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: 1 }}>Exp/MT</div>
+                            </div>
+                            <div style={{ flex: 1, textAlign: 'center', background: 'rgba(16,185,129,0.06)', borderRadius: 8, padding: '6px 4px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#10b981' }}>{v.revenue > 0 ? `${Math.round((v.profit / v.revenue) * 100)}%` : '—'}</div>
+                              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: 1 }}>Margin</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="analytics-card-body">
-                {data.revenueByVehicle.length === 0 ? (
-                  <div className="analytics-empty">No vehicle data</div>
-                ) : (
-                  <BarChart
-                    data={data.revenueByVehicle.slice(0, 15).map(v => ({ label: v.plateNo.slice(-4), value: v.revenue }))}
-                    color="var(--color-accent)"
-                    height={220}
-                  />
-                )}
-              </div>
-            </div>
+            )}
 
+            {/* Full sortable table */}
             <div className="analytics-card">
               <div className="analytics-card-header">
                 <span className="analytics-card-title">📋 Full Vehicle Performance</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{data.revenueByVehicle.length} vehicles</span>
               </div>
               <div className="analytics-card-body analytics-card-body-table">
                 <table className="data-table">
                   <thead>
                     <tr>
                       <th>Vehicle</th>
-                      <th>Owner</th>
                       <th onClick={() => handleSort('trips')} className="sortable-th" style={{ textAlign: 'right' }}>Trips <SortIcon field="trips" /></th>
                       <th onClick={() => handleSort('weight')} className="sortable-th" style={{ textAlign: 'right' }}>Weight <SortIcon field="weight" /></th>
                       <th onClick={() => handleSort('revenue')} className="sortable-th" style={{ textAlign: 'right' }}>Revenue <SortIcon field="revenue" /></th>
-                      <th onClick={() => handleSort('expenses')} className="sortable-th" style={{ textAlign: 'right' }}>Expenses <SortIcon field="expenses" /></th>
-                      <th onClick={() => handleSort('profit')} className="sortable-th" style={{ textAlign: 'right' }}>Profit <SortIcon field="profit" /></th>
+                      <th style={{ textAlign: 'right' }}>⛽ Fuel</th>
+                      <th onClick={() => handleSort('expenses')} className="sortable-th" style={{ textAlign: 'right' }}>Total Exp <SortIcon field="expenses" /></th>
+                      <th onClick={() => handleSort('profit')} className="sortable-th" style={{ textAlign: 'right' }}>Net <SortIcon field="profit" /></th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortArray(data.revenueByVehicle, sortBy).map((v, i) => (
                       <tr key={i}>
                         <td><strong>{v.plateNo}</strong></td>
-                        <td style={{ color: 'var(--color-text-muted)' }}>{v.ownerName}</td>
-                        <td style={{ textAlign: 'right' }}>{v.trips}</td>
-                        <td style={{ textAlign: 'right' }}>{v.weight.toFixed(1)} MT</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <span style={{ background: 'rgba(59,130,246,.1)', color: 'var(--color-info)', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{v.trips}</span>
+                        </td>
+                        <td style={{ textAlign: 'right', fontSize: '12px' }}>{v.weight.toFixed(1)} MT</td>
                         <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{v.revenue.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{v.fuel > 0 ? `₹${v.fuel.toLocaleString('en-IN')}` : '—'}</td>
                         <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>₹{v.expenses.toLocaleString('en-IN')}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: v.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{v.profit.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700, color: v.profit >= 0 ? '#f59e0b' : 'var(--color-danger)' }}>₹{v.profit.toLocaleString('en-IN')}</td>
                       </tr>
                     ))}
-                    {data.revenueByVehicle.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center' }}>No data</td></tr>}
+                    {data.revenueByVehicle.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)' }}>No vehicle data</td></tr>}
                   </tbody>
                 </table>
               </div>

@@ -280,19 +280,7 @@ export default async function VehiclesPage({ searchParams }: VehiclesPageProps) 
 
                   {/* Actions */}
                   <div className="vehicle-perf-actions">
-                    <VehicleAnalyticsButton vehicle={{
-                      plateNo: v.plateNo,
-                      trips: (v.rawTrips || []).map((t: any) => ({
-                        projectId: t.projectId,
-                        project: t.project ? { projectName: t.project.projectName } : null,
-                        partyFreightAmount: t.partyFreightAmount
-                      })),
-                      expenses: (v.rawExpenses || []).map((e: any) => ({
-                        projectId: e.projectId,
-                        project: e.project ? { projectName: e.project.projectName } : null,
-                        amount: e.amount
-                      }))
-                    }} />
+                    <VehicleAnalyticsButton vehicle={{ id: v.id, plateNo: v.plateNo }} />
                     <EditVehicleButton
                       vehicle={{ id: v.id, plateNo: v.plateNo, ownerId: v.owner.id, projectId: v.projectId }}
                       owners={simpleOwners}

@@ -37,7 +37,8 @@ export interface AnalyticsData {
   expenseByType: { type: string; amount: number; pct: number }[]
   revenueByProject: { name: string; revenue: number; trips: number; weight: number }[]
   revenueByOwner: { name: string; revenue: number; expenses: number; trips: number; profit: number }[]
-  revenueByVehicle: { plateNo: string; ownerName: string; revenue: number; expenses: number; trips: number; weight: number; profit: number }[]
+  revenueByVehicle: { plateNo: string; ownerName: string; revenue: number; expenses: number; trips: number; weight: number; profit: number; fuel: number; maintenance: number; toll: number; driverAdvance: number; otherExp: number }[]
+  vehicleExpenseBreakdown: { vehicleId: string; plateNo: string; type: string; amount: number }[]
 
   // Top Performers
   topVehicles: { plateNo: string; revenue: number; trips: number }[]
@@ -151,6 +152,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     revenueByProjectData, // 13
     revenueByOwnerData,  // 14
     revenueByVehicleData, // 15
+    expenseByVehicleData, // 16
     timeSeriesTrips,     // 16
     timeSeriesExpenses,  // 17
     timeSeriesAdvances,  // 18
@@ -237,6 +239,13 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       _sum: { ownerFreightAmount: true, partyFreightAmount: true, weight: true },
       _count: { id: true },
       where: tripWhere,
+    }),
+
+    // Expenses by Vehicle + Type
+    prisma.expense.groupBy({
+      by: ['vehicleId', 'type'],
+      _sum: { amount: true },
+      where: expenseWhere,
     }),
 
     // Time Series data (explicitly limited to chart range)
@@ -375,19 +384,42 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     .map(o => ({ ...o, profit: o.revenue - o.expenses }))
     .sort((a, b) => b.revenue - a.revenue)
 
+  // === Vehicle Expense Breakdown by Type ===
+  const vehicleExpenseBreakdown = (expenseByVehicleData as any[]).map((e: any) => {
+    const vehicle = vehiclesList.find((veh: any) => veh.id === e.vehicleId)
+    return {
+      vehicleId: e.vehicleId,
+      plateNo: vehicle?.plateNo || 'Unknown',
+      type: e.type as string,
+      amount: e._sum.amount || 0,
+    }
+  })
+
   // === Revenue by Vehicle ===
   const revenueByVehicle = revenueByVehicleData.map(v => {
     const vehicle = vehiclesList.find(veh => veh.id === v.vehicleId)
     const rev = v._sum.ownerFreightAmount || 0
     const exp = v._sum.partyFreightAmount || 0
+    const vExpenses = vehicleExpenseBreakdown.filter((e: any) => e.vehicleId === v.vehicleId)
+    const fuel = vExpenses.find((e: any) => e.type === 'FUEL')?.amount || 0
+    const maintenance = vExpenses.find((e: any) => e.type === 'MAINTENANCE')?.amount || 0
+    const toll = vExpenses.find((e: any) => e.type === 'TOLL')?.amount || 0
+    const driverAdvance = vExpenses.find((e: any) => e.type === 'DRIVER_ADVANCE')?.amount || 0
+    const otherExp = vExpenses.filter((e: any) => !['FUEL','MAINTENANCE','TOLL','DRIVER_ADVANCE'].includes(e.type)).reduce((a: number, e: any) => a + e.amount, 0)
+    const totalRunningExp = fuel + maintenance + toll + driverAdvance + otherExp
     return {
       plateNo: vehicle?.plateNo || 'Unknown',
-      ownerName: '—', // We'd need another join for this or separate mapping
+      ownerName: '—',
       revenue: rev,
-      expenses: exp,
+      expenses: totalRunningExp,
       trips: v._count.id || 0,
       weight: v._sum.weight || 0,
-      profit: rev - exp,
+      profit: rev - totalRunningExp,
+      fuel,
+      maintenance,
+      toll,
+      driverAdvance,
+      otherExp,
     }
   }).sort((a, b) => b.revenue - a.revenue)
 
@@ -427,6 +459,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     revenueByProject,
     revenueByOwner,
     revenueByVehicle,
+    vehicleExpenseBreakdown,
     topVehicles,
     topProjects,
     recentTrips: recentTripsData.map(t => {
