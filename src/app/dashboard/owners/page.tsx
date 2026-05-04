@@ -155,7 +155,14 @@ export default async function OwnersPage({ searchParams }: OwnersPageProps) {
           </div>
           <div className="stat-card info">
             <div className="stat-card-header">
-              <div className="stat-card-icon info">💰</div>
+              <div className="stat-card-icon info">🛣️</div>
+            </div>
+            <div className="stat-card-value">{totalTripsAll}</div>
+            <div className="stat-card-label">Total Trips</div>
+          </div>
+          <div className="stat-card teal">
+            <div className="stat-card-header">
+              <div className="stat-card-icon teal">💰</div>
             </div>
             <div className="stat-card-value">₹{totalRevenueAll.toLocaleString('en-IN')}</div>
             <div className="stat-card-label">Total Revenue</div>
@@ -211,9 +218,11 @@ export default async function OwnersPage({ searchParams }: OwnersPageProps) {
               </span>
             )}
           </h2>
-          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-            {totalTripsAll} total trips across all owners
-          </span>
+          <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+            <span>🚛 {totalVehiclesCount} vehicles</span>
+            <span>🛣️ {totalTripsAll} trips</span>
+            <span>💰 ₹{totalRevenueAll.toLocaleString('en-IN')} revenue</span>
+          </div>
         </div>
 
         {owners.length === 0 ? (
@@ -378,34 +387,7 @@ export default async function OwnersPage({ searchParams }: OwnersPageProps) {
 
                   {/* Actions */}
                   <div className="owner-profile-actions">
-                    <OwnerAnalyticsButton owner={{
-                      ownerName: owner.name,
-                      vehicles: (ownersData.find(od => od.id === owner.id)?.vehicles || []).map((v: any) => ({
-                        id: v.id,
-                        plateNo: v.plateNo,
-                        trips: (v.trips || []).map((t: any) => ({
-                          projectId: t.projectId,
-                          project: t.project ? { projectName: t.project.projectName } : null,
-                          partyFreightAmount: t.partyFreightAmount
-                        })),
-                        expenses: (v.expenses || []).map((e: any) => ({
-                          projectId: e.projectId,
-                          project: e.project ? { projectName: e.project.projectName } : null,
-                          amount: e.amount
-                        }))
-                      })),
-                      settlements: (ownersData.find(od => od.id === owner.id)?.settlements || []).map((s: any) => ({
-                        status: s.status,
-                        finalPayout: s.finalPayout
-                      })),
-                      advances: (ownersData.find(od => od.id === owner.id)?.advances || []).map((a: any) => ({
-                        id: a.id,
-                        amount: a.amount,
-                        date: a.date,
-                        remarks: a.remarks,
-                        project: a.project ? { projectName: a.project.projectName } : null
-                      }))
-                    }} />
+                    <OwnerAnalyticsButton owner={{ id: owner.id, ownerName: owner.name }} />
                     <EditOwnerButton owner={{
                       id: owner.id,
                       ownerName: owner.name,

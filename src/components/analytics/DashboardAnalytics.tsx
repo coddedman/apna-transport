@@ -994,6 +994,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
         {/* ============ OWNERS TAB ============ */}
         {activeTab === 'owners' && (
           <>
+            {/* KPI Row */}
             <div className="analytics-kpi-grid analytics-kpi-grid-4">
               <div className="analytics-kpi accent">
                 <div className="analytics-kpi-icon">👤</div>
@@ -1006,14 +1007,14 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.revenueByOwner.length > 0 ? Math.round(data.totalRevenue / data.revenueByOwner.length).toLocaleString('en-IN') : 0}</div>
-                  <div className="analytics-kpi-label">Avg Earnings/Owner</div>
+                  <div className="analytics-kpi-label">Avg Earnings / Owner</div>
                 </div>
               </div>
               <div className="analytics-kpi danger">
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.revenueByOwner.length > 0 ? Math.round(data.totalExpenses / data.revenueByOwner.length).toLocaleString('en-IN') : 0}</div>
-                  <div className="analytics-kpi-label">Avg Expenses/Owner</div>
+                  <div className="analytics-kpi-label">Avg Expenses / Owner</div>
                 </div>
               </div>
               <div className="analytics-kpi purple">
@@ -1025,26 +1026,58 @@ export default function DashboardAnalytics({ initialData }: Props) {
               </div>
             </div>
 
-            <div className="analytics-card" style={{ marginBottom: 16 }}>
-              <div className="analytics-card-header">
-                <span className="analytics-card-title">👤 Owner Revenue Comparison</span>
+            {/* Visual + Table side by side when data exists */}
+            <div className="analytics-grid-2" style={{ marginBottom: 16 }}>
+              {/* Revenue Horizontal Bar */}
+              <div className="analytics-card">
+                <div className="analytics-card-header">
+                  <span className="analytics-card-title">📊 Revenue Share</span>
+                </div>
+                <div className="analytics-card-body">
+                  {data.revenueByOwner.length === 0 ? (
+                    <div className="analytics-empty">No owner data</div>
+                  ) : (
+                    <HorizontalBar
+                      data={data.revenueByOwner.map((o, i) => ({
+                        label: o.name,
+                        value: o.revenue,
+                        color: ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#ec4899'][i % 5],
+                      }))}
+                    />
+                  )}
+                </div>
               </div>
-              <div className="analytics-card-body">
-                {data.revenueByOwner.length === 0 ? (
-                  <div className="analytics-empty">No owner data</div>
-                ) : (
-                  <BarChart
-                    data={data.revenueByOwner.map(o => ({ label: o.name.length > 8 ? o.name.slice(0, 8) + '..' : o.name, value: o.revenue }))}
-                    color="#8b5cf6"
-                    height={220}
-                  />
-                )}
+
+              {/* Net Payable Horizontal Bar */}
+              <div className="analytics-card">
+                <div className="analytics-card-header">
+                  <span className="analytics-card-title">💸 Net Payable by Owner</span>
+                </div>
+                <div className="analytics-card-body">
+                  {data.revenueByOwner.length === 0 ? (
+                    <div className="analytics-empty">No owner data</div>
+                  ) : (
+                    <HorizontalBar
+                      data={data.revenueByOwner
+                        .filter(o => o.profit > 0)
+                        .map((o, i) => ({
+                          label: o.name,
+                          value: o.profit,
+                          color: ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'][i % 5],
+                        }))}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* Full Performance Table */}
             <div className="analytics-card">
               <div className="analytics-card-header">
                 <span className="analytics-card-title">📋 Owner Performance Table</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                  {data.revenueByOwner.length} owner{data.revenueByOwner.length !== 1 ? 's' : ''} · {data.totalTrips} total trips
+                </span>
               </div>
               <div className="analytics-card-body analytics-card-body-table">
                 <table className="data-table">
@@ -1052,22 +1085,61 @@ export default function DashboardAnalytics({ initialData }: Props) {
                     <tr>
                       <th>Owner</th>
                       <th onClick={() => handleSort('trips')} className="sortable-th" style={{ textAlign: 'right' }}>Trips <SortIcon field="trips" /></th>
-                      <th onClick={() => handleSort('revenue')} className="sortable-th" style={{ textAlign: 'right' }}>Owner Earnings <SortIcon field="revenue" /></th>
+                      <th onClick={() => handleSort('revenue')} className="sortable-th" style={{ textAlign: 'right' }}>Earnings <SortIcon field="revenue" /></th>
                       <th onClick={() => handleSort('expenses')} className="sortable-th" style={{ textAlign: 'right' }}>Expenses <SortIcon field="expenses" /></th>
+                      <th style={{ textAlign: 'right' }}>Margin</th>
                       <th onClick={() => handleSort('profit')} className="sortable-th" style={{ textAlign: 'right' }}>Net Payable <SortIcon field="profit" /></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortArray(data.revenueByOwner, sortBy).map((o, i) => (
-                      <tr key={i}>
-                        <td><strong>{o.name}</strong></td>
-                        <td style={{ textAlign: 'right' }}>{o.trips}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{o.revenue.toLocaleString('en-IN')}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>₹{o.expenses.toLocaleString('en-IN')}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: o.profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>₹{o.profit.toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
-                    {data.revenueByOwner.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center' }}>No data</td></tr>}
+                    {sortArray(data.revenueByOwner, sortBy).map((o, i) => {
+                      const margin = o.revenue > 0 ? ((o.profit / o.revenue) * 100).toFixed(1) : '0.0'
+                      const marginNum = parseFloat(margin)
+                      return (
+                        <tr key={i}>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{
+                                width: '28px', height: '28px', borderRadius: '50%',
+                                background: `rgba(139,92,246,0.15)`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '11px', fontWeight: 800, color: '#8b5cf6', flexShrink: 0,
+                              }}>
+                                {o.name.slice(0, 1).toUpperCase()}
+                              </div>
+                              <strong>{o.name}</strong>
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{
+                              display: 'inline-block', minWidth: '36px',
+                              background: 'rgba(59,130,246,0.1)', color: 'var(--color-info)',
+                              borderRadius: '20px', padding: '2px 8px',
+                              fontSize: '12px', fontWeight: 700,
+                            }}>{o.trips}</span>
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{o.revenue.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>₹{o.expenses.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{
+                              color: marginNum >= 30 ? 'var(--color-success)' : marginNum >= 10 ? 'var(--color-accent)' : 'var(--color-danger)',
+                              fontWeight: 700, fontSize: '12px',
+                            }}>{margin}%</span>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{
+                              fontWeight: 800, fontSize: '13px',
+                              color: o.profit > 0 ? 'var(--color-accent)' : 'var(--color-success)',
+                            }}>
+                              {o.profit > 0 ? '▲ ' : o.profit < 0 ? '▼ ' : ''}₹{Math.abs(o.profit).toLocaleString('en-IN')}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                    {data.revenueByOwner.length === 0 && (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)' }}>No owner data for the selected period</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
