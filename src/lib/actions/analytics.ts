@@ -269,7 +269,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   const totalWeight = tripsAggr._sum.weight || 0
   const totalExpenses = (expenseAggr._sum.amount || 0)
   const totalAdvances = advanceAggr._sum.amount || 0
-  const totalCombinedExpense = totalExpenses + totalAdvances + vehiclePayoutCost
+  const totalCombinedExpense = totalExpenses + totalAdvances
   const netProfit = totalRevenue - totalCombinedExpense
   const avgRevenuePerTrip = tripCount > 0 ? totalRevenue / tripCount : 0
   const avgWeightPerTrip = tripCount > 0 ? totalWeight / tripCount : 0
