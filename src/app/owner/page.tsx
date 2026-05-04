@@ -9,16 +9,7 @@ export const metadata = {
 
 export default async function OwnerPortalPage() {
   const session = await auth()
-  
-  if (!session) redirect('/login')
-
-  const user = session.user as any
-
-  // Must be an OWNER role
-  if (user.role !== 'OWNER') redirect('/dashboard')
-
-  // Force password change
-  if (user.mustChangePassword) redirect('/change-password')
+  const user = session?.user as any
 
   // Get owner record with all related data
   const owner = await prisma.owner.findUnique({

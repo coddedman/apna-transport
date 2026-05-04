@@ -1,12 +1,8 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import NextAuth from 'next-auth'
+import { authConfig } from '@/lib/auth.config'
 
-// Proxy handles low-level request routing.
-// Auth checks and mustChangePassword redirects are handled in layouts.
-export function proxy(request: NextRequest) {
-  return NextResponse.next()
-}
+export const proxy = NextAuth(authConfig).auth
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.svg).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg).*)'],
 }

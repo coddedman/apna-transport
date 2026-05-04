@@ -29,6 +29,7 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/apna_transport?schema=public
       - DIRECT_URL=postgresql://postgres:password@db:5432/apna_transport?schema=public
       - AUTH_SECRET=some-random-secret-for-nextauth
+      - AUTH_TRUST_HOST=true
       - NODE_ENV=production
     depends_on:
       db:
