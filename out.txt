@@ -1,0 +1,4 @@
+CSRF Token: 3db6c945537e7a375ea694f5950900eda44a33673a6478aacb4b87144edd2691
+Login Status: 302
+Dashboard Status: 200
+No error found. Length: 14727

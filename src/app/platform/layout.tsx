@@ -13,15 +13,6 @@ export default async function PlatformLayout({
 }) {
   const session = await auth()
 
-  if (!session) {
-    redirect('/login')
-  }
-
-  // Only SUPER_ADMIN can access /platform
-  if ((session.user as any)?.role !== 'SUPER_ADMIN') {
-    redirect('/dashboard')
-  }
-
   return (
     <div className="app-layout">
       <PlatformSidebar />

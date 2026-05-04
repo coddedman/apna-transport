@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "pkill -f 'next dev' || true && docker compose down && docker compose up -d --build",
+    "start:next": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:seed": "npx tsx prisma/seed.ts",

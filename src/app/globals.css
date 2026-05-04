@@ -2258,6 +2258,451 @@ body {
   }
 }
 
+/* ===== OWNER PROFILE CARDS ===== */
+.owner-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 20px;
+}
+
+.owner-profile-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.owner-profile-card:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.owner-profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-info));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.owner-profile-card:hover::before {
+  opacity: 1;
+}
+
+.owner-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.owner-profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-accent), #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0b1120;
+  flex-shrink: 0;
+}
+
+.owner-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.owner-profile-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.owner-profile-contact {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.owner-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.owner-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.owner-kpi-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.owner-kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.owner-finance-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  margin-bottom: 12px;
+}
+
+.owner-finance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.owner-finance-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.owner-finance-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.owner-payout-progress {
+  margin-bottom: 10px;
+}
+
+.owner-payout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.owner-payout-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.owner-payout-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.owner-payout-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.owner-payout-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--color-success), #34d399);
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.owner-vehicles-breakdown {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.owner-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.owner-vehicle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+}
+
+.owner-vehicle-row:last-child {
+  border-bottom: none;
+}
+
+.owner-vehicle-plate {
+  font-weight: 700;
+  color: var(--color-text-primary);
+  min-width: 100px;
+}
+
+.owner-vehicle-stat {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  flex: 1;
+  text-align: right;
+}
+
+.owner-profile-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== VEHICLE PERFORMANCE CARDS ===== */
+.vehicle-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.vehicle-perf-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vehicle-perf-card:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.vehicle-perf-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-success));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.vehicle-perf-card:hover::before {
+  opacity: 1;
+}
+
+.vehicle-perf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.vehicle-perf-plate-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vehicle-perf-plate-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.vehicle-perf-plate {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: 0.02em;
+}
+
+.vehicle-perf-owner {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}
+
+.vehicle-perf-project {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.vehicle-perf-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.vehicle-perf-kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.vehicle-perf-kpi-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.vehicle-perf-kpi-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.vehicle-perf-bar {
+  margin-bottom: 6px;
+}
+
+.vehicle-perf-bar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.vehicle-perf-bar-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.vehicle-perf-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--color-accent), var(--color-success));
+  transition: width 0.6s ease;
+}
+
+.vehicle-perf-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== OWNER / VEHICLE CARD RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .owner-card-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .vehicle-card-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .owner-profile-header {
+    flex-wrap: wrap;
+  }
+
+  .owner-profile-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
+  }
+
+  .owner-kpi-value {
+    font-size: 15px;
+  }
+
+  .owner-vehicle-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .owner-vehicle-plate {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .owner-vehicle-stat {
+    text-align: left;
+    flex: none;
+  }
+
+  .vehicle-perf-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .owner-kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .owner-kpi {
+    padding: 8px 4px;
+  }
+
+  .owner-kpi-value {
+    font-size: 14px;
+  }
+
+  .vehicle-perf-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* ===== INVOICE / LR BADGES ===== */
 .invoice-badge {
   display: inline-block;

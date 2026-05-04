@@ -7,7 +7,7 @@ sleep 2
 
 # Push database schema
 echo "Pushing database schema..."
-npx prisma db push --accept-data-loss
+npx prisma@6.19.3 db push --accept-data-loss
 
 # Start the application
 echo "Starting application..."

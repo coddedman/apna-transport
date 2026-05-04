@@ -12,7 +12,28 @@ export const authConfig = {
       const isProtected = isDashboard || isPlatform || isOwnerPortal || isChangePassword
 
       if (isProtected) {
-        if (isLoggedIn) return true
+        if (isLoggedIn) {
+          const user = auth?.user as any
+          if (user?.mustChangePassword && !isChangePassword) {
+            return Response.redirect(new URL('/change-password', nextUrl))
+          }
+          if (!user?.mustChangePassword && isChangePassword) {
+            return Response.redirect(new URL('/dashboard', nextUrl))
+          }
+          if (isDashboard && user?.role === 'SUPER_ADMIN') {
+            return Response.redirect(new URL('/platform', nextUrl))
+          }
+          if (isDashboard && user?.role === 'OWNER') {
+            return Response.redirect(new URL('/owner', nextUrl))
+          }
+          if (isPlatform && user?.role !== 'SUPER_ADMIN') {
+            return Response.redirect(new URL('/dashboard', nextUrl))
+          }
+          if (isOwnerPortal && user?.role !== 'OWNER') {
+            return Response.redirect(new URL('/dashboard', nextUrl))
+          }
+          return true
+        }
         return false // Redirect unauthenticated users to login page
       } else if (isLoggedIn && nextUrl.pathname === '/login') {
         // Redirect to the correct dashboard based on role
