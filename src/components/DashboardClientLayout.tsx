@@ -1,4 +1,5 @@
 'use client'
+import { SessionProvider } from 'next-auth/react'
 import { SidebarProvider, useSidebar } from '@/lib/context/SidebarContext'
 import Sidebar from '@/components/Sidebar'
 import MobileBottomNav from '@/components/MobileBottomNav'
@@ -26,8 +27,10 @@ export default function DashboardClientLayout({
   children: React.ReactNode
 }) {
   return (
-    <SidebarProvider>
-      <LayoutInner>{children}</LayoutInner>
-    </SidebarProvider>
+    <SessionProvider>
+      <SidebarProvider>
+        <LayoutInner>{children}</LayoutInner>
+      </SidebarProvider>
+    </SessionProvider>
   )
 }
