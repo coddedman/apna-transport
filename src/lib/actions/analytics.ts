@@ -329,26 +329,18 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   const dailyWeight = Array.from(weightMap.entries()).map(([date, value]) => ({ date, value }))
 
   // === Expense by Type ===
-  const totalExpenseForPct = totalCombinedExpense || 1
+  const totalExpenseForBreakdown = totalExpenses + totalAdvances || 1
   const expenseByType = expensesByType.map(e => ({
     type: e.type.replace(/_/g, ' '),
     amount: e._sum.amount || 0,
-    pct: Math.round(((e._sum.amount || 0) / totalExpenseForPct) * 100),
+    pct: Math.round(((e._sum.amount || 0) / totalExpenseForBreakdown) * 100),
   }))
-
-  if (vehiclePayoutCost > 0) {
-    expenseByType.push({
-      type: 'VEHICLE PAYOUT',
-      amount: vehiclePayoutCost,
-      pct: Math.round((vehiclePayoutCost / totalExpenseForPct) * 100),
-    })
-  }
 
   if (totalAdvances > 0) {
     expenseByType.push({
       type: 'OWNER ADVANCE',
       amount: totalAdvances,
-      pct: Math.round((totalAdvances / totalExpenseForPct) * 100),
+      pct: Math.round((totalAdvances / totalExpenseForBreakdown) * 100),
     })
   }
   expenseByType.sort((a, b) => b.amount - a.amount)
