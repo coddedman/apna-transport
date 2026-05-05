@@ -15,8 +15,9 @@ export interface AnalyticsFilters {
 export interface AnalyticsData {
   // KPI Cards
   totalTrips: number
-  totalRevenue: number
-  totalExpenses: number
+  totalRevenue: number       // ownerFreightAmount — what company pays transporter
+  ownerPayout: number        // partyFreightAmount — what transporter pays vehicle owner
+  totalExpenses: number      // running expenses + advances
   totalAdvances: number
   netProfit: number
   totalWeight: number
@@ -433,6 +434,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   return {
     totalTrips: tripCount,
     totalRevenue,
+    ownerPayout: vehiclePayoutCost,
     totalExpenses: totalCombinedExpense,
     totalAdvances,
     netProfit,
