@@ -153,7 +153,7 @@ function HorizontalBar({ data, maxValue }: { data: { label: string; value: numbe
 // Tab Definitions
 // ===========================
 
-type TabKey = 'overview' | 'revenue' | 'expenses' | 'vehicles' | 'projects' | 'owners'
+type TabKey = 'overview' | 'revenue' | 'expenses' | 'vehicles' | 'projects' | 'owners' | 'simulator'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'overview', label: 'Overview', icon: '📊' },
@@ -162,6 +162,7 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'vehicles', label: 'Vehicles', icon: '🚛' },
   { key: 'projects', label: 'Projects', icon: '📁' },
   { key: 'owners', label: 'Owners', icon: '👤' },
+  { key: 'simulator', label: 'Rate Calculator', icon: '🧮' },
 ]
 
 const PERIODS = [
@@ -435,17 +436,31 @@ export default function DashboardAnalytics({ initialData }: Props) {
             {/* KPI Grid */}
             <div className="analytics-kpi-grid">
               <div className="analytics-kpi accent">
-                <div className="analytics-kpi-icon">💰</div>
+                <div className="analytics-kpi-icon">🏢</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalRevenue.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Gross Revenue</div>
+                  <div className="analytics-kpi-label">Company Revenue</div>
+                </div>
+              </div>
+              <div className="analytics-kpi warning">
+                <div className="analytics-kpi-icon">🚛</div>
+                <div className="analytics-kpi-body">
+                  <div className="analytics-kpi-value">₹{data.ownerPayout.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-label">Owner Payout</div>
+                </div>
+              </div>
+              <div className="analytics-kpi info">
+                <div className="analytics-kpi-icon">📊</div>
+                <div className="analytics-kpi-body">
+                  <div className="analytics-kpi-value">₹{(data.totalRevenue - data.ownerPayout).toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-label">Rate Spread</div>
                 </div>
               </div>
               <div className="analytics-kpi danger">
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalExpenses.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Operational Costs</div>
+                  <div className="analytics-kpi-label">Running Expenses</div>
                 </div>
               </div>
               <div className={`analytics-kpi ${data.netProfit >= 0 ? 'success' : 'loss'}`}>
@@ -453,20 +468,6 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.netProfit.toLocaleString('en-IN')}</div>
                   <div className="analytics-kpi-label">Net Profit</div>
-                </div>
-              </div>
-              <div className="analytics-kpi info">
-                <div className="analytics-kpi-icon">🛣️</div>
-                <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">{data.totalTrips.toLocaleString()}</div>
-                  <div className="analytics-kpi-label">Total Trips</div>
-                </div>
-              </div>
-              <div className="analytics-kpi purple">
-                <div className="analytics-kpi-icon">⚖️</div>
-                <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">{data.totalWeight.toFixed(1)} MT</div>
-                  <div className="analytics-kpi-label">Weight Moved</div>
                 </div>
               </div>
               <div className="analytics-kpi teal">
@@ -496,14 +497,19 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <span className="analytics-mini-label">Projects</span>
               </div>
               <div className="analytics-mini-kpi">
-                <span className="analytics-mini-icon">💰</span>
-                <span className="analytics-mini-value">₹{Math.round(data.avgRevenuePerTrip).toLocaleString('en-IN')}</span>
-                <span className="analytics-mini-label">Revenue/Trip</span>
+                <span className="analytics-mini-icon">🛣️</span>
+                <span className="analytics-mini-value">{data.totalTrips.toLocaleString()}</span>
+                <span className="analytics-mini-label">Trips</span>
               </div>
               <div className="analytics-mini-kpi">
                 <span className="analytics-mini-icon">⚖️</span>
-                <span className="analytics-mini-value">{data.avgWeightPerTrip.toFixed(1)} MT</span>
-                <span className="analytics-mini-label">Avg Weight</span>
+                <span className="analytics-mini-value">{data.totalWeight.toFixed(1)} MT</span>
+                <span className="analytics-mini-label">Weight</span>
+              </div>
+              <div className="analytics-mini-kpi">
+                <span className="analytics-mini-icon">💰</span>
+                <span className="analytics-mini-value">₹{Math.round(data.avgRevenuePerTrip).toLocaleString('en-IN')}</span>
+                <span className="analytics-mini-label">Revenue/Trip</span>
               </div>
             </div>
 
@@ -1197,7 +1203,213 @@ export default function DashboardAnalytics({ initialData }: Props) {
           </>
         )}
 
+        {/* ============ SIMULATOR TAB ============ */}
+        {activeTab === 'simulator' && (() => {
+          // Local state for simulator is managed via data attributes to avoid hooks in conditional
+          return <SimulatorTab data={data} />
+        })()}
+
       </div>
     </div>
   )
 }
+
+// ===========================
+// Simulator Tab Component
+// ===========================
+
+const EXP_TYPE_LABELS: Record<string, string> = {
+  FUEL: '⛽ Fuel',
+  DRIVER_ADVANCE: '👤 Driver Advance',
+  OWNER_ADVANCE: '🏦 Owner Advance',
+  MAINTENANCE: '🔧 Maintenance',
+  TOLL: '🛣️ Toll',
+  CASH_PAYMENT: '💵 Cash Payment',
+}
+
+function SimulatorTab({ data }: { data: AnalyticsData }) {
+  const currentCompanyRate = data.totalWeight > 0 ? Math.round(data.totalRevenue / data.totalWeight) : 0
+  const currentOwnerRate = data.totalWeight > 0 ? Math.round(data.ownerPayout / data.totalWeight) : 0
+
+  const [companyRate, setCompanyRate] = useState<number>(currentCompanyRate || 133)
+  const [ownerRate, setOwnerRate] = useState<number>(currentOwnerRate || 125)
+  const [refundableTypes, setRefundableTypes] = useState<Set<string>>(new Set(['TOLL']))
+
+  const toggleRefundable = (type: string) => {
+    setRefundableTypes(prev => {
+      const next = new Set(prev)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
+      return next
+    })
+  }
+
+  // Calculations
+  const simCompanyRev = data.totalWeight * companyRate
+  const simOwnerPayout = data.totalWeight * ownerRate
+  const rateSpread = simCompanyRev - simOwnerPayout
+  const spreadPerMT = companyRate - ownerRate
+
+  const refundableAmount = data.expenseByType
+    .filter(e => refundableTypes.has(e.type.replace(/ /g, '_').toUpperCase()))
+    .reduce((a, e) => a + e.amount, 0)
+  const effectiveExpenses = data.totalExpenses - refundableAmount
+  const simProfit = rateSpread - effectiveExpenses
+  const simMargin = simCompanyRev > 0 ? (simProfit / simCompanyRev) * 100 : 0
+
+  // Weekly
+  const weekMap: Record<string, { trips: number; weight: number; revenue: number; expenses: number }> = {}
+  data.dailyTrips.forEach((d, i) => {
+    const dt = new Date(d.date)
+    const sun = new Date(dt); sun.setDate(dt.getDate() - dt.getDay())
+    const k = sun.toISOString().split('T')[0]
+    if (!weekMap[k]) weekMap[k] = { trips: 0, weight: 0, revenue: 0, expenses: 0 }
+    weekMap[k].trips += d.value
+    weekMap[k].weight += data.dailyWeight[i]?.value || 0
+    weekMap[k].revenue += data.dailyRevenue[i]?.value || 0
+    weekMap[k].expenses += data.dailyExpenses[i]?.value || 0
+  })
+  const weekRows = Object.entries(weekMap).sort((a, b) => b[0].localeCompare(a[0]))
+
+  const getWeekLabel = (k: string) => {
+    const d = new Date(k)
+    const e = new Date(k); e.setDate(d.getDate() + 6)
+    return `${d.getDate()} ${d.toLocaleString('en-IN',{month:'short'})} – ${e.getDate()} ${e.toLocaleString('en-IN',{month:'short'})}`
+  }
+
+  const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+  const cardStyle = { background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '20px' } as React.CSSProperties
+  const allExpTypes = ['FUEL', 'MAINTENANCE', 'TOLL', 'DRIVER_ADVANCE', 'OWNER_ADVANCE', 'CASH_PAYMENT']
+
+  const RateInput = ({ label, sub, value, onChange, color, presets }: { label: string; sub: string; value: number; onChange: (v: number) => void; color: string; presets: number[] }) => (
+    <div>
+      <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>{label}</label>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input
+          type="number" className="form-input" value={value}
+          onChange={e => onChange(parseFloat(e.target.value) || 0)}
+          style={{ width: '110px', fontSize: '16px', fontWeight: 700, padding: '8px 12px', borderColor: color }}
+          min={0} step={1}
+        />
+        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{sub}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' as const }}>
+        {presets.map(r => (
+          <button key={r} onClick={() => onChange(r)} style={{
+            padding: '3px 8px', fontSize: '10px', fontWeight: 600, borderRadius: 5, border: 'none', cursor: 'pointer',
+            background: value === r ? color : 'rgba(255,255,255,0.06)',
+            color: value === r ? '#fff' : 'var(--color-text-muted)',
+          }}>₹{r}</button>
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      {/* Settings panel */}
+      <div style={{ ...cardStyle, marginBottom: 16 }}>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>🧮 Rate Configuration</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
+          <RateInput
+            label="🏢 Company Rate (₹/MT)" sub={`Current: ₹${currentCompanyRate}/MT`}
+            value={companyRate} onChange={setCompanyRate} color="#10b981"
+            presets={[120, 125, 130, 133, 140, 150]}
+          />
+          <RateInput
+            label="🚛 Owner Rate (₹/MT)" sub={`Current: ₹${currentOwnerRate}/MT`}
+            value={ownerRate} onChange={setOwnerRate} color="#f59e0b"
+            presets={[110, 115, 120, 125, 130, 135]}
+          />
+          {/* Refundable toggles */}
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Refundable Costs</label>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+              {allExpTypes.map(type => {
+                const isRef = refundableTypes.has(type)
+                const amt = data.expenseByType.find(e => e.type.replace(/ /g, '_').toUpperCase() === type)?.amount || 0
+                return (
+                  <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '11px' }}>
+                    <input type="checkbox" checked={isRef} onChange={() => toggleRefundable(type)} style={{ width: 14, height: 14, accentColor: 'var(--color-accent)' }} />
+                    <span style={{ color: isRef ? '#10b981' : 'var(--color-text-secondary)', fontWeight: isRef ? 700 : 400, textDecoration: isRef ? 'line-through' : 'none' }}>
+                      {EXP_TYPE_LABELS[type] || type}
+                    </span>
+                    {isRef && amt > 0 && <span style={{ fontSize: '9px', background: 'rgba(16,185,129,0.12)', color: '#10b981', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>REFUND</span>}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* P&L Waterfall */}
+      <div style={{ ...cardStyle, marginBottom: 16 }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>💹 Profit & Loss Waterfall</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
+          {[
+            { label: '🏢 Company Revenue', value: simCompanyRev, color: '#10b981', sub: `${data.totalWeight.toFixed(1)} MT × ₹${companyRate}` },
+            { label: '🚛 Owner Payout', value: simOwnerPayout, color: '#f59e0b', sub: `${data.totalWeight.toFixed(1)} MT × ₹${ownerRate}` },
+            { label: '📊 Rate Spread', value: rateSpread, color: '#3b82f6', sub: `₹${spreadPerMT}/MT spread` },
+            { label: '📉 Running Expenses', value: effectiveExpenses, color: '#ef4444', sub: refundableAmount > 0 ? `−${fmt(refundableAmount)} refunded` : 'all costs' },
+            { label: '💵 Net Profit', value: simProfit, color: simProfit >= 0 ? '#f59e0b' : '#ef4444', sub: `Margin: ${simMargin.toFixed(1)}%` },
+          ].map(k => (
+            <div key={k.label} style={{ ...cardStyle, borderLeft: `3px solid ${k.color}`, padding: '12px 14px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 3 }}>{k.label}</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: k.color }}>{fmt(k.value)}</div>
+              <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{k.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Weekly P&L */}
+      <div style={cardStyle}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>📅 Weekly P&L — Company ₹{companyRate} / Owner ₹{ownerRate} per MT</div>
+        {weekRows.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No weekly data</div>
+        ) : (
+          <div className="data-table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th style={{ textAlign: 'right' }}>Trips</th>
+                  <th style={{ textAlign: 'right' }}>Weight</th>
+                  <th style={{ textAlign: 'right' }}>Company Rev</th>
+                  <th style={{ textAlign: 'right' }}>Owner Pay</th>
+                  <th style={{ textAlign: 'right' }}>Spread</th>
+                  <th style={{ textAlign: 'right' }}>Expenses</th>
+                  <th style={{ textAlign: 'right' }}>Net</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weekRows.map(([key, w]) => {
+                  const wCompany = w.weight * companyRate
+                  const wOwner = w.weight * ownerRate
+                  const wSpread = wCompany - wOwner
+                  const wNet = wSpread - w.expenses
+                  return (
+                    <tr key={key}>
+                      <td style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{getWeekLabel(key)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <span style={{ background: 'rgba(59,130,246,.1)', color: '#3b82f6', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{w.trips}</span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontSize: '12px' }}>{w.weight.toFixed(1)} MT</td>
+                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(wCompany)}</td>
+                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(wOwner)}</td>
+                      <td style={{ textAlign: 'right', color: '#3b82f6', fontWeight: 600 }}>{fmt(wSpread)}</td>
+                      <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{w.expenses > 0 ? fmt(w.expenses) : '—'}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: wNet >= 0 ? '#f59e0b' : '#ef4444' }}>{fmt(wNet)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
