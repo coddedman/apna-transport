@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { upsertPartner, deletePartner, addCompanyExpense, deleteCompanyExpense } from '@/lib/actions/partners'
 import toast from 'react-hot-toast'
 
-type Partner = { id: string; name: string; phone: string | null; equityPct: number; investedAmount: number }
+type Partner = { id: string; name: string; phone: string | null; equityPct: number; investedAmount: number; paidOutAmount: number }
 type CompanyExp = { id: string; date: Date; amount: number; type: string; description: string | null }
 
 const EXP_TYPES = ['SALARY', 'RENT', 'INSURANCE', 'EMI', 'OFFICE', 'PARTNER_PAYOUT', 'OTHER']
@@ -29,7 +29,7 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
   const [expenses, setExpenses] = useState(initExp)
 
   // Partner form
-  const [pForm, setPForm] = useState({ id: '', name: '', phone: '', equityPct: '', investedAmount: '' })
+  const [pForm, setPForm] = useState({ id: '', name: '', phone: '', equityPct: '', investedAmount: '', paidOutAmount: '' })
   const [editingP, setEditingP] = useState(false)
 
   // Expense form
@@ -42,7 +42,7 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
   const netAfterOverhead = netProfit - totalOverhead
 
   function handleEditPartner(p: Partner) {
-    setPForm({ id: p.id, name: p.name, phone: p.phone || '', equityPct: String(p.equityPct), investedAmount: String(p.investedAmount) })
+    setPForm({ id: p.id, name: p.name, phone: p.phone || '', equityPct: String(p.equityPct), investedAmount: String(p.investedAmount), paidOutAmount: String(p.paidOutAmount || 0) })
     setEditingP(true)
   }
 
@@ -50,9 +50,9 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
     if (!pForm.name || !pForm.equityPct) return toast.error('Name and equity % required')
     start(async () => {
       try {
-        await upsertPartner({ id: pForm.id || undefined, name: pForm.name, phone: pForm.phone || undefined, equityPct: parseFloat(pForm.equityPct), investedAmount: parseFloat(pForm.investedAmount || '0') })
+        await upsertPartner({ id: pForm.id || undefined, name: pForm.name, phone: pForm.phone || undefined, equityPct: parseFloat(pForm.equityPct), investedAmount: parseFloat(pForm.investedAmount || '0'), paidOutAmount: parseFloat(pForm.paidOutAmount || '0') })
         toast.success(pForm.id ? 'Partner updated' : 'Partner added')
-        setPForm({ id: '', name: '', phone: '', equityPct: '', investedAmount: '' })
+        setPForm({ id: '', name: '', phone: '', equityPct: '', investedAmount: '', paidOutAmount: '' })
         setEditingP(false)
         // Refresh is handled by revalidatePath; for optimistic UI:
         window.location.reload()
@@ -141,7 +141,11 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
                         </div>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>{fmt(share)}</div>
-                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>SHARE (est.)</div>
+                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>EST. SHARE</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>{fmt(share - p.paidOutAmount)}</div>
+                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>REMAINING</div>
                         </div>
                       </div>
                       {/* Equity bar */}
@@ -174,12 +178,18 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
                   <label className="form-label">Invested Amount (₹)</label>
                   <input className="form-input" type="number" min={0} value={pForm.investedAmount} onChange={e => setPForm(f => ({ ...f, investedAmount: e.target.value }))} placeholder="e.g. 500000" />
                 </div>
+                {editingP && (
+                  <div className="form-group">
+                    <label className="form-label">Total Paid Out (₹)</label>
+                    <input className="form-input" type="number" min={0} value={pForm.paidOutAmount} onChange={e => setPForm(f => ({ ...f, paidOutAmount: e.target.value }))} placeholder="e.g. 10000" />
+                  </div>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button className="btn btn-primary" onClick={handleSavePartner} disabled={isPending} style={{ fontSize: 12 }}>
                   {isPending ? '...' : editingP ? 'Update' : 'Add Partner'}
                 </button>
-                {editingP && <button className="btn btn-secondary" onClick={() => { setEditingP(false); setPForm({ id: '', name: '', phone: '', equityPct: '', investedAmount: '' }) }} style={{ fontSize: 12 }}>Cancel</button>}
+                {editingP && <button className="btn btn-secondary" onClick={() => { setEditingP(false); setPForm({ id: '', name: '', phone: '', equityPct: '', investedAmount: '', paidOutAmount: '' }) }} style={{ fontSize: 12 }}>Cancel</button>}
               </div>
               {totalEquity > 100 && <div style={{ fontSize: 11, color: '#ef4444', marginTop: 6 }}>⚠️ Total equity {totalEquity}% exceeds 100%</div>}
             </div>
@@ -191,10 +201,14 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
                 {partners.map((p, i) => {
                   const colors = ['#8b5cf6', '#3b82f6', '#f59e0b', '#10b981', '#ef4444']
                   const share = (p.equityPct / 100) * netAfterOverhead
+                  const pending = share - p.paidOutAmount
                   return (
                     <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                       <span style={{ color: colors[i % colors.length] }}>{p.name} ({p.equityPct}%)</span>
-                      <strong>{fmt(share)}</strong>
+                      <div style={{ textAlign: 'right' }}>
+                        <strong>{fmt(share)}</strong>
+                        {p.paidOutAmount > 0 && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--color-text-muted)' }}>(Paid: {fmt(p.paidOutAmount)} / Pend: {fmt(pending)})</span>}
+                      </div>
                     </div>
                   )
                 })}
