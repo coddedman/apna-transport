@@ -43,6 +43,7 @@ model BusinessPartner {
   phone           String?
   equityPct       Float    @default(0)   // Profit share percentage (e.g. 30 = 30%)
   investedAmount  Float    @default(0)   // Total capital invested
+  paidOutAmount   Float    @default(0)   // Total profit paid out to this partner
   transporterId   String
   transporter     Transporter @relation(fields: [transporterId], references: [id])
   createdAt       DateTime @default(now())
