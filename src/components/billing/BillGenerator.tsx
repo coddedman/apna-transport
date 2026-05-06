@@ -323,6 +323,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
             `}} />
             
             {/* Owner Summary View */}
+            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
             {billView === 'owner' && bill.ownerSummaries.map(os => (
               <div key={os.ownerId} style={{ border: '1px solid var(--color-border)', borderRadius: 14, marginBottom: 20, overflow: 'hidden', background: 'var(--color-bg-primary)' }}>
                 <div style={{ padding: '16px 20px', background: 'rgba(139,92,246,0.05)', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -375,7 +376,19 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
                                 <span style={{ color: '#ef4444', fontWeight: 700 }}>−{fmt(item.amount)}</span>
                               </div>
                             ))}
-                            {v.previouslyPaid > 0 && <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(249,115,22,0.3)', display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#f97316' }}><span>💸 Already paid to owner</span><span>−{fmt(v.previouslyPaid)}</span></div>}
+                            {v.paidItems && v.paidItems.length > 0 && (
+                              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(249,115,22,0.3)' }}>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: '#f97316', marginBottom: 6 }}>💸 ALREADY PAID ({fmt(v.previouslyPaid)})</div>
+                                {v.paidItems.map((p, pi) => (
+                                  <div key={pi} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                    <span style={{ color: 'var(--color-text-muted)', width: 70 }}>{new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                    <span style={{ flex: 1, fontWeight: 600 }}>{p.label}</span>
+                                    <span style={{ color: 'var(--color-text-muted)', flex: 1, fontStyle: 'italic' }}>{p.note || ''}</span>
+                                    <span style={{ color: '#f97316', fontWeight: 700 }}>−{fmt(p.amount)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                         <table className="data-table" style={{ fontSize: 12 }}>
@@ -388,8 +401,10 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
                 ))}
               </div>
             ))}
+            </div>
 
             {/* Vehicle view */}
+            <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
             {billView === 'vehicle' && bill.vehicles.map(v => (
               <div key={v.vehicleId} style={{ border: '1px solid var(--color-border)', borderRadius: 12, marginBottom: 14, overflow: 'hidden', background: 'var(--color-bg-primary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', cursor: 'pointer' }} onClick={() => setExpanded(expanded === v.vehicleId ? null : v.vehicleId)}>
@@ -420,7 +435,19 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
                             <span style={{ color: '#ef4444', fontWeight: 700 }}>−{fmt(item.amount)}</span>
                           </div>
                         ))}
-                        {v.previouslyPaid > 0 && <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(249,115,22,0.3)', display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#f97316' }}><span>💸 Already paid</span><span>−{fmt(v.previouslyPaid)}</span></div>}
+                        {v.paidItems && v.paidItems.length > 0 && (
+                          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(249,115,22,0.3)' }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: '#f97316', marginBottom: 6 }}>💸 ALREADY PAID ({fmt(v.previouslyPaid)})</div>
+                            {v.paidItems.map((p, pi) => (
+                              <div key={pi} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                <span style={{ color: 'var(--color-text-muted)', width: 70 }}>{new Date(p.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                <span style={{ flex: 1, fontWeight: 600 }}>{p.label}</span>
+                                <span style={{ color: 'var(--color-text-muted)', flex: 1, fontStyle: 'italic' }}>{p.note || ''}</span>
+                                <span style={{ color: '#f97316', fontWeight: 700 }}>−{fmt(p.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     <table className="data-table" style={{ fontSize: 12 }}>
@@ -431,6 +458,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
                 )}
               </div>
             ))}
+            </div>
             {bill.vehicles.length === 0 && <div style={{ textAlign: 'center', padding: 60, color: 'var(--color-text-muted)', background: 'var(--color-bg-primary)', borderRadius: 12, border: '1px dashed var(--color-border)' }}>No trips found for this period.</div>}
           </div>
         </div>
