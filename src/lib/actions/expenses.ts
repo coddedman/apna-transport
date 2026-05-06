@@ -40,12 +40,57 @@ export async function createExpense(formData: FormData) {
     }
   })
 
+  revalidatePath('/dashboard/settlements')
+  
+  return expense
+}
+
+export async function createMultipleExpenses(expensesData: {
+  vehicleId: string
+  amount: number
+  type: string
+  remarks?: string
+  date: string
+  projectId?: string
+}[]) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  if (!expensesData || expensesData.length === 0) return { count: 0 }
+
+  // Verify all vehicles belong to the transporter
+  const vehicleIds = [...new Set(expensesData.map(e => e.vehicleId))]
+  const validVehicles = await prisma.vehicle.findMany({
+    where: { id: { in: vehicleIds }, owner: { transporterId } },
+    select: { id: true }
+  })
+  
+  const validVehicleIds = new Set(validVehicles.map(v => v.id))
+  
+  const validData = expensesData
+    .filter(e => validVehicleIds.has(e.vehicleId) && !isNaN(e.amount) && e.amount > 0)
+    .map(e => ({
+      vehicleId: e.vehicleId,
+      projectId: e.projectId || null,
+      amount: e.amount,
+      type: e.type as ExpenseType,
+      remarks: e.remarks || null,
+      date: e.date ? new Date(e.date + 'T00:00:00') : new Date(),
+    }))
+
+  if (validData.length === 0) throw new Error('No valid expenses to log')
+
+  const result = await prisma.expense.createMany({
+    data: validData
+  })
+
   revalidatePath('/dashboard/expenses')
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/vehicles')
   revalidatePath('/dashboard/settlements')
   
-  return expense
+  return { count: result.count }
 }
 
 export async function updateExpense(formData: FormData) {

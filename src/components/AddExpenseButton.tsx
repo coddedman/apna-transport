@@ -21,7 +21,8 @@ export default function AddExpenseButton({ vehicles, projects }: AddExpenseButto
       <Modal 
         isOpen={isOpen} 
         onClose={() => setIsOpen(false)} 
-        title="Log Operational Expense"
+        title="Log Operational Expenses"
+        maxWidth="960px"
       >
         <ExpenseForm 
           vehicles={vehicles} 
