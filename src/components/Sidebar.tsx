@@ -31,6 +31,7 @@ const navItems = [
     section: 'Billing',
     items: [
       { href: '/dashboard/settlements', icon: '🧾', label: 'Settlements' },
+      { href: '/dashboard/billing', icon: '📋', label: 'Bill Generator' },
     ],
   },
 ]

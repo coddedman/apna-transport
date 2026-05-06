@@ -150,6 +150,12 @@ function HorizontalBar({ data, maxValue }: { data: { label: string; value: numbe
 }
 
 // ===========================
+// Helpers
+// ===========================
+
+const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+
+// ===========================
 // Tab Definitions
 // ===========================
 
@@ -1265,6 +1271,8 @@ function SimulatorTab({
 
   const [companyRate, setCompanyRate] = useState<number>(currentCompanyRate || 133)
   const [ownerRate, setOwnerRate] = useState<number>(currentOwnerRate || 125)
+  const refundableTypes = deductibleTypes
+
 
   const toggleRefundable = (type: string) => {
     const next = new Set(deductibleTypes)
@@ -1306,7 +1314,6 @@ function SimulatorTab({
     return `${d.getDate()} ${d.toLocaleString('en-IN',{month:'short'})} – ${e.getDate()} ${e.toLocaleString('en-IN',{month:'short'})}`
   }
 
-  const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
   const cardStyle = { background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '20px' } as React.CSSProperties
   const allExpTypes = ['FUEL', 'MAINTENANCE', 'TOLL', 'DRIVER_ADVANCE', 'OWNER_ADVANCE', 'CASH_PAYMENT']
 

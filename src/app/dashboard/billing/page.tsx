@@ -20,21 +20,18 @@ export default async function BillingPage() {
     getProjects(),
   ])
 
-  const projectDefaultRate = projects[0]?.ownerRate ?? 125
-  const projectPartyRate = projects[0]?.partyRate ?? 133
+  const projectDefaultOwnerRate = projects[0]?.ownerRate ?? 125
 
   return (
     <div className="page-container">
       <PageHeader
-        title="Bill Generator"
+        title="🧾 Bill Generator"
         subtitle="Generate weekly & monthly settlements per vehicle or owner"
-        icon="🧾"
       />
       <BillGenerator
         vehicles={vehicles as any}
         owners={owners as any}
-        projectDefaultOwnerRate={projectDefaultRate}
-        projectPartyRate={projectPartyRate}
+        projectDefaultOwnerRate={projectDefaultOwnerRate}
       />
     </div>
   )

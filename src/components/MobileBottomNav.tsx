@@ -8,7 +8,8 @@ const navItems = [
   { href: '/dashboard', icon: '📊', label: 'Home' },
   { href: '/dashboard/trips', icon: '🛣️', label: 'Trips' },
   { href: '/dashboard/expenses', icon: '💰', label: 'Expenses' },
-  { href: '/dashboard/settlements', icon: '🧾', label: 'Billing' },
+  { href: '/dashboard/settlements', icon: '🧾', label: 'Settle' },
+  { href: '/dashboard/billing', icon: '📋', label: 'Bills' },
 ]
 
 export default function MobileBottomNav() {
