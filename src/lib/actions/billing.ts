@@ -187,6 +187,8 @@ export async function generateBill(
   })
   const projectOwnerRate = project?.ownerRate || 125
 
+  const appliedOwnerAdvances = new Set<string>()
+
   const vehicleBills: VehicleBillLine[] = vehicles
     .filter(v => v.trips.length > 0)
     .map(v => {
@@ -220,16 +222,22 @@ export async function generateBill(
       const expByType = (type: string) =>
         v.expenses.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
 
-      const ownerAdvanceTotal = ownerAdvances
-        .filter(a => a.ownerId === v.ownerId)
-        .reduce((a, adv) => a + adv.amount, 0)
+      let ownerAdvanceTotal = 0
+      let ownerAdvancesForThisVehicle: typeof ownerAdvances = []
+      
+      // Ensure owner-level advances are only applied once per owner across their vehicles
+      if (!appliedOwnerAdvances.has(v.ownerId)) {
+        appliedOwnerAdvances.add(v.ownerId)
+        ownerAdvancesForThisVehicle = ownerAdvances.filter(a => a.ownerId === v.ownerId)
+        ownerAdvanceTotal = ownerAdvancesForThisVehicle.reduce((a, adv) => a + adv.amount, 0)
+      }
 
       const deductionMap = {
         fuel: expByType('FUEL'),
         toll: expByType('TOLL'),
         maintenance: expByType('MAINTENANCE'),
         driverAdvance: expByType('DRIVER_ADVANCE'),
-        ownerAdvance: ownerAdvanceTotal,
+        ownerAdvance: expByType('OWNER_ADVANCE') + ownerAdvanceTotal,
         other: expByType('CASH_PAYMENT'),
       }
 
@@ -237,6 +245,7 @@ export async function generateBill(
       const deductTotal = Object.entries(deductionMap).reduce((sum, [key, val]) => {
         const expKey = key === 'ownerAdvance' ? 'OWNER_ADVANCE'
           : key === 'driverAdvance' ? 'DRIVER_ADVANCE'
+          : key === 'other' ? 'CASH_PAYMENT'
           : key.toUpperCase()
         return deductibleExpenseTypes.includes(expKey) ? sum + val : sum
       }, 0)
@@ -256,8 +265,8 @@ export async function generateBill(
             amount: e.amount,
             note: e.remarks ?? undefined,
           })),
-        ...ownerAdvances
-          .filter(a => a.ownerId === v.ownerId && deductibleExpenseTypes.includes('OWNER_ADVANCE'))
+        ...ownerAdvancesForThisVehicle
+          .filter(a => deductibleExpenseTypes.includes('OWNER_ADVANCE'))
           .map(a => ({
             type: 'OWNER_ADVANCE',
             label: '🏦 Owner Advance',
@@ -270,7 +279,7 @@ export async function generateBill(
       // Build paid items detail
       const paidItems: PaidItem[] = [
         ...v.expenses
-          .filter(e => ['OWNER_ADVANCE', 'CASH_PAYMENT'].includes(e.type))
+          .filter(e => ['OWNER_ADVANCE', 'CASH_PAYMENT'].includes(e.type) && !deductibleExpenseTypes.includes(e.type))
           .map(e => ({
             type: e.type,
             label: e.type === 'OWNER_ADVANCE' ? '🏦 Owner Advance' : '💵 Cash Payment',
@@ -278,8 +287,8 @@ export async function generateBill(
             amount: e.amount,
             note: e.remarks ?? undefined,
           })),
-        ...ownerAdvances
-          .filter(a => a.ownerId === v.ownerId)
+        ...ownerAdvancesForThisVehicle
+          .filter(a => !deductibleExpenseTypes.includes('OWNER_ADVANCE'))
           .map(a => ({
             type: 'OWNER_ADVANCE',
             label: '🏦 Owner Advance (Direct)',
@@ -308,7 +317,7 @@ export async function generateBill(
         netSettlement: grossPayout - deductTotal,
         previouslyPaid,
         paidItems,
-        balanceDue: Math.max(0, grossPayout - deductTotal - previouslyPaid),
+        balanceDue: grossPayout - deductTotal - previouslyPaid,
       }
     })
 
