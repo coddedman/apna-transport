@@ -178,6 +178,22 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
               <h4 style={{ color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ color: '#ef4444' }}>🔴</span> 2. DEDUCTIONS
               </h4>
+              
+              {/* Gross Summary of Deductions */}
+              <div style={{ background: 'rgba(239,68,68,0.02)', border: '1px solid rgba(239,68,68,0.1)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#ef4444', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid rgba(239,68,68,0.1)', paddingBottom: 6 }}>Category Summary</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
+                  {v.deductions.fuel > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Fuel</span><span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(v.deductions.fuel)}</span></div>}
+                  {v.deductions.toll > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Toll</span><span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(v.deductions.toll)}</span></div>}
+                  {v.deductions.maintenance > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Maintenance</span><span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(v.deductions.maintenance)}</span></div>}
+                  {v.deductions.driverAdvance > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Driver Adv.</span><span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(v.deductions.driverAdvance)}</span></div>}
+                  {v.deductions.ownerAdvance > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Owner Adv.</span><span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(v.deductions.ownerAdvance)}</span></div>}
+                  {v.deductions.other > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Cash / Other</span><span style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(v.deductions.other)}</span></div>}
+                </div>
+              </div>
+
+              {/* Detailed Item List */}
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Further Details</div>
               <div style={{ background: 'rgba(239,68,68,0.02)', border: '1px solid rgba(239,68,68,0.1)', borderRadius: 10, padding: 12 }}>
                 {v.deductions.items.map((item: any, i: number) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: i < v.deductions.items.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
@@ -206,6 +222,18 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
               <h4 style={{ color: 'var(--color-text-muted)', fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ color: '#f97316' }}>🟠</span> 3. ALREADY PAID (ADVANCES)
               </h4>
+
+              {/* Gross Summary of Paid Items */}
+              <div style={{ background: 'rgba(249,115,22,0.02)', border: '1px solid rgba(249,115,22,0.1)', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: '#f97316', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid rgba(249,115,22,0.1)', paddingBottom: 6 }}>Category Summary</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
+                  {v.paidItems.filter((p: any) => p.type === 'OWNER_ADVANCE').reduce((s: number, p: any) => s + p.amount, 0) > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Owner Adv.</span><span style={{ fontSize: 14, fontWeight: 700, color: '#f97316' }}>−{fmt(v.paidItems.filter((p: any) => p.type === 'OWNER_ADVANCE').reduce((s: number, p: any) => s + p.amount, 0))}</span></div>}
+                  {v.paidItems.filter((p: any) => p.type === 'CASH_PAYMENT').reduce((s: number, p: any) => s + p.amount, 0) > 0 && <div><span style={{ fontSize: 10, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Cash / Other</span><span style={{ fontSize: 14, fontWeight: 700, color: '#f97316' }}>−{fmt(v.paidItems.filter((p: any) => p.type === 'CASH_PAYMENT').reduce((s: number, p: any) => s + p.amount, 0))}</span></div>}
+                </div>
+              </div>
+
+              {/* Detailed Item List */}
+              <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Further Details</div>
               <div style={{ background: 'rgba(249,115,22,0.02)', border: '1px solid rgba(249,115,22,0.1)', borderRadius: 10, padding: 12 }}>
                 {v.paidItems.map((p: any, pi: number) => (
                   <div key={pi} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '6px 0', borderBottom: pi < v.paidItems.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
