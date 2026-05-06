@@ -4,6 +4,7 @@ import { useState, useTransition, useCallback } from 'react'
 import { fetchAnalytics, type AnalyticsData, type AnalyticsFilters } from '@/lib/actions/analytics'
 import { useLoading } from '@/lib/context/LoadingContext'
 import { useSidebar } from '@/lib/context/SidebarContext'
+import toast from 'react-hot-toast'
 
 // ============================================
 // Mini Chart Components (Pure CSS, no library)
@@ -219,6 +220,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
   const [sortBy, setSortBy] = useState<string>('revenue')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [deductibleTypes, setDeductibleTypes] = useState<Set<string>>(new Set(['TOLL', 'OWNER_ADVANCE']))
+  const [modalData, setModalData] = useState<{ title: string; content: React.ReactNode } | null>(null)
 
   // Calculated values based on deductible config
   const totalDeductions = data.expenseByType
@@ -453,46 +455,111 @@ export default function DashboardAnalytics({ initialData }: Props) {
           <>
             {/* KPI Grid */}
             <div className="analytics-kpi-grid">
-              <div className="analytics-kpi accent">
+              <div className="analytics-kpi accent" style={{ cursor: 'pointer' }} onClick={() => setModalData({
+                title: 'Company Revenue Breakdown',
+                content: (
+                  <div>
+                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>Total freight revenue generated from projects before any payouts.</p>
+                    {data.revenueByProject.map(p => (
+                      <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{p.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{p.trips} trips · {p.weight.toFixed(1)} MT</div>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}>{fmt(p.revenue)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}>
                 <div className="analytics-kpi-icon">🏢</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{data.totalRevenue.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Company Revenue</div>
+                  <div className="analytics-kpi-label">Company Rev <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
-              <div className="analytics-kpi warning">
+              
+              <div className="analytics-kpi warning" style={{ cursor: 'pointer' }} onClick={() => setModalData({
+                title: 'Owner Gross Payout Breakdown',
+                content: (
+                  <div>
+                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>Gross payout per owner (before deductions). The final settlement will subtract their specific expenses (fuel, tolls, advances).</p>
+                    {data.revenueByOwner.map(o => (
+                      <div key={o.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{o.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{o.trips} trips</div>
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>{fmt(o.expenses)}</div>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', marginTop: 8, fontWeight: 700, borderTop: '2px solid var(--color-border)' }}>
+                      <span>Total Gross Payout</span>
+                      <span style={{ color: '#f59e0b' }}>{fmt(data.ownerPayout)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontWeight: 700 }}>
+                      <span style={{ color: '#ef4444' }}>MINUS Global Deductions</span>
+                      <span style={{ color: '#ef4444' }}>-{fmt(totalDeductions)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontWeight: 800 }}>
+                      <span style={{ color: '#8b5cf6' }}>Net Settlement (Paid)</span>
+                      <span style={{ color: '#8b5cf6' }}>{fmt(netSettlement)}</span>
+                    </div>
+                  </div>
+                )
+              })}>
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{netSettlement.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Owner Settlement</div>
+                  <div className="analytics-kpi-label">Owner Settlement <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
-              <div className="analytics-kpi danger">
+
+              <div className="analytics-kpi danger" style={{ cursor: 'pointer' }} onClick={() => setModalData({
+                title: 'My Non-Deductible Expenses',
+                content: (
+                  <div>
+                    <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>Operational costs borne by your company that CANNOT be deducted from owner settlements.</p>
+                    {data.expenseByType
+                      .filter(e => !deductibleTypes.has(e.type.replace(/ /g, '_').toUpperCase()))
+                      .map(e => (
+                      <div key={e.type} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600 }}>{e.type}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>{fmt(e.amount)}</div>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', marginTop: 8, fontWeight: 800, borderTop: '2px solid var(--color-border)' }}>
+                      <span>Total</span>
+                      <span style={{ color: '#ef4444' }}>{fmt(nonDeductibleExpenses)}</span>
+                    </div>
+                  </div>
+                )
+              })}>
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{nonDeductibleExpenses.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">My Expenses</div>
+                  <div className="analytics-kpi-label">My Expenses <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
-              <div className="analytics-kpi info">
+              <div className="analytics-kpi info" style={{ cursor: 'pointer' }} onClick={() => toast('Rate Spread:\nThe gross difference between Company Revenue and Owner Gross Payout.', { icon: 'ℹ️', duration: 4000 })}>
                 <div className="analytics-kpi-icon">📊</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{rateSpread.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Rate Spread</div>
+                  <div className="analytics-kpi-label">Rate Spread <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
-              <div className={`analytics-kpi ${adjustedNetProfit >= 0 ? 'success' : 'loss'}`}>
+              <div className={`analytics-kpi ${adjustedNetProfit >= 0 ? 'success' : 'loss'}`} style={{ cursor: 'pointer' }} onClick={() => toast('Net Profit:\nFinal take-home profit: Company Revenue - Owner Settlement - My Expenses.', { icon: 'ℹ️', duration: 4000 })}>
                 <div className="analytics-kpi-icon">💵</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">₹{adjustedNetProfit.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Net Profit</div>
+                  <div className="analytics-kpi-label">Net Profit <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
-              <div className="analytics-kpi teal">
+              <div className="analytics-kpi teal" style={{ cursor: 'pointer' }} onClick={() => toast('Profit Margin:\nNet Profit as a percentage of Company Revenue.', { icon: 'ℹ️', duration: 4000 })}>
                 <div className="analytics-kpi-icon">📈</div>
                 <div className="analytics-kpi-body">
                   <div className="analytics-kpi-value">{adjustedMargin.toFixed(1)}%</div>
-                  <div className="analytics-kpi-label">Profit Margin</div>
+                  <div className="analytics-kpi-label">Profit Margin <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
             </div>
@@ -1234,12 +1301,23 @@ export default function DashboardAnalytics({ initialData }: Props) {
         )}
 
         {/* ============ SIMULATOR TAB ============ */}
-        {activeTab === 'simulator' && (() => {
-          // Local state for simulator is managed via data attributes to avoid hooks in conditional
-          return <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />
-        })()}
-
+        {activeTab === 'simulator' && (
+          <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />
+        )}
       </div>
+
+      {/* ===== MODAL ===== */}
+      {modalData && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setModalData(null)}>
+          <div style={{ background: 'var(--color-bg-primary)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 450, maxHeight: '80vh', overflowY: 'auto', border: '1px solid var(--color-border)', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>{modalData.title}</h3>
+              <button onClick={() => setModalData(null)} style={{ background: 'var(--color-bg-secondary)', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--color-text-primary)', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>&times;</button>
+            </div>
+            {modalData.content}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1445,9 +1523,9 @@ function SimulatorTab({
         </div>
       )}
 
-      {/* ── Weekly P&L (real DB data) ── */}
+      {/* ── Weekly P&L (Scenario) ── */}
       <div style={cardStyle}>
-        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 14 }}>📅 Weekly Settlement — Actual DB Data</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 14 }}>📅 Weekly Settlement — Scenario Projection</div>
         {data.weeklyBreakdown.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No weekly data for this period</div>
         ) : (
@@ -1458,22 +1536,29 @@ function SimulatorTab({
                   <th>Week</th>
                   <th style={{ textAlign: 'right' }}>Trips</th>
                   <th style={{ textAlign: 'right' }}>Weight</th>
-                  <th style={{ textAlign: 'right' }}>Company Rev</th>
-                  <th style={{ textAlign: 'right' }}>Gross Payout</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Rev</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Payout</th>
                   <th style={{ textAlign: 'right' }}>Deductions</th>
                   <th style={{ textAlign: 'right' }}>Net Settlement</th>
-                  <th style={{ textAlign: 'right' }}>My Net</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Net</th>
                 </tr>
               </thead>
               <tbody>
-                {data.weeklyBreakdown.map(w => {
+                {[...data.weeklyBreakdown]
+                  .sort((a, b) => a.weekKey.localeCompare(b.weekKey)) // Ascending chronological sort
+                  .map(w => {
                   const wDeductions = Object.entries(w.expByType)
                     .filter(([type]) => refundableTypes.has(type))
                     .reduce((a, [, v]) => a + v, 0)
                   const wTotalExp = Object.values(w.expByType).reduce((a, v) => a + v, 0)
-                  const wSettlement = w.payout - wDeductions
+                  
+                  // Use the custom rates instead of actuals to reflect UI updates
+                  const wScenarioRev = w.weight * companyRate
+                  const wScenarioPayout = w.weight * ownerRate
+                  
+                  const wSettlement = wScenarioPayout - wDeductions
                   const wMyExp = wTotalExp - wDeductions
-                  const wNet = (w.revenue - wSettlement) - wMyExp
+                  const wNet = (wScenarioRev - wSettlement) - wMyExp
 
                   return (
                     <tr key={w.weekKey}>
@@ -1482,8 +1567,8 @@ function SimulatorTab({
                         <span style={{ background: 'rgba(59,130,246,.1)', color: '#3b82f6', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{w.trips}</span>
                       </td>
                       <td style={{ textAlign: 'right', fontSize: '12px' }}>{w.weight.toFixed(1)} MT</td>
-                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(w.revenue)}</td>
-                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(w.payout)}</td>
+                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(wScenarioRev)}</td>
+                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(wScenarioPayout)}</td>
                       <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{wDeductions > 0 ? fmt(wDeductions) : '—'}</td>
                       <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 700 }}>{fmt(wSettlement)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: wNet >= 0 ? '#f59e0b' : '#ef4444' }}>{fmt(wNet)}</td>

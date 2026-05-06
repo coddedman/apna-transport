@@ -26,16 +26,17 @@ export async function upsertPartner(data: {
   phone?: string
   equityPct: number
   investedAmount: number
+  paidOutAmount?: number
 }) {
   const tid = await getTransporterId()
   if (data.id) {
     await prisma.businessPartner.update({
       where: { id: data.id },
-      data: { name: data.name, phone: data.phone, equityPct: data.equityPct, investedAmount: data.investedAmount },
+      data: { name: data.name, phone: data.phone, equityPct: data.equityPct, investedAmount: data.investedAmount, paidOutAmount: data.paidOutAmount || 0 },
     })
   } else {
     await prisma.businessPartner.create({
-      data: { ...data, transporterId: tid },
+      data: { ...data, transporterId: tid, paidOutAmount: data.paidOutAmount || 0 },
     })
   }
   revalidatePath('/dashboard/partners')
