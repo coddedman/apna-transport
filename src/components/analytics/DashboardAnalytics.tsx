@@ -1445,9 +1445,9 @@ function SimulatorTab({
         </div>
       )}
 
-      {/* ── Weekly P&L (real DB data) ── */}
+      {/* ── Weekly P&L (Scenario) ── */}
       <div style={cardStyle}>
-        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 14 }}>📅 Weekly Settlement — Actual DB Data</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 14 }}>📅 Weekly Settlement — Scenario Projection</div>
         {data.weeklyBreakdown.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No weekly data for this period</div>
         ) : (
@@ -1458,22 +1458,29 @@ function SimulatorTab({
                   <th>Week</th>
                   <th style={{ textAlign: 'right' }}>Trips</th>
                   <th style={{ textAlign: 'right' }}>Weight</th>
-                  <th style={{ textAlign: 'right' }}>Company Rev</th>
-                  <th style={{ textAlign: 'right' }}>Gross Payout</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Rev</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Payout</th>
                   <th style={{ textAlign: 'right' }}>Deductions</th>
                   <th style={{ textAlign: 'right' }}>Net Settlement</th>
-                  <th style={{ textAlign: 'right' }}>My Net</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Net</th>
                 </tr>
               </thead>
               <tbody>
-                {data.weeklyBreakdown.map(w => {
+                {[...data.weeklyBreakdown]
+                  .sort((a, b) => a.weekKey.localeCompare(b.weekKey)) // Ascending chronological sort
+                  .map(w => {
                   const wDeductions = Object.entries(w.expByType)
                     .filter(([type]) => refundableTypes.has(type))
                     .reduce((a, [, v]) => a + v, 0)
                   const wTotalExp = Object.values(w.expByType).reduce((a, v) => a + v, 0)
-                  const wSettlement = w.payout - wDeductions
+                  
+                  // Use the custom rates instead of actuals to reflect UI updates
+                  const wScenarioRev = w.weight * companyRate
+                  const wScenarioPayout = w.weight * ownerRate
+                  
+                  const wSettlement = wScenarioPayout - wDeductions
                   const wMyExp = wTotalExp - wDeductions
-                  const wNet = (w.revenue - wSettlement) - wMyExp
+                  const wNet = (wScenarioRev - wSettlement) - wMyExp
 
                   return (
                     <tr key={w.weekKey}>
@@ -1482,8 +1489,8 @@ function SimulatorTab({
                         <span style={{ background: 'rgba(59,130,246,.1)', color: '#3b82f6', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{w.trips}</span>
                       </td>
                       <td style={{ textAlign: 'right', fontSize: '12px' }}>{w.weight.toFixed(1)} MT</td>
-                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(w.revenue)}</td>
-                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(w.payout)}</td>
+                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(wScenarioRev)}</td>
+                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(wScenarioPayout)}</td>
                       <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{wDeductions > 0 ? fmt(wDeductions) : '—'}</td>
                       <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 700 }}>{fmt(wSettlement)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: wNet >= 0 ? '#f59e0b' : '#ef4444' }}>{fmt(wNet)}</td>
