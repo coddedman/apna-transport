@@ -58,13 +58,21 @@ export interface BillPeriod {
   endDate: string    // ISO date
 }
 
+export interface DeductionItem {
+  type: string
+  label: string
+  date: string
+  amount: number
+  note?: string
+}
+
 export interface VehicleBillLine {
   plateNo: string
   vehicleId: string
   ownerName: string
   ownerId: string
   ownerRateOverride: number | null
-  ownerOwnerRateOverride: number | null   // owner-level override
+  ownerOwnerRateOverride: number | null
   effectiveOwnerRate: number
   effectiveRateSource: 'vehicle' | 'owner' | 'project' | 'default'
   trips: {
@@ -88,19 +96,36 @@ export interface VehicleBillLine {
     ownerAdvance: number
     other: number
     total: number
+    items: DeductionItem[]   // individual expense rows for detailed view
   }
   netSettlement: number
+  previouslyPaid: number    // OWNER_ADVANCE + CASH_PAYMENT logged in expenses
+  balanceDue: number        // netSettlement - previouslyPaid
+}
+
+export interface OwnerBillSummary {
+  ownerId: string
+  ownerName: string
+  vehicles: VehicleBillLine[]
+  totalGross: number
+  totalDeductions: number
+  totalNet: number
+  totalPreviouslyPaid: number
+  totalBalanceDue: number
 }
 
 export interface BillSummary {
   period: { start: string; end: string; label: string }
   vehicles: VehicleBillLine[]
+  ownerSummaries: OwnerBillSummary[]
   grandTotal: {
     trips: number
     weight: number
     grossPayout: number
     totalDeductions: number
     netSettlement: number
+    totalPreviouslyPaid: number
+    totalBalanceDue: number
   }
 }
 
@@ -207,6 +232,41 @@ export async function generateBill(
         return deductibleExpenseTypes.includes(expKey) ? sum + val : sum
       }, 0)
 
+      // Build individual deduction items for the detail panel
+      const deductionItems: DeductionItem[] = [
+        ...v.expenses
+          .filter(e => deductibleExpenseTypes.includes(e.type))
+          .map(e => ({
+            type: e.type,
+            label: {
+              FUEL: '⛽ Fuel', TOLL: '🛣️ Toll', MAINTENANCE: '🔧 Maintenance',
+              DRIVER_ADVANCE: '👤 Driver Advance', OWNER_ADVANCE: '🏦 Owner Advance',
+              CASH_PAYMENT: '💵 Cash Payment',
+            }[e.type] ?? e.type,
+            date: e.date.toISOString().split('T')[0],
+            amount: e.amount,
+            note: e.remarks ?? undefined,
+          })),
+        ...ownerAdvances
+          .filter(a => a.ownerId === v.ownerId && deductibleExpenseTypes.includes('OWNER_ADVANCE'))
+          .map(a => ({
+            type: 'OWNER_ADVANCE',
+            label: '🏦 Owner Advance',
+            date: a.date.toISOString().split('T')[0],
+            amount: a.amount,
+            note: a.remarks ?? undefined,
+          })),
+      ].sort((a, b) => a.date.localeCompare(b.date))
+
+      // previouslyPaid = owner-level cash payments / advances already handed over
+      const previouslyPaid =
+        v.expenses
+          .filter(e => ['OWNER_ADVANCE', 'CASH_PAYMENT'].includes(e.type))
+          .reduce((s, e) => s + e.amount, 0) +
+        ownerAdvances
+          .filter(a => a.ownerId === v.ownerId)
+          .reduce((s, a) => s + a.amount, 0)
+
       return {
         plateNo: v.plateNo,
         vehicleId: v.id,
@@ -220,10 +280,36 @@ export async function generateBill(
         totalTrips: tripLines.length,
         totalWeight: tripLines.reduce((a, t) => a + t.weight, 0),
         grossPayout,
-        deductions: { ...deductionMap, total: deductTotal },
+        deductions: { ...deductionMap, total: deductTotal, items: deductionItems },
         netSettlement: grossPayout - deductTotal,
+        previouslyPaid,
+        balanceDue: Math.max(0, grossPayout - deductTotal - previouslyPaid),
       }
     })
+
+  // Build owner-level summaries
+  const ownerMap = new Map<string, OwnerBillSummary>()
+  for (const vb of vehicleBills) {
+    if (!ownerMap.has(vb.ownerId)) {
+      ownerMap.set(vb.ownerId, {
+        ownerId: vb.ownerId,
+        ownerName: vb.ownerName,
+        vehicles: [],
+        totalGross: 0,
+        totalDeductions: 0,
+        totalNet: 0,
+        totalPreviouslyPaid: 0,
+        totalBalanceDue: 0,
+      })
+    }
+    const os = ownerMap.get(vb.ownerId)!
+    os.vehicles.push(vb)
+    os.totalGross += vb.grossPayout
+    os.totalDeductions += vb.deductions.total
+    os.totalNet += vb.netSettlement
+    os.totalPreviouslyPaid += vb.previouslyPaid
+    os.totalBalanceDue += vb.balanceDue
+  }
 
   const grandTotal = vehicleBills.reduce((a, v) => ({
     trips: a.trips + v.totalTrips,
@@ -231,7 +317,9 @@ export async function generateBill(
     grossPayout: a.grossPayout + v.grossPayout,
     totalDeductions: a.totalDeductions + v.deductions.total,
     netSettlement: a.netSettlement + v.netSettlement,
-  }), { trips: 0, weight: 0, grossPayout: 0, totalDeductions: 0, netSettlement: 0 })
+    totalPreviouslyPaid: a.totalPreviouslyPaid + v.previouslyPaid,
+    totalBalanceDue: a.totalBalanceDue + v.balanceDue,
+  }), { trips: 0, weight: 0, grossPayout: 0, totalDeductions: 0, netSettlement: 0, totalPreviouslyPaid: 0, totalBalanceDue: 0 })
 
   const periodLabel = period.type === 'weekly'
     ? `Week of ${startDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
@@ -246,6 +334,7 @@ export async function generateBill(
       label: periodLabel,
     },
     vehicles: vehicleBills,
+    ownerSummaries: [...ownerMap.values()],
     grandTotal,
   }
 }
