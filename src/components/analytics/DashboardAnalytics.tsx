@@ -150,6 +150,12 @@ function HorizontalBar({ data, maxValue }: { data: { label: string; value: numbe
 }
 
 // ===========================
+// Helpers
+// ===========================
+
+const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+
+// ===========================
 // Tab Definitions
 // ===========================
 
@@ -212,6 +218,18 @@ export default function DashboardAnalytics({ initialData }: Props) {
   const [customEnd, setCustomEnd] = useState('')
   const [sortBy, setSortBy] = useState<string>('revenue')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [deductibleTypes, setDeductibleTypes] = useState<Set<string>>(new Set(['TOLL', 'OWNER_ADVANCE']))
+
+  // Calculated values based on deductible config
+  const totalDeductions = data.expenseByType
+    .filter(e => deductibleTypes.has(e.type.replace(/ /g, '_').toUpperCase()))
+    .reduce((a, e) => a + e.amount, 0)
+  
+  const netSettlement = data.ownerPayout - totalDeductions
+  const rateSpread = data.totalRevenue - data.ownerPayout
+  const nonDeductibleExpenses = data.totalExpenses - totalDeductions
+  const adjustedNetProfit = rateSpread - nonDeductibleExpenses
+  const adjustedMargin = data.totalRevenue > 0 ? (adjustedNetProfit / data.totalRevenue) * 100 : 0
 
   const loadData = useCallback((newFilters: AnalyticsFilters) => {
     setFilters(newFilters)
@@ -443,37 +461,37 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 </div>
               </div>
               <div className="analytics-kpi warning">
-                <div className="analytics-kpi-icon">🚛</div>
+                <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.ownerPayout.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Owner Payout</div>
-                </div>
-              </div>
-              <div className="analytics-kpi info">
-                <div className="analytics-kpi-icon">📊</div>
-                <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{(data.totalRevenue - data.ownerPayout).toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Rate Spread</div>
+                  <div className="analytics-kpi-value">₹{netSettlement.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-label">Owner Settlement</div>
                 </div>
               </div>
               <div className="analytics-kpi danger">
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.totalExpenses.toLocaleString('en-IN')}</div>
-                  <div className="analytics-kpi-label">Running Expenses</div>
+                  <div className="analytics-kpi-value">₹{nonDeductibleExpenses.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-label">My Expenses</div>
                 </div>
               </div>
-              <div className={`analytics-kpi ${data.netProfit >= 0 ? 'success' : 'loss'}`}>
+              <div className="analytics-kpi info">
+                <div className="analytics-kpi-icon">📊</div>
+                <div className="analytics-kpi-body">
+                  <div className="analytics-kpi-value">₹{rateSpread.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-label">Rate Spread</div>
+                </div>
+              </div>
+              <div className={`analytics-kpi ${adjustedNetProfit >= 0 ? 'success' : 'loss'}`}>
                 <div className="analytics-kpi-icon">💵</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.netProfit.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">₹{adjustedNetProfit.toLocaleString('en-IN')}</div>
                   <div className="analytics-kpi-label">Net Profit</div>
                 </div>
               </div>
               <div className="analytics-kpi teal">
                 <div className="analytics-kpi-icon">📈</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">{data.profitMargin.toFixed(1)}%</div>
+                  <div className="analytics-kpi-value">{adjustedMargin.toFixed(1)}%</div>
                   <div className="analytics-kpi-label">Profit Margin</div>
                 </div>
               </div>
@@ -874,56 +892,56 @@ export default function DashboardAnalytics({ initialData }: Props) {
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 12 }}>⛽ Per-Vehicle Expense Breakdown</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
                   {data.revenueByVehicle.map((v, i) => {
-                    const totalExp = v.fuel + v.maintenance + v.toll + v.driverAdvance + v.otherExp
-                    const maxBar = Math.max(v.fuel, v.maintenance, v.toll, v.driverAdvance, v.otherExp, 1)
-                    const expRows = [
-                      { label: '⛽ Fuel', value: v.fuel, color: '#f59e0b' },
-                      { label: '🔧 Maintenance', value: v.maintenance, color: '#ec4899' },
-                      { label: '🛣️ Toll', value: v.toll, color: '#10b981' },
-                      { label: '👤 Driver Advance', value: v.driverAdvance, color: '#3b82f6' },
-                      { label: '📦 Other', value: v.otherExp, color: '#64748b' },
-                    ].filter(r => r.value > 0)
+                    const deductions = [
+                      { type: 'FUEL', val: v.fuel },
+                      { type: 'MAINTENANCE', val: v.maintenance },
+                      { type: 'TOLL', val: v.toll },
+                      { type: 'DRIVER_ADVANCE', val: v.driverAdvance },
+                    ].filter(d => deductibleTypes.has(d.type)).reduce((a, d) => a + d.val, 0)
+                    
+                    const settlement = v.payout - deductions
+                    const myProfit = v.profit + deductions
+                    const margin = v.revenue > 0 ? (myProfit / v.revenue) * 100 : 0
+
                     return (
                       <div key={i} style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 12, padding: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                           <div>
-                            <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text-primary)' }}>🚛 {v.plateNo}</div>
-                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{v.trips} trips · {v.weight.toFixed(1)} MT</div>
+                            <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-text-primary)' }}>🚛 {v.plateNo}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{v.trips} trips • {v.weight.toFixed(1)} MT</div>
                           </div>
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#10b981' }}>₹{v.revenue.toLocaleString('en-IN')}</div>
-                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>revenue</div>
+                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#10b981' }}>{fmt(v.revenue)}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Revenue</div>
                           </div>
                         </div>
-                        {expRows.length === 0 ? (
-                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>No expenses recorded</div>
-                        ) : expRows.map(row => (
-                          <div key={row.label} style={{ marginBottom: 6 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: 3 }}>
-                              <span style={{ color: 'var(--color-text-muted)' }}>{row.label}</span>
-                              <span style={{ fontWeight: 700, color: row.color }}>₹{row.value.toLocaleString('en-IN')}</span>
-                            </div>
-                            <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 100, overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${(row.value / maxBar) * 100}%`, background: row.color, borderRadius: 100 }} />
-                            </div>
+
+                        {/* Stats mini-grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                          <div style={{ textAlign: 'center', background: 'rgba(245,158,11,0.06)', borderRadius: 8, padding: '6px 4px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#f59e0b' }}>{fmt(v.payout)}</div>
+                            <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Gross Pay</div>
                           </div>
-                        ))}
-                        {totalExp > 0 && (
-                          <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
-                            <div style={{ flex: 1, textAlign: 'center', background: 'rgba(245,158,11,0.06)', borderRadius: 8, padding: '6px 4px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#f59e0b' }}>{v.trips > 0 ? `₹${Math.round(v.fuel / v.trips).toLocaleString('en-IN')}` : '—'}</div>
-                              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: 1 }}>Fuel/Trip</div>
-                            </div>
-                            <div style={{ flex: 1, textAlign: 'center', background: 'rgba(239,68,68,0.06)', borderRadius: 8, padding: '6px 4px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#ef4444' }}>{v.weight > 0 ? `₹${Math.round(totalExp / v.weight).toLocaleString('en-IN')}` : '—'}</div>
-                              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: 1 }}>Exp/MT</div>
-                            </div>
-                            <div style={{ flex: 1, textAlign: 'center', background: 'rgba(16,185,129,0.06)', borderRadius: 8, padding: '6px 4px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#10b981' }}>{v.revenue > 0 ? `${Math.round((v.profit / v.revenue) * 100)}%` : '—'}</div>
-                              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', marginTop: 1 }}>Margin</div>
-                            </div>
+                          <div style={{ textAlign: 'center', background: 'rgba(239,68,68,0.06)', borderRadius: 8, padding: '6px 4px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#ef4444' }}>{fmt(deductions)}</div>
+                            <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Deduct</div>
                           </div>
-                        )}
+                          <div style={{ textAlign: 'center', background: 'rgba(139,92,246,0.06)', borderRadius: 8, padding: '6px 4px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#8b5cf6' }}>{fmt(settlement)}</div>
+                            <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Settled</div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTop: '1px solid var(--color-border)' }}>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: myProfit >= 0 ? '#10b981' : '#ef4444' }}>{fmt(myProfit)}</div>
+                            <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>My Net</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#10b981' }}>{margin.toFixed(1)}%</div>
+                            <div style={{ fontSize: '9px', color: 'var(--color-text-muted)' }}>Margin</div>
+                          </div>
+                        </div>
                       </div>
                     )
                   })}
@@ -943,27 +961,39 @@ export default function DashboardAnalytics({ initialData }: Props) {
                     <tr>
                       <th>Vehicle</th>
                       <th onClick={() => handleSort('trips')} className="sortable-th" style={{ textAlign: 'right' }}>Trips <SortIcon field="trips" /></th>
-                      <th onClick={() => handleSort('weight')} className="sortable-th" style={{ textAlign: 'right' }}>Weight <SortIcon field="weight" /></th>
                       <th onClick={() => handleSort('revenue')} className="sortable-th" style={{ textAlign: 'right' }}>Revenue <SortIcon field="revenue" /></th>
-                      <th style={{ textAlign: 'right' }}>⛽ Fuel</th>
-                      <th onClick={() => handleSort('expenses')} className="sortable-th" style={{ textAlign: 'right' }}>Total Exp <SortIcon field="expenses" /></th>
-                      <th onClick={() => handleSort('profit')} className="sortable-th" style={{ textAlign: 'right' }}>Net <SortIcon field="profit" /></th>
+                      <th style={{ textAlign: 'right' }}>Gross Payout</th>
+                      <th style={{ textAlign: 'right' }}>Deductions</th>
+                      <th style={{ textAlign: 'right' }}>Settlement</th>
+                      <th style={{ textAlign: 'right' }}>My Net</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortArray(data.revenueByVehicle, sortBy).map((v, i) => (
-                      <tr key={i}>
-                        <td><strong>{v.plateNo}</strong></td>
-                        <td style={{ textAlign: 'right' }}>
-                          <span style={{ background: 'rgba(59,130,246,.1)', color: 'var(--color-info)', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{v.trips}</span>
-                        </td>
-                        <td style={{ textAlign: 'right', fontSize: '12px' }}>{v.weight.toFixed(1)} MT</td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{v.revenue.toLocaleString('en-IN')}</td>
-                        <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{v.fuel > 0 ? `₹${v.fuel.toLocaleString('en-IN')}` : '—'}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>₹{v.expenses.toLocaleString('en-IN')}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700, color: v.profit >= 0 ? '#f59e0b' : 'var(--color-danger)' }}>₹{v.profit.toLocaleString('en-IN')}</td>
-                      </tr>
-                    ))}
+                    {sortArray(data.revenueByVehicle, sortBy).map((v, i) => {
+                      const deductions = [
+                        { type: 'FUEL', val: v.fuel },
+                        { type: 'MAINTENANCE', val: v.maintenance },
+                        { type: 'TOLL', val: v.toll },
+                        { type: 'DRIVER_ADVANCE', val: v.driverAdvance },
+                      ].filter(d => deductibleTypes.has(d.type)).reduce((a, d) => a + d.val, 0)
+                      
+                      const settlement = v.payout - deductions
+                      const myProfit = v.profit + deductions
+
+                      return (
+                        <tr key={i}>
+                          <td><strong>{v.plateNo}</strong></td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span style={{ background: 'rgba(59,130,246,.1)', color: 'var(--color-info)', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{v.trips}</span>
+                          </td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{v.revenue.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>₹{v.payout.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{deductions > 0 ? `₹${deductions.toLocaleString('en-IN')}` : '—'}</td>
+                          <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>₹{settlement.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: myProfit >= 0 ? '#10b981' : '#ef4444' }}>₹{myProfit.toLocaleString('en-IN')}</td>
+                        </tr>
+                      )
+                    })}
                     {data.revenueByVehicle.length === 0 && <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)' }}>No vehicle data</td></tr>}
                   </tbody>
                 </table>
@@ -1206,7 +1236,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
         {/* ============ SIMULATOR TAB ============ */}
         {activeTab === 'simulator' && (() => {
           // Local state for simulator is managed via data attributes to avoid hooks in conditional
-          return <SimulatorTab data={data} />
+          return <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />
         })()}
 
       </div>
@@ -1227,79 +1257,69 @@ const EXP_TYPE_LABELS: Record<string, string> = {
   CASH_PAYMENT: '💵 Cash Payment',
 }
 
-function SimulatorTab({ data }: { data: AnalyticsData }) {
-  const currentCompanyRate = data.totalWeight > 0 ? Math.round(data.totalRevenue / data.totalWeight) : 0
-  const currentOwnerRate = data.totalWeight > 0 ? Math.round(data.ownerPayout / data.totalWeight) : 0
+function SimulatorTab({ 
+  data, 
+  deductibleTypes, 
+  setDeductibleTypes 
+}: { 
+  data: AnalyticsData;
+  deductibleTypes: Set<string>;
+  setDeductibleTypes: (s: Set<string>) => void;
+}) {
+  const currentCompanyRate = data.totalWeight > 0 ? Math.round(data.totalRevenue / data.totalWeight) : 133
+  const currentOwnerRate = data.totalWeight > 0 ? Math.round(data.ownerPayout / data.totalWeight) : 125
 
-  const [companyRate, setCompanyRate] = useState<number>(currentCompanyRate || 133)
-  const [ownerRate, setOwnerRate] = useState<number>(currentOwnerRate || 125)
-  const [refundableTypes, setRefundableTypes] = useState<Set<string>>(new Set(['TOLL']))
+  const [companyRate, setCompanyRate] = useState<number>(currentCompanyRate)
+  const [ownerRate, setOwnerRate] = useState<number>(currentOwnerRate)
+  const refundableTypes = deductibleTypes
 
   const toggleRefundable = (type: string) => {
-    setRefundableTypes(prev => {
-      const next = new Set(prev)
-      if (next.has(type)) next.delete(type)
-      else next.add(type)
-      return next
-    })
+    const next = new Set(deductibleTypes)
+    if (next.has(type)) next.delete(type)
+    else next.add(type)
+    setDeductibleTypes(next)
   }
 
-  // Calculations
-  const simCompanyRev = data.totalWeight * companyRate
-  const simOwnerPayout = data.totalWeight * ownerRate
-  const rateSpread = simCompanyRev - simOwnerPayout
-  const spreadPerMT = companyRate - ownerRate
+  const allExpTypes = ['FUEL', 'MAINTENANCE', 'TOLL', 'DRIVER_ADVANCE', 'OWNER_ADVANCE', 'CASH_PAYMENT']
 
-  const refundableAmount = data.expenseByType
+  // === ACTUAL figures (from DB) ===
+  const actualRevenue = data.totalRevenue
+  const actualPayout = data.ownerPayout
+  const actualDeductions = data.expenseByType
     .filter(e => refundableTypes.has(e.type.replace(/ /g, '_').toUpperCase()))
     .reduce((a, e) => a + e.amount, 0)
-  const effectiveExpenses = data.totalExpenses - refundableAmount
-  const simProfit = rateSpread - effectiveExpenses
-  const simMargin = simCompanyRev > 0 ? (simProfit / simCompanyRev) * 100 : 0
+  const actualSettlement = actualPayout - actualDeductions
+  const actualNonDeductExp = data.totalExpenses - actualDeductions
+  const actualProfit = actualRevenue - actualSettlement - actualNonDeductExp
 
-  // Weekly
-  const weekMap: Record<string, { trips: number; weight: number; revenue: number; expenses: number }> = {}
-  data.dailyTrips.forEach((d, i) => {
-    const dt = new Date(d.date)
-    const sun = new Date(dt); sun.setDate(dt.getDate() - dt.getDay())
-    const k = sun.toISOString().split('T')[0]
-    if (!weekMap[k]) weekMap[k] = { trips: 0, weight: 0, revenue: 0, expenses: 0 }
-    weekMap[k].trips += d.value
-    weekMap[k].weight += data.dailyWeight[i]?.value || 0
-    weekMap[k].revenue += data.dailyRevenue[i]?.value || 0
-    weekMap[k].expenses += data.dailyExpenses[i]?.value || 0
-  })
-  const weekRows = Object.entries(weekMap).sort((a, b) => b[0].localeCompare(a[0]))
+  // === SCENARIO figures (using custom rates) ===
+  const scenarioRevenue = data.totalWeight * companyRate
+  const scenarioPayout = data.totalWeight * ownerRate
+  const scenarioSettlement = scenarioPayout - actualDeductions
+  const scenarioProfit = scenarioRevenue - scenarioSettlement - actualNonDeductExp
+  const scenarioMargin = scenarioRevenue > 0 ? (scenarioProfit / scenarioRevenue) * 100 : 0
 
   const getWeekLabel = (k: string) => {
     const d = new Date(k)
     const e = new Date(k); e.setDate(d.getDate() + 6)
-    return `${d.getDate()} ${d.toLocaleString('en-IN',{month:'short'})} – ${e.getDate()} ${e.toLocaleString('en-IN',{month:'short'})}`
+    return `${d.getDate()} ${d.toLocaleString('en-IN', { month: 'short' })} – ${e.getDate()} ${e.toLocaleString('en-IN', { month: 'short' })}`
   }
 
-  const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
   const cardStyle = { background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '20px' } as React.CSSProperties
-  const allExpTypes = ['FUEL', 'MAINTENANCE', 'TOLL', 'DRIVER_ADVANCE', 'OWNER_ADVANCE', 'CASH_PAYMENT']
 
   const RateInput = ({ label, sub, value, onChange, color, presets }: { label: string; sub: string; value: number; onChange: (v: number) => void; color: string; presets: number[] }) => (
     <div>
       <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>{label}</label>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input
-          type="number" className="form-input" value={value}
+        <input type="number" className="form-input" value={value}
           onChange={e => onChange(parseFloat(e.target.value) || 0)}
           style={{ width: '110px', fontSize: '16px', fontWeight: 700, padding: '8px 12px', borderColor: color }}
-          min={0} step={1}
-        />
+          min={0} step={1} />
         <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{sub}</span>
       </div>
       <div style={{ display: 'flex', gap: 5, marginTop: 6, flexWrap: 'wrap' as const }}>
         {presets.map(r => (
-          <button key={r} onClick={() => onChange(r)} style={{
-            padding: '3px 8px', fontSize: '10px', fontWeight: 600, borderRadius: 5, border: 'none', cursor: 'pointer',
-            background: value === r ? color : 'rgba(255,255,255,0.06)',
-            color: value === r ? '#fff' : 'var(--color-text-muted)',
-          }}>₹{r}</button>
+          <button key={r} onClick={() => onChange(r)} style={{ padding: '3px 8px', fontSize: '10px', fontWeight: 600, borderRadius: 5, border: 'none', cursor: 'pointer', background: value === r ? color : 'rgba(255,255,255,0.06)', color: value === r ? '#fff' : 'var(--color-text-muted)' }}>₹{r}</button>
         ))}
       </div>
     </div>
@@ -1307,34 +1327,28 @@ function SimulatorTab({ data }: { data: AnalyticsData }) {
 
   return (
     <>
-      {/* Settings panel */}
+      {/* ── Rate Config ── */}
       <div style={{ ...cardStyle, marginBottom: 16 }}>
-        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>🧮 Rate Configuration</div>
+        <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>🧮 Rate Calculator
+          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: 8 }}>Scenario modelling vs actual DB data</span>
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
-          <RateInput
-            label="🏢 Company Rate (₹/MT)" sub={`Current: ₹${currentCompanyRate}/MT`}
-            value={companyRate} onChange={setCompanyRate} color="#10b981"
-            presets={[120, 125, 130, 133, 140, 150]}
-          />
-          <RateInput
-            label="🚛 Owner Rate (₹/MT)" sub={`Current: ₹${currentOwnerRate}/MT`}
-            value={ownerRate} onChange={setOwnerRate} color="#f59e0b"
-            presets={[110, 115, 120, 125, 130, 135]}
-          />
-          {/* Refundable toggles */}
+          <RateInput label="🏢 Company Rate (₹/MT)" sub={`DB Actual: ₹${currentCompanyRate}/MT`}
+            value={companyRate} onChange={setCompanyRate} color="#10b981" presets={[120, 125, 130, 133, 140, 150]} />
+          <RateInput label="🚛 Owner Rate (₹/MT)" sub={`DB Actual: ₹${currentOwnerRate}/MT`}
+            value={ownerRate} onChange={setOwnerRate} color="#f59e0b" presets={[110, 115, 120, 125, 130, 135]} />
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Refundable Costs</label>
+            <label style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Deduct from Owner Settlement</label>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
               {allExpTypes.map(type => {
-                const isRef = refundableTypes.has(type)
+                const isDeductible = deductibleTypes.has(type)
                 const amt = data.expenseByType.find(e => e.type.replace(/ /g, '_').toUpperCase() === type)?.amount || 0
                 return (
                   <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '11px' }}>
-                    <input type="checkbox" checked={isRef} onChange={() => toggleRefundable(type)} style={{ width: 14, height: 14, accentColor: 'var(--color-accent)' }} />
-                    <span style={{ color: isRef ? '#10b981' : 'var(--color-text-secondary)', fontWeight: isRef ? 700 : 400, textDecoration: isRef ? 'line-through' : 'none' }}>
-                      {EXP_TYPE_LABELS[type] || type}
-                    </span>
-                    {isRef && amt > 0 && <span style={{ fontSize: '9px', background: 'rgba(16,185,129,0.12)', color: '#10b981', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>REFUND</span>}
+                    <input type="checkbox" checked={isDeductible} onChange={() => toggleRefundable(type)} style={{ width: 14, height: 14, accentColor: 'var(--color-accent)' }} />
+                    <span style={{ color: isDeductible ? '#ef4444' : 'var(--color-text-secondary)', fontWeight: isDeductible ? 700 : 400 }}>{EXP_TYPE_LABELS[type] || type}</span>
+                    {amt > 0 && <span style={{ color: 'var(--color-text-muted)', fontSize: '10px', marginLeft: 'auto' }}>{fmt(amt)}</span>}
+                    {isDeductible && amt > 0 && <span style={{ fontSize: '9px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '1px 5px', borderRadius: 4, fontWeight: 700 }}>DEDUCT</span>}
                   </label>
                 )
               })}
@@ -1343,31 +1357,99 @@ function SimulatorTab({ data }: { data: AnalyticsData }) {
         </div>
       </div>
 
-      {/* P&L Waterfall */}
+      {/* ── Actual vs Scenario P&L ── */}
       <div style={{ ...cardStyle, marginBottom: 16 }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>💹 Profit & Loss Waterfall</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
-          {[
-            { label: '🏢 Company Revenue', value: simCompanyRev, color: '#10b981', sub: `${data.totalWeight.toFixed(1)} MT × ₹${companyRate}` },
-            { label: '🚛 Owner Payout', value: simOwnerPayout, color: '#f59e0b', sub: `${data.totalWeight.toFixed(1)} MT × ₹${ownerRate}` },
-            { label: '📊 Rate Spread', value: rateSpread, color: '#3b82f6', sub: `₹${spreadPerMT}/MT spread` },
-            { label: '📉 Running Expenses', value: effectiveExpenses, color: '#ef4444', sub: refundableAmount > 0 ? `−${fmt(refundableAmount)} refunded` : 'all costs' },
-            { label: '💵 Net Profit', value: simProfit, color: simProfit >= 0 ? '#f59e0b' : '#ef4444', sub: `Margin: ${simMargin.toFixed(1)}%` },
-          ].map(k => (
-            <div key={k.label} style={{ ...cardStyle, borderLeft: `3px solid ${k.color}`, padding: '12px 14px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--color-text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 3 }}>{k.label}</div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: k.color }}>{fmt(k.value)}</div>
-              <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{k.sub}</div>
-            </div>
-          ))}
+        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 14 }}>💹 Actual vs Scenario — {data.totalWeight.toFixed(1)} MT</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {/* Actual */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 8, textTransform: 'uppercase' as const }}>📊 Actual (from DB)</div>
+            {[
+              { label: 'Company Revenue', val: actualRevenue, color: '#10b981', sub: `₹${currentCompanyRate}/MT avg` },
+              { label: 'Gross Payout', val: actualPayout, color: '#f59e0b', sub: `₹${currentOwnerRate}/MT avg` },
+              { label: 'Deductions', val: actualDeductions, color: '#ef4444', sub: 'Configured above' },
+              { label: 'Net Settlement', val: actualSettlement, color: '#8b5cf6', sub: 'Owner gets this' },
+              { label: 'My Expenses', val: actualNonDeductExp, color: '#64748b', sub: 'Non-deductible' },
+              { label: 'Net Profit', val: actualProfit, color: actualProfit >= 0 ? '#f59e0b' : '#ef4444', sub: `${actualRevenue > 0 ? ((actualProfit / actualRevenue) * 100).toFixed(1) : 0}% margin` },
+            ].map(k => (
+              <div key={k.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{k.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{k.sub}</div>
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: k.color }}>{fmt(k.val)}</div>
+              </div>
+            ))}
+          </div>
+          {/* Scenario */}
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 8, textTransform: 'uppercase' as const }}>🎯 Scenario (₹{companyRate}/{ownerRate})</div>
+            {[
+              { label: 'Company Revenue', val: scenarioRevenue, color: '#10b981', sub: `₹${companyRate}/MT × ${data.totalWeight.toFixed(1)} MT`, delta: scenarioRevenue - actualRevenue },
+              { label: 'Gross Payout', val: scenarioPayout, color: '#f59e0b', sub: `₹${ownerRate}/MT × ${data.totalWeight.toFixed(1)} MT`, delta: scenarioPayout - actualPayout },
+              { label: 'Deductions', val: actualDeductions, color: '#ef4444', sub: 'Same as actual', delta: 0 },
+              { label: 'Net Settlement', val: scenarioSettlement, color: '#8b5cf6', sub: 'Owner gets this', delta: scenarioSettlement - actualSettlement },
+              { label: 'My Expenses', val: actualNonDeductExp, color: '#64748b', sub: 'Non-deductible', delta: 0 },
+              { label: 'Net Profit', val: scenarioProfit, color: scenarioProfit >= 0 ? '#f59e0b' : '#ef4444', sub: `${scenarioMargin.toFixed(1)}% margin`, delta: scenarioProfit - actualProfit },
+            ].map(k => (
+              <div key={k.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--color-border)' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: k.color }}>{fmt(k.val)}</div>
+                  {k.delta !== 0 && <span style={{ fontSize: 10, fontWeight: 700, color: k.delta > 0 ? '#10b981' : '#ef4444', background: k.delta > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', padding: '1px 5px', borderRadius: 4 }}>
+                    {k.delta > 0 ? '+' : ''}{fmt(k.delta)}
+                  </span>}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--color-text-muted)', textAlign: 'right' as const }}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Weekly P&L */}
+      {/* ── Per-Vehicle Rate Breakdown ── */}
+      {data.revenueByVehicle.length > 0 && (
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 12 }}>🚛 Per-Vehicle Rate Breakdown</div>
+          <div className="data-table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Vehicle</th>
+                  <th style={{ textAlign: 'right' }}>Trips</th>
+                  <th style={{ textAlign: 'right' }}>Weight</th>
+                  <th style={{ textAlign: 'right' }}>Actual Rev</th>
+                  <th style={{ textAlign: 'right' }}>Actual Payout</th>
+                  <th style={{ textAlign: 'right' }}>Scenario Payout</th>
+                  <th style={{ textAlign: 'right' }}>Δ Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.revenueByVehicle.map((v, i) => {
+                  const scenVehiclePayout = v.weight * ownerRate
+                  const delta = scenVehiclePayout - v.payout
+                  return (
+                    <tr key={i}>
+                      <td><strong>{v.plateNo}</strong></td>
+                      <td style={{ textAlign: 'right' }}><span style={{ background: 'rgba(59,130,246,.1)', color: '#3b82f6', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{v.trips}</span></td>
+                      <td style={{ textAlign: 'right', fontSize: 12 }}>{v.weight.toFixed(1)} MT</td>
+                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(v.revenue)}</td>
+                      <td style={{ textAlign: 'right', color: '#f59e0b' }}>{fmt(v.payout)}</td>
+                      <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>{fmt(scenVehiclePayout)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: delta <= 0 ? '#10b981' : '#ef4444' }}>{delta > 0 ? '+' : ''}{fmt(delta)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Weekly P&L (real DB data) ── */}
       <div style={cardStyle}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 14 }}>📅 Weekly P&L — Company ₹{companyRate} / Owner ₹{ownerRate} per MT</div>
-        {weekRows.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No weekly data</div>
+        <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: 14 }}>📅 Weekly Settlement — Actual DB Data</div>
+        {data.weeklyBreakdown.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>No weekly data for this period</div>
         ) : (
           <div className="data-table-wrapper">
             <table className="data-table">
@@ -1377,29 +1459,33 @@ function SimulatorTab({ data }: { data: AnalyticsData }) {
                   <th style={{ textAlign: 'right' }}>Trips</th>
                   <th style={{ textAlign: 'right' }}>Weight</th>
                   <th style={{ textAlign: 'right' }}>Company Rev</th>
-                  <th style={{ textAlign: 'right' }}>Owner Pay</th>
-                  <th style={{ textAlign: 'right' }}>Spread</th>
-                  <th style={{ textAlign: 'right' }}>Expenses</th>
-                  <th style={{ textAlign: 'right' }}>Net</th>
+                  <th style={{ textAlign: 'right' }}>Gross Payout</th>
+                  <th style={{ textAlign: 'right' }}>Deductions</th>
+                  <th style={{ textAlign: 'right' }}>Net Settlement</th>
+                  <th style={{ textAlign: 'right' }}>My Net</th>
                 </tr>
               </thead>
               <tbody>
-                {weekRows.map(([key, w]) => {
-                  const wCompany = w.weight * companyRate
-                  const wOwner = w.weight * ownerRate
-                  const wSpread = wCompany - wOwner
-                  const wNet = wSpread - w.expenses
+                {data.weeklyBreakdown.map(w => {
+                  const wDeductions = Object.entries(w.expByType)
+                    .filter(([type]) => refundableTypes.has(type))
+                    .reduce((a, [, v]) => a + v, 0)
+                  const wTotalExp = Object.values(w.expByType).reduce((a, v) => a + v, 0)
+                  const wSettlement = w.payout - wDeductions
+                  const wMyExp = wTotalExp - wDeductions
+                  const wNet = (w.revenue - wSettlement) - wMyExp
+
                   return (
-                    <tr key={key}>
-                      <td style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>{getWeekLabel(key)}</td>
+                    <tr key={w.weekKey}>
+                      <td style={{ fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' as const }}>{getWeekLabel(w.weekKey)}</td>
                       <td style={{ textAlign: 'right' }}>
                         <span style={{ background: 'rgba(59,130,246,.1)', color: '#3b82f6', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{w.trips}</span>
                       </td>
                       <td style={{ textAlign: 'right', fontSize: '12px' }}>{w.weight.toFixed(1)} MT</td>
-                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(wCompany)}</td>
-                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(wOwner)}</td>
-                      <td style={{ textAlign: 'right', color: '#3b82f6', fontWeight: 600 }}>{fmt(wSpread)}</td>
-                      <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{w.expenses > 0 ? fmt(w.expenses) : '—'}</td>
+                      <td style={{ textAlign: 'right', color: '#10b981', fontWeight: 600 }}>{fmt(w.revenue)}</td>
+                      <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(w.payout)}</td>
+                      <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{wDeductions > 0 ? fmt(wDeductions) : '—'}</td>
+                      <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 700 }}>{fmt(wSettlement)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: wNet >= 0 ? '#f59e0b' : '#ef4444' }}>{fmt(wNet)}</td>
                     </tr>
                   )
@@ -1412,4 +1498,3 @@ function SimulatorTab({ data }: { data: AnalyticsData }) {
     </>
   )
 }
-
