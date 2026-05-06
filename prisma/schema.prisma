@@ -27,14 +27,48 @@ enum ExpenseType {
   CASH_PAYMENT
 }
 
+enum CompanyExpenseType {
+  SALARY
+  RENT
+  INSURANCE
+  EMI
+  OFFICE
+  PARTNER_PAYOUT
+  OTHER
+}
+
+model BusinessPartner {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String?
+  equityPct       Float    @default(0)   // Profit share percentage (e.g. 30 = 30%)
+  investedAmount  Float    @default(0)   // Total capital invested
+  transporterId   String
+  transporter     Transporter @relation(fields: [transporterId], references: [id])
+  createdAt       DateTime @default(now())
+}
+
+model CompanyExpense {
+  id            String             @id @default(cuid())
+  date          DateTime           @default(now())
+  amount        Float
+  type          CompanyExpenseType
+  description   String?
+  transporterId String
+  transporter   Transporter        @relation(fields: [transporterId], references: [id])
+  createdAt     DateTime           @default(now())
+}
+
 model Transporter {
   id           String    @id @default(cuid())
   name         String
   registration String?   // GST/Business ID
-  users        User[]
-  projects     Project[]
-  owners       Owner[]
-  createdAt    DateTime  @default(now())
+  users            User[]
+  projects         Project[]
+  owners           Owner[]
+  partners         BusinessPartner[]
+  companyExpenses  CompanyExpense[]
+  createdAt        DateTime  @default(now())
 }
 
 model User {
