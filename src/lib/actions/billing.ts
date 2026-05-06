@@ -66,6 +66,14 @@ export interface DeductionItem {
   note?: string
 }
 
+export interface PaidItem {
+  type: string
+  label: string
+  date: string
+  amount: number
+  note?: string
+}
+
 export interface VehicleBillLine {
   plateNo: string
   vehicleId: string
@@ -100,6 +108,7 @@ export interface VehicleBillLine {
   }
   netSettlement: number
   previouslyPaid: number    // OWNER_ADVANCE + CASH_PAYMENT logged in expenses
+  paidItems: PaidItem[]     // itemized detail of payments already made
   balanceDue: number        // netSettlement - previouslyPaid
 }
 
@@ -258,14 +267,29 @@ export async function generateBill(
           })),
       ].sort((a, b) => a.date.localeCompare(b.date))
 
-      // previouslyPaid = owner-level cash payments / advances already handed over
-      const previouslyPaid =
-        v.expenses
+      // Build paid items detail
+      const paidItems: PaidItem[] = [
+        ...v.expenses
           .filter(e => ['OWNER_ADVANCE', 'CASH_PAYMENT'].includes(e.type))
-          .reduce((s, e) => s + e.amount, 0) +
-        ownerAdvances
+          .map(e => ({
+            type: e.type,
+            label: e.type === 'OWNER_ADVANCE' ? '🏦 Owner Advance' : '💵 Cash Payment',
+            date: e.date.toISOString().split('T')[0],
+            amount: e.amount,
+            note: e.remarks ?? undefined,
+          })),
+        ...ownerAdvances
           .filter(a => a.ownerId === v.ownerId)
-          .reduce((s, a) => s + a.amount, 0)
+          .map(a => ({
+            type: 'OWNER_ADVANCE',
+            label: '🏦 Owner Advance (Direct)',
+            date: a.date.toISOString().split('T')[0],
+            amount: a.amount,
+            note: a.remarks ?? undefined,
+          })),
+      ].sort((a, b) => a.date.localeCompare(b.date))
+
+      const previouslyPaid = paidItems.reduce((s, p) => s + p.amount, 0)
 
       return {
         plateNo: v.plateNo,
@@ -283,6 +307,7 @@ export async function generateBill(
         deductions: { ...deductionMap, total: deductTotal, items: deductionItems },
         netSettlement: grossPayout - deductTotal,
         previouslyPaid,
+        paidItems,
         balanceDue: Math.max(0, grossPayout - deductTotal - previouslyPaid),
       }
     })
