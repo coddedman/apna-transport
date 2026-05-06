@@ -56,6 +56,16 @@ export interface AnalyticsData {
 
   // Period label
   periodLabel: string
+
+  // Weekly breakdown (for Rate Calculator)
+  weeklyBreakdown: {
+    weekKey: string       // YYYY-MM-DD of week start (Monday)
+    trips: number
+    weight: number
+    revenue: number       // actual ownerFreightAmount
+    payout: number        // actual partyFreightAmount
+    expByType: Record<string, number>  // FUEL, TOLL etc → amount
+  }[]
 }
 
 function getDateRange(filters: AnalyticsFilters): { startDate?: Date; endDate: Date } {
@@ -256,7 +266,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     }),
     prisma.expense.findMany({
       where: { ...expenseWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
-      select: { date: true, amount: true }
+      select: { date: true, amount: true, type: true }
     }),
     prisma.ownerAdvance.findMany({
       where: { ...advanceWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
@@ -496,5 +506,55 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     owners: ownersList.map(o => ({ id: o.id, name: o.ownerName })),
     vehicles: vehiclesList.map(v => ({ id: v.id, plateNo: v.plateNo })),
     periodLabel: periodLabels[filters.period] || 'All Time',
+    weeklyBreakdown: buildWeeklyBreakdown(timeSeriesTrips, timeSeriesExpenses, timeSeriesAdvances),
   }
+}
+
+function getMonday(date: Date): string {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = (day === 0 ? -6 : 1 - day)
+  d.setDate(d.getDate() + diff)
+  return d.toISOString().split('T')[0]
+}
+
+function buildWeeklyBreakdown(
+  trips: { date: Date | null; ownerFreightAmount: number | null; partyFreightAmount: number | null; weight: number | null }[],
+  expenses: { date: Date | null; amount: number | null; type?: string }[],
+  advances: { date: Date | null; amount: number | null }[]
+) {
+  const weekMap: Record<string, { trips: number; weight: number; revenue: number; payout: number; expByType: Record<string, number> }> = {}
+
+  const ensureWeek = (k: string) => {
+    if (!weekMap[k]) weekMap[k] = { trips: 0, weight: 0, revenue: 0, payout: 0, expByType: {} }
+  }
+
+  trips.forEach(t => {
+    if (!t.date) return
+    const k = getMonday(t.date)
+    ensureWeek(k)
+    weekMap[k].trips += 1
+    weekMap[k].weight += t.weight || 0
+    weekMap[k].revenue += t.ownerFreightAmount || 0
+    weekMap[k].payout += t.partyFreightAmount || 0
+  })
+
+  expenses.forEach(e => {
+    if (!e.date) return
+    const k = getMonday(e.date)
+    ensureWeek(k)
+    const type = (e as any).type || 'OTHER'
+    weekMap[k].expByType[type] = (weekMap[k].expByType[type] || 0) + (e.amount || 0)
+  })
+
+  advances.forEach(a => {
+    if (!a.date) return
+    const k = getMonday(a.date)
+    ensureWeek(k)
+    weekMap[k].expByType['OWNER_ADVANCE'] = (weekMap[k].expByType['OWNER_ADVANCE'] || 0) + (a.amount || 0)
+  })
+
+  return Object.entries(weekMap)
+    .map(([weekKey, v]) => ({ weekKey, ...v }))
+    .sort((a, b) => b.weekKey.localeCompare(a.weekKey))
 }
