@@ -38,7 +38,7 @@ export interface AnalyticsData {
   expenseByType: { type: string; amount: number; pct: number }[]
   revenueByProject: { name: string; revenue: number; trips: number; weight: number }[]
   revenueByOwner: { name: string; revenue: number; expenses: number; trips: number; profit: number }[]
-  revenueByVehicle: { plateNo: string; ownerName: string; revenue: number; expenses: number; trips: number; weight: number; profit: number; fuel: number; maintenance: number; toll: number; driverAdvance: number; otherExp: number }[]
+  revenueByVehicle: { plateNo: string; ownerName: string; revenue: number; payout: number; expenses: number; trips: number; weight: number; profit: number; fuel: number; maintenance: number; toll: number; driverAdvance: number; otherExp: number }[]
   vehicleExpenseBreakdown: { vehicleId: string; plateNo: string; type: string; amount: number }[]
 
   // Top Performers
@@ -404,10 +404,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       plateNo: vehicle?.plateNo || 'Unknown',
       ownerName: '—',
       revenue: rev,
+      payout: exp, // partyFreightAmount
       expenses: totalRunningExp,
       trips: v._count.id || 0,
       weight: v._sum.weight || 0,
-      profit: rev - totalRunningExp,
+      profit: rev - exp - totalRunningExp,
       fuel,
       maintenance,
       toll,
