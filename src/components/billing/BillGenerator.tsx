@@ -77,6 +77,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
   const [deductibles, setDeductibles] = useState<string[]>(['TOLL', 'OWNER_ADVANCE'])
   const [bill, setBill] = useState<BillSummary | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [billView, setBillView] = useState<'vehicle' | 'owner'>('owner')
 
   async function saveOwnerRate(id: string) {
     setSaving(p => ({ ...p, [id]: true }))
@@ -280,23 +281,33 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
           </div>
 
           {/* Grand total */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 32 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12, marginBottom: 28 }}>
             {[
-              { label: 'Total Trips', val: String(bill.grandTotal.trips), color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-              { label: 'Total Weight', val: `${bill.grandTotal.weight.toFixed(1)} MT`, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+              { label: 'Trips', val: String(bill.grandTotal.trips), color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+              { label: 'Weight (MT)', val: bill.grandTotal.weight.toFixed(1), color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
               { label: 'Gross Payout', val: fmt(bill.grandTotal.grossPayout), color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-              { label: 'Total Deductions', val: `-${fmt(bill.grandTotal.totalDeductions)}`, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-              { label: 'Net Payable', val: fmt(bill.grandTotal.netSettlement), color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+              { label: 'Deductions', val: `-${fmt(bill.grandTotal.totalDeductions)}`, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+              { label: 'Net Settlement', val: fmt(bill.grandTotal.netSettlement), color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+              { label: 'Already Paid', val: `-${fmt(bill.grandTotal.totalPreviouslyPaid)}`, color: '#f97316', bg: 'rgba(249,115,22,0.1)' },
+              { label: 'Balance Due', val: fmt(bill.grandTotal.totalBalanceDue), color: '#22d3ee', bg: 'rgba(34,211,238,0.1)' },
             ].map(k => (
-              <div key={k.label} style={{ background: k.bg, borderRadius: 12, padding: '16px', textAlign: 'center', border: `1px solid ${k.color}30` }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: k.color }}>{k.val}</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', marginTop: 6, opacity: 0.8 }}>{k.label}</div>
+              <div key={k.label} style={{ background: k.bg, borderRadius: 12, padding: '14px 10px', textAlign: 'center', border: `1px solid ${k.color}30` }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: k.color }}>{k.val}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-primary)', marginTop: 5, opacity: 0.8 }}>{k.label}</div>
               </div>
             ))}
           </div>
 
           {/* Per-vehicle */}
           <div ref={printRef}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-text-muted)', letterSpacing: 1 }}>BREAKDOWN</div>
+              <div style={{ display: 'flex', background: 'var(--color-bg-primary)', borderRadius: 8, padding: 3, gap: 4 }}>
+                {(['owner', 'vehicle'] as const).map(v => (
+                  <button key={v} onClick={() => setBillView(v)} style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', background: billView === v ? 'var(--color-accent)' : 'transparent', color: billView === v ? '#000' : 'var(--color-text-primary)' }}>{v === 'owner' ? '🧑 By Owner' : '🚛 By Vehicle'}</button>
+                ))}
+              </div>
+            </div>
             <style dangerouslySetInnerHTML={{__html: `
               @media print {
                 body { background: white !important; color: black !important; margin: 0; padding: 20px; font-family: sans-serif; }
@@ -310,84 +321,112 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
                 .text-red { color: #dc2626 !important; }
               }
             `}} />
-            <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12, color: 'var(--color-text-muted)' }}>VEHICLE BREAKDOWN</div>
-            {bill.vehicles.map(v => (
-              <div key={v.vehicleId} className="print-card" style={{ border: '1px solid var(--color-border)', borderRadius: 12, marginBottom: 16, overflow: 'hidden', background: 'var(--color-bg-primary)', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <div className="print-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'rgba(255,255,255,0.02)', cursor: 'pointer', transition: 'background 0.2s' }} onClick={() => setExpanded(expanded === v.vehicleId ? null : v.vehicleId)}>
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(59,130,246,0.1)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🚛</div>
+            
+            {/* Owner Summary View */}
+            {billView === 'owner' && bill.ownerSummaries.map(os => (
+              <div key={os.ownerId} style={{ border: '1px solid var(--color-border)', borderRadius: 14, marginBottom: 20, overflow: 'hidden', background: 'var(--color-bg-primary)' }}>
+                <div style={{ padding: '16px 20px', background: 'rgba(139,92,246,0.05)', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧑</div>
                     <div>
-                      <div style={{ fontSize: 16, fontWeight: 800 }}>{v.plateNo}</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{v.ownerName}</div>
+                      <div style={{ fontSize: 17, fontWeight: 800 }}>{os.ownerName}</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{os.vehicles.length} vehicle(s) · {os.vehicles.reduce((a, v) => a + v.totalTrips, 0)} trips</div>
                     </div>
-                    <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, fontWeight: 700, background: v.effectiveRateSource === 'vehicle' ? 'rgba(139,92,246,0.1)' : v.effectiveRateSource === 'owner' ? 'rgba(245,158,11,0.1)' : 'rgba(100,116,139,0.1)', color: v.effectiveRateSource === 'vehicle' ? '#8b5cf6' : v.effectiveRateSource === 'owner' ? '#f59e0b' : '#94a3b8', border: '1px solid currentColor' }}>
-                      Rate: ₹{v.effectiveOwnerRate}/MT ({v.effectiveRateSource})
-                    </span>
                   </div>
-                  <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-                    <div style={{ textAlign: 'right', fontSize: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <span style={{ color: 'var(--color-text-muted)' }}>{v.totalTrips} trips</span>
-                      <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{v.totalWeight.toFixed(1)} MT</span>
-                    </div>
-                    <div style={{ width: 1, height: 30, background: 'var(--color-border)' }} />
-                    <div style={{ textAlign: 'right', fontSize: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <span style={{ color: '#f59e0b', fontWeight: 600 }}>{fmt(v.grossPayout)} Gross</span>
-                      <span style={{ color: '#ef4444', fontWeight: 600 }}>−{fmt(v.deductions.total)} Deduct</span>
-                    </div>
-                    <div style={{ width: 1, height: 30, background: 'var(--color-border)' }} />
-                    <div style={{ textAlign: 'right', minWidth: 100 }}>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 2 }}>Net Payable</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981' }}>{fmt(v.netSettlement)}</div>
-                    </div>
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--color-bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)', transition: 'transform 0.3s', transform: expanded === v.vehicleId ? 'rotate(180deg)' : 'none' }}>
-                      ▼
+                  <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                    <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Gross</div><div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>{fmt(os.totalGross)}</div></div>
+                    <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Deductions</div><div style={{ fontSize: 14, fontWeight: 700, color: '#ef4444' }}>−{fmt(os.totalDeductions)}</div></div>
+                    <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Net Settlement</div><div style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}>{fmt(os.totalNet)}</div></div>
+                    <div style={{ width: 1, height: 36, background: 'var(--color-border)' }} />
+                    <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Already Paid</div><div style={{ fontSize: 14, fontWeight: 700, color: '#f97316' }}>−{fmt(os.totalPreviouslyPaid)}</div></div>
+                    <div style={{ textAlign: 'right', padding: '8px 14px', background: 'rgba(34,211,238,0.1)', borderRadius: 10, border: '1px solid rgba(34,211,238,0.3)' }}>
+                      <div style={{ fontSize: 11, color: '#22d3ee' }}>BALANCE DUE</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: '#22d3ee' }}>{fmt(os.totalBalanceDue)}</div>
                     </div>
                   </div>
                 </div>
-
-                {expanded === v.vehicleId && (
-                  <div style={{ borderTop: '1px solid var(--color-border)' }}>
-                    {/* Deduction breakdown */}
-                    {v.deductions.total > 0 && (
-                      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '12px 20px', background: 'rgba(239,68,68,0.03)', borderBottom: '1px solid var(--color-border)', fontSize: 12 }}>
-                        <span style={{ fontWeight: 800, color: '#ef4444', marginRight: 8 }}>Deductions:</span>
-                        {[['⛽ Fuel', v.deductions.fuel], ['🛣️ Toll', v.deductions.toll], ['🔧 Maint.', v.deductions.maintenance], ['👤 Driver Adv', v.deductions.driverAdvance], ['🏦 Owner Adv', v.deductions.ownerAdvance], ['💵 Other', v.deductions.other]].filter(([, n]) => (n as number) > 0).map(([lbl, n]) => (
-                          <span key={String(lbl)} style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{lbl}: {fmt(n as number)}</span>
-                        ))}
+                {os.vehicles.map(v => (
+                  <div key={v.vehicleId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px 12px 32px', cursor: 'pointer', background: 'rgba(255,255,255,0.01)' }} onClick={() => setExpanded(expanded === v.vehicleId ? null : v.vehicleId)}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                        <span style={{ fontSize: 14, fontWeight: 800 }}>🚛 {v.plateNo}</span>
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>₹{v.effectiveOwnerRate}/MT</span>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{v.totalTrips} trips · {v.totalWeight.toFixed(1)} MT</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 13 }}>
+                        <span style={{ color: '#f59e0b', fontWeight: 600 }}>{fmt(v.grossPayout)}</span>
+                        <span style={{ color: '#ef4444' }}>−{fmt(v.deductions.total)}</span>
+                        <span style={{ color: '#10b981', fontWeight: 700 }}>{fmt(v.netSettlement)}</span>
+                        {v.previouslyPaid > 0 && <span style={{ color: '#f97316' }}>−{fmt(v.previouslyPaid)} paid</span>}
+                        <span style={{ color: '#22d3ee', fontWeight: 800 }}>{fmt(v.balanceDue)} due</span>
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{expanded === v.vehicleId ? '▲' : '▼'}</span>
+                      </div>
+                    </div>
+                    {expanded === v.vehicleId && (
+                      <div style={{ padding: '0 20px 20px 32px' }}>
+                        {v.deductions.items.length > 0 && (
+                          <div style={{ marginBottom: 14, padding: 14, background: 'rgba(239,68,68,0.04)', borderRadius: 10, border: '1px solid rgba(239,68,68,0.15)' }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', marginBottom: 8 }}>DEDUCTION DETAIL</div>
+                            {v.deductions.items.map((item, i) => (
+                              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                <span style={{ color: 'var(--color-text-muted)', width: 80 }}>{new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                                <span style={{ fontWeight: 600, flex: 1 }}>{item.label}</span>
+                                <span style={{ color: 'var(--color-text-muted)', flex: 1, fontStyle: 'italic' }}>{item.note || ''}</span>
+                                <span style={{ color: '#ef4444', fontWeight: 700 }}>−{fmt(item.amount)}</span>
+                              </div>
+                            ))}
+                            {v.previouslyPaid > 0 && <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(249,115,22,0.3)', display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#f97316' }}><span>💸 Already paid to owner</span><span>−{fmt(v.previouslyPaid)}</span></div>}
+                          </div>
+                        )}
+                        <table className="data-table" style={{ fontSize: 12 }}>
+                          <thead><tr><th>Date</th><th>Invoice</th><th>LR</th><th style={{ textAlign: 'right' }}>MT</th><th style={{ textAlign: 'right' }}>Rate</th><th style={{ textAlign: 'right' }}>Payout</th></tr></thead>
+                          <tbody>{v.trips.map(t => (<tr key={t.id}><td>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td><td style={{ color: 'var(--color-text-muted)' }}>{t.invoiceNo || '—'}</td><td style={{ color: 'var(--color-text-muted)' }}>{t.lrNo || '—'}</td><td style={{ textAlign: 'right', fontWeight: 600 }}>{t.weight.toFixed(2)}</td><td style={{ textAlign: 'right', color: '#8b5cf6' }}>₹{t.appliedOwnerRate}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{fmt(t.ownerPayout)}</td></tr>))}</tbody>
+                        </table>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            ))}
 
-                    {/* Trip table */}
-                    <div className="data-table-wrapper" style={{ maxHeight: 400, overflowY: 'auto', padding: '0 20px 20px 20px' }}>
-                      <table className="data-table print-table" style={{ marginTop: 16 }}>
-                        <thead><tr><th>Date</th><th>Invoice No</th><th>LR No</th><th className="text-right" style={{ textAlign: 'right' }}>Weight (MT)</th><th className="text-right" style={{ textAlign: 'right' }}>Applied Rate</th><th className="text-right" style={{ textAlign: 'right' }}>Payout</th></tr></thead>
-                        <tbody>
-                          {v.trips.map(t => (
-                            <tr key={t.id}>
-                              <td style={{ fontSize: 13, fontWeight: 500 }}>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                              <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{t.invoiceNo || '—'}</td>
-                              <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{t.lrNo || '—'}</td>
-                              <td className="text-right" style={{ textAlign: 'right', fontWeight: 700 }}>{t.weight.toFixed(2)}</td>
-                              <td className="text-right" style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>₹{t.appliedOwnerRate}</td>
-                              <td className="text-right" style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-text-primary)' }}>{fmt(t.ownerPayout)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                        <tfoot>
-                          <tr style={{ background: 'var(--color-bg-secondary)' }}>
-                            <td colSpan={3} style={{ fontWeight: 700, padding: '12px 8px' }}>Total Freight</td>
-                            <td className="text-right" style={{ textAlign: 'right', fontWeight: 800, padding: '12px 8px' }}>{v.totalWeight.toFixed(2)} MT</td>
-                            <td />
-                            <td className="text-right" style={{ textAlign: 'right', fontWeight: 800, color: '#f59e0b', fontSize: 14, padding: '12px 8px' }}>{fmt(v.grossPayout)}</td>
-                          </tr>
-                          {v.deductions.total > 0 && <tr><td colSpan={5} className="text-red" style={{ color: '#ef4444', fontWeight: 700, padding: '12px 8px', borderTop: 'none' }}>Less: Total Deductions</td><td className="text-right text-red" style={{ textAlign: 'right', color: '#ef4444', fontWeight: 800, fontSize: 14, padding: '12px 8px', borderTop: 'none' }}>−{fmt(v.deductions.total)}</td></tr>}
-                          <tr style={{ background: 'rgba(16,185,129,0.1)' }}>
-                            <td colSpan={5} className="text-green" style={{ fontWeight: 800, color: '#059669', padding: '16px 8px', fontSize: 14, borderTop: '2px solid #10b981' }}>NET SETTLEMENT PAYABLE</td>
-                            <td className="text-right text-green" style={{ textAlign: 'right', fontWeight: 800, color: '#059669', fontSize: 18, padding: '16px 8px', borderTop: '2px solid #10b981' }}>{fmt(v.netSettlement)}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
+            {/* Vehicle view */}
+            {billView === 'vehicle' && bill.vehicles.map(v => (
+              <div key={v.vehicleId} style={{ border: '1px solid var(--color-border)', borderRadius: 12, marginBottom: 14, overflow: 'hidden', background: 'var(--color-bg-primary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', cursor: 'pointer' }} onClick={() => setExpanded(expanded === v.vehicleId ? null : v.vehicleId)}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: 15, fontWeight: 800 }}>🚛 {v.plateNo}</span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{v.ownerName}</span>
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 12, background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>₹{v.effectiveOwnerRate}/MT</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', fontSize: 13 }}>
+                    <span style={{ color: '#f59e0b', fontWeight: 600 }}>{fmt(v.grossPayout)}</span>
+                    <span style={{ color: '#ef4444' }}>−{fmt(v.deductions.total)}</span>
+                    <span style={{ color: '#10b981', fontWeight: 700 }}>{fmt(v.netSettlement)}</span>
+                    {v.previouslyPaid > 0 && <span style={{ color: '#f97316' }}>−{fmt(v.previouslyPaid)} paid</span>}
+                    <span style={{ fontWeight: 800, color: '#22d3ee' }}>{fmt(v.balanceDue)} due</span>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{expanded === v.vehicleId ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+                {expanded === v.vehicleId && (
+                  <div style={{ borderTop: '1px solid var(--color-border)', padding: '14px 18px' }}>
+                    {v.deductions.items.length > 0 && (
+                      <div style={{ marginBottom: 14, padding: 12, background: 'rgba(239,68,68,0.04)', borderRadius: 8, border: '1px solid rgba(239,68,68,0.15)' }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#ef4444', marginBottom: 8 }}>DEDUCTION DETAIL</div>
+                        {v.deductions.items.map((item, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <span style={{ color: 'var(--color-text-muted)', width: 80 }}>{new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                            <span style={{ fontWeight: 600, flex: 1 }}>{item.label}</span>
+                            <span style={{ color: 'var(--color-text-muted)', flex: 1 }}>{item.note || ''}</span>
+                            <span style={{ color: '#ef4444', fontWeight: 700 }}>−{fmt(item.amount)}</span>
+                          </div>
+                        ))}
+                        {v.previouslyPaid > 0 && <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(249,115,22,0.3)', display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: '#f97316' }}><span>💸 Already paid</span><span>−{fmt(v.previouslyPaid)}</span></div>}
+                      </div>
+                    )}
+                    <table className="data-table" style={{ fontSize: 12 }}>
+                      <thead><tr><th>Date</th><th>Invoice</th><th>LR</th><th style={{ textAlign: 'right' }}>MT</th><th style={{ textAlign: 'right' }}>Rate</th><th style={{ textAlign: 'right' }}>Payout</th></tr></thead>
+                      <tbody>{v.trips.map(t => (<tr key={t.id}><td>{new Date(t.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td><td style={{ color: 'var(--color-text-muted)' }}>{t.invoiceNo || '—'}</td><td style={{ color: 'var(--color-text-muted)' }}>{t.lrNo || '—'}</td><td style={{ textAlign: 'right', fontWeight: 600 }}>{t.weight.toFixed(2)}</td><td style={{ textAlign: 'right', color: '#8b5cf6' }}>₹{t.appliedOwnerRate}</td><td style={{ textAlign: 'right', fontWeight: 700 }}>{fmt(t.ownerPayout)}</td></tr>))}</tbody>
+                    </table>
                   </div>
                 )}
               </div>
