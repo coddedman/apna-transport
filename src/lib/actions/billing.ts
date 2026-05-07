@@ -188,9 +188,19 @@ export async function generateBill(
   const projectOwnerRate = project?.ownerRate || 125
 
   const appliedOwnerAdvances = new Set<string>()
+  const processedOwnersWithAdvances = new Set<string>()
 
   const vehicleBills: VehicleBillLine[] = vehicles
-    .filter(v => v.trips.length > 0)
+    .filter(v => {
+      if (v.trips.length > 0) return true
+      if (v.expenses.length > 0) return true
+      // Include at least one vehicle per owner if they have an owner advance
+      if (ownerAdvances.some(a => a.ownerId === v.ownerId) && !processedOwnersWithAdvances.has(v.ownerId)) {
+        processedOwnersWithAdvances.add(v.ownerId)
+        return true
+      }
+      return false
+    })
     .map(v => {
       // 3-tier effective rate: Vehicle override → Owner override → Project default
       const effectiveOwnerRate =
