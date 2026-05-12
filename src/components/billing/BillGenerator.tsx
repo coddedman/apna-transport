@@ -198,7 +198,9 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
               <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{bill.period.label}</div>
             </div>
           </div>
-          <BillOutput bill={bill} />
+          <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 4 }}>
+            <BillOutput bill={bill} />
+          </div>
         </div>
       )}
     </div>
