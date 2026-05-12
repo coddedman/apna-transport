@@ -119,3 +119,76 @@ export async function markSettled(settlementId: string) {
 
   revalidatePath('/dashboard/settlements')
 }
+
+export async function deleteSettlement(settlementId: string) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const settlement = await prisma.settlement.findUnique({
+    where: { id: settlementId },
+    include: { owner: { select: { transporterId: true } } }
+  })
+
+  if (!settlement || settlement.owner.transporterId !== transporterId) {
+    throw new Error('Settlement not found')
+  }
+
+  await prisma.settlement.delete({ where: { id: settlementId } })
+  revalidatePath('/dashboard/settlements')
+}
+
+export async function updateSettlement(
+  settlementId: string,
+  data: { totalRevenue?: number; totalFuel?: number; totalAdvances?: number; totalMaint?: number; totalTolls?: number; totalOther?: number }
+) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const settlement = await prisma.settlement.findUnique({
+    where: { id: settlementId },
+    include: { owner: { select: { transporterId: true } } }
+  })
+
+  if (!settlement || settlement.owner.transporterId !== transporterId) {
+    throw new Error('Settlement not found')
+  }
+
+  const rev = data.totalRevenue ?? settlement.totalRevenue
+  const fuel = data.totalFuel ?? settlement.totalFuel
+  const adv = data.totalAdvances ?? settlement.totalAdvances
+  const maint = data.totalMaint ?? settlement.totalMaint
+  const tolls = data.totalTolls ?? settlement.totalTolls
+  const other = data.totalOther ?? settlement.totalOther
+  const deductions = fuel + maint + tolls + other
+  const finalPayout = rev - deductions - adv
+
+  await prisma.settlement.update({
+    where: { id: settlementId },
+    data: { totalRevenue: rev, totalFuel: fuel, totalAdvances: adv, totalMaint: maint, totalTolls: tolls, totalOther: other, finalPayout }
+  })
+
+  revalidatePath('/dashboard/settlements')
+}
+
+export async function getSettlementById(settlementId: string) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const settlement = await prisma.settlement.findUnique({
+    where: { id: settlementId },
+    include: {
+      owner: {
+        select: {
+          ownerName: true, transporterId: true,
+          vehicles: { select: { id: true, plateNo: true } }
+        }
+      }
+    }
+  })
+
+  if (!settlement || settlement.owner.transporterId !== transporterId) return null
+  return settlement
+}

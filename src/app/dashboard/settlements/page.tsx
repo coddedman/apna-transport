@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import GenerateSettlementButton from '@/components/GenerateSettlementButton'
 import MarkSettledButton from '@/components/MarkSettledButton'
 import ExportCSVButton from '@/components/ExportCSVButton'
+import SettlementActions from '@/components/SettlementActions'
 
 export const metadata = {
   title: 'Settlements — Hyva Transport',
@@ -197,8 +198,9 @@ export default async function SettlementsPage() {
                           {fmt(s.finalPayout)}
                         </p>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         {s.status === 'PENDING' && <MarkSettledButton settlementId={s.id} />}
+                        <SettlementActions settlement={JSON.parse(JSON.stringify(s))} />
                       </div>
                     </div>
                   </div>
