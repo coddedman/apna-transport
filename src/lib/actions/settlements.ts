@@ -10,99 +10,91 @@ export async function generateSettlement(formData: FormData) {
   if (!transporterId) throw new Error('Unauthorized')
 
   const ownerId = formData.get('ownerId') as string
-  const periodStartStr = formData.get('periodStart') as string
   const periodEndStr = formData.get('periodEnd') as string
+  // periodStart is optional — if not provided, we use "till date" (all time)
+  const periodStartStr = formData.get('periodStart') as string
 
-  if (!ownerId || !periodStartStr || !periodEndStr) {
-    throw new Error('Owner and date range are required')
-  }
+  if (!ownerId || !periodEndStr) throw new Error('Owner and end date are required')
 
-  const periodStart = new Date(periodStartStr + 'T00:00:00')
+  const useTillDate = !periodStartStr
+  const periodStart = useTillDate ? new Date('2000-01-01') : new Date(periodStartStr + 'T00:00:00')
   const periodEnd = new Date(periodEndStr + 'T23:59:59')
 
-  // Verify owner belongs to this transporter + fetch vehicle data
-  const [owner, ownerAdvances] = await Promise.all([
-    prisma.owner.findUnique({
-      where: { id: ownerId },
-      include: {
-        vehicles: {
-          include: {
-            trips: {
-              where: { date: { gte: periodStart, lte: periodEnd } }
-            },
-            expenses: {
-              where: { date: { gte: periodStart, lte: periodEnd } }
-            }
-          }
+  const owner = await prisma.owner.findUnique({
+    where: { id: ownerId },
+    include: {
+      vehicles: {
+        include: {
+          project: true,
+          trips: { where: { date: { gte: periodStart, lte: periodEnd } } },
+          expenses: { where: { date: { gte: periodStart, lte: periodEnd } } },
         }
       }
-    }),
-    // Also fetch dedicated OwnerAdvance records for same period
-    prisma.ownerAdvance.findMany({
-      where: {
-        ownerId,
-        date: { gte: periodStart, lte: periodEnd }
-      }
-    })
-  ])
+    }
+  })
 
-  if (!owner || owner.transporterId !== transporterId) {
-    throw new Error('Owner not found')
-  }
+  if (!owner || owner.transporterId !== transporterId) throw new Error('Owner not found')
 
-  // Calculate totals
-  let totalRevenue = 0
+  // Owner advances: ALL time, no date filter (cumulative)
+  const ownerAdvances = await prisma.ownerAdvance.findMany({ where: { ownerId } })
+  const ownerAdvanceTotal = ownerAdvances.reduce((a, adv) => a + adv.amount, 0)
+
+  // Get project default rate
+  const project = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
+  const projectOwnerRate = project?.ownerRate || 125
+
+  let totalOwnerPayout = 0
   let totalFuel = 0
-  let totalAdvances = 0
+  let totalDriverAdvances = 0
   let totalMaint = 0
   let totalTolls = 0
   let totalOther = 0
   let tripsCount = 0
 
   owner.vehicles.forEach((v: any) => {
+    const effectiveRate = v.ownerRateOverride ?? owner.ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
     tripsCount += v.trips.length
-    totalRevenue += v.trips.reduce((acc: number, t: any) => acc + t.partyFreightAmount, 0)
+    totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * effectiveRate), 0)
 
     v.expenses.forEach((e: any) => {
       switch (e.type) {
         case 'FUEL': totalFuel += e.amount; break
-        case 'DRIVER_ADVANCE': totalAdvances += e.amount; break
-        case 'OWNER_ADVANCE': totalAdvances += e.amount; break
+        case 'DRIVER_ADVANCE': totalDriverAdvances += e.amount; break
         case 'MAINTENANCE': totalMaint += e.amount; break
         case 'TOLL': totalTolls += e.amount; break
         case 'CASH_PAYMENT': totalOther += e.amount; break
+        // OWNER_ADVANCE from expenses table is ignored — we use OwnerAdvance table
       }
     })
   })
 
-  // Include dedicated OwnerAdvance table records in advances total
-  const ownerAdvanceTotal = ownerAdvances.reduce((acc, a) => acc + a.amount, 0)
-  totalAdvances += ownerAdvanceTotal
+  // totalAdvances = only owner advances (cumulative, from OwnerAdvance table)
+  const totalDeductions = totalFuel + totalDriverAdvances + totalMaint + totalTolls + totalOther
+  const netSettlement = totalOwnerPayout - totalDeductions
+  const finalPayout = netSettlement - ownerAdvanceTotal // balance due
 
-  const totalDeductions = totalFuel + totalAdvances + totalMaint + totalTolls + totalOther
-  const finalPayout = totalRevenue - totalDeductions
-
-  if (tripsCount === 0 && totalDeductions === 0) {
+  if (tripsCount === 0 && totalDeductions === 0 && ownerAdvanceTotal === 0) {
     throw new Error('No trip or expense activity found in this period')
   }
 
   const settlement = await prisma.settlement.create({
     data: {
       ownerId,
-      periodStart,
+      periodStart: useTillDate ? new Date('2000-01-01') : periodStart,
       periodEnd,
-      totalRevenue,
+      totalRevenue: totalOwnerPayout, // using owner payout (weight × rate) not party revenue
       totalFuel,
-      totalAdvances,
+      totalAdvances: ownerAdvanceTotal, // cumulative owner advances (all time)
       totalMaint,
       totalTolls,
-      totalOther,
+      totalOther: totalOther + totalDriverAdvances,
       finalPayout,
       tripsCount,
     }
   })
 
   revalidatePath('/dashboard/settlements')
+  revalidatePath('/dashboard/billing')
   return settlement
 }
 
@@ -111,7 +103,6 @@ export async function markSettled(settlementId: string) {
   const transporterId = (session?.user as any)?.transporterId
   if (!transporterId) throw new Error('Unauthorized')
 
-  // Verify settlement belongs to this transporter's owner
   const settlement = await prisma.settlement.findUnique({
     where: { id: settlementId },
     include: { owner: { select: { transporterId: true } } }
@@ -123,10 +114,7 @@ export async function markSettled(settlementId: string) {
 
   await prisma.settlement.update({
     where: { id: settlementId },
-    data: {
-      status: 'SETTLED',
-      settledAt: new Date(),
-    }
+    data: { status: 'SETTLED', settledAt: new Date() }
   })
 
   revalidatePath('/dashboard/settlements')
