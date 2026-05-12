@@ -63,6 +63,7 @@ export async function updateOwnerAdvance(formData: FormData) {
   })
 
   revalidatePath('/dashboard/owners')
+  revalidatePath(`/dashboard/owners/${advance.ownerId}`)
   revalidatePath('/dashboard/expenses')
 }
 
@@ -82,5 +83,6 @@ export async function deleteOwnerAdvance(advanceId: string) {
   await prisma.ownerAdvance.delete({ where: { id: advanceId } })
 
   revalidatePath('/dashboard/owners')
+  revalidatePath(`/dashboard/owners/${advance.ownerId}`)
   revalidatePath('/dashboard/expenses')
 }

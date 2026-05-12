@@ -93,7 +93,6 @@ export default function EditExpenseButton({ expense, vehicles, projects }: EditE
               <select className="form-select" name="type" defaultValue={expense.type} required>
                 <option value="FUEL">Fuel</option>
                 <option value="DRIVER_ADVANCE">Driver Advance</option>
-                <option value="OWNER_ADVANCE">Owner Advance</option>
                 <option value="MAINTENANCE">Maintenance</option>
                 <option value="TOLL">Toll</option>
                 <option value="CASH_PAYMENT">Cash Payment</option>

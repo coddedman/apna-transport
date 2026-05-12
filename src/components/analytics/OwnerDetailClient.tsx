@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import EditOwnerAdvanceButton from '../EditOwnerAdvanceButton'
 
 const EXP_COLORS: Record<string, string> = {
   FUEL: '#f59e0b', DRIVER_ADVANCE: '#3b82f6', OWNER_ADVANCE: '#8b5cf6',
@@ -28,9 +29,9 @@ function Bar({ value, max, color = '#f59e0b', height = 6 }: { value: number; max
   )
 }
 
-type Tab = 'overview' | 'weekly' | 'trips' | 'expenses'
+type Tab = 'overview' | 'weekly' | 'trips' | 'expenses' | 'advances'
 
-export default function OwnerDetailClient({ data }: { data: any }) {
+export default function OwnerDetailClient({ data, projects }: { data: any; projects: any[] }) {
   const [tab, setTab] = useState<Tab>('overview')
   const [selectedVehicle, setSelectedVehicle] = useState<string>('all')
   const [selectedWeekVehicle, setSelectedWeekVehicle] = useState<string>(data.vehicles[0]?.id || '')
@@ -88,6 +89,7 @@ export default function OwnerDetailClient({ data }: { data: any }) {
     { key: 'weekly', label: '📅 Weekly Breakdown' },
     { key: 'trips', label: `🛣️ All Trips (${allTrips.length})` },
     { key: 'expenses', label: `📉 All Expenses (${allExpenses.length})` },
+    { key: 'advances', label: `🏦 Advances (${data.advances.length})` },
   ]
 
   const tabBtn = (k: Tab) => ({
@@ -337,6 +339,54 @@ export default function OwnerDetailClient({ data }: { data: any }) {
                     </td>
                     <td style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{e.remarks || '—'}</td>
                     <td style={{ textAlign: 'right', fontWeight: 700, color: EXP_COLORS[e.type] || '#64748b' }}>{fmt(e.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ══ ADVANCES ══ */}
+      {tab === 'advances' && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>Owner Advances</div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{data.advances.length} entries · {fmt(totalAdvances)}</div>
+          </div>
+          <div className="data-table-wrapper">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Project</th>
+                  <th>Remarks</th>
+                  <th style={{ textAlign: 'right' }}>Amount</th>
+                  <th style={{ textAlign: 'center', width: '60px' }}>Edit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.advances.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-muted)' }}>No advances found</td></tr>}
+                {data.advances.map((a: any) => (
+                  <tr key={a.id}>
+                    <td style={{ fontSize: '12px', whiteSpace: 'nowrap' }}>{fmtDate(a.date)}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{a.project?.projectName || '—'}</td>
+                    <td style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{a.remarks || '—'}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 700, color: '#8b5cf6' }}>{fmt(a.amount)}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <EditOwnerAdvanceButton
+                        advance={{
+                          id: a.id,
+                          date: new Date(a.date).toLocaleDateString(),
+                          rawDate: new Date(a.date).toISOString().split('T')[0],
+                          amount: a.amount,
+                          projectId: a.projectId || null,
+                          project: a.project?.projectName || null,
+                          remarks: a.remarks || '',
+                        }}
+                        projects={projects}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -16,8 +16,10 @@ interface Props {
 
 const EXP_LABELS: Record<string, string> = {
   FUEL: '⛽ Fuel', TOLL: '🛣️ Toll', MAINTENANCE: '🔧 Maintenance',
-  DRIVER_ADVANCE: '👤 Driver Advance', OWNER_ADVANCE: '🏦 Owner Advance', CASH_PAYMENT: '💵 Cash Payment',
+  DRIVER_ADVANCE: '👤 Driver Advance', CASH_PAYMENT: '💵 Cash Payment',
 }
+// Note: Owner Advances are managed via the "Log Advance" button on the Owners page
+// and are sourced from the OwnerAdvance table. They appear in billing as a separate section.
 const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 
 function getEffectiveRate(v: Vehicle, projectDefault: number) {
@@ -401,15 +403,21 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
           <div>
             <label style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 12, letterSpacing: '0.5px' }}>
               3. Deduct from Settlement
-              <span style={{ display: 'block', fontSize: 10, color: '#f59e0b', marginTop: 4, fontWeight: 500, textTransform: 'none' }}>Unchecked advances will move to "Already Paid"</span>
+              <span style={{ display: 'block', fontSize: 10, color: '#f59e0b', marginTop: 4, fontWeight: 500, textTransform: 'none' }}>Unchecked items will move to “Already Paid”</span>
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'var(--color-bg-primary)', padding: 16, borderRadius: 12, border: '1px solid var(--color-border)' }}>
+            <div style={{ background: 'var(--color-bg-primary)', padding: 16, borderRadius: 12, border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {Object.entries(EXP_LABELS).map(([type, label]) => (
                 <label key={type} style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: deductibles.includes(type) ? 'rgba(239,68,68,0.1)' : 'transparent', padding: '8px 10px', borderRadius: 8, transition: 'all 0.2s', border: `1px solid ${deductibles.includes(type) ? 'rgba(239,68,68,0.2)' : 'transparent'}` }}>
                   <input type="checkbox" checked={deductibles.includes(type)} style={{ width: 16, height: 16, accentColor: '#ef4444' }} onChange={e => setDeductibles(p => e.target.checked ? [...p, type] : p.filter(t => t !== type))} />
-                  <span style={{ color: deductibles.includes(type) ? '#ef4444' : 'var(--color-text-primary)', fontWeight: deductibles.includes(type) ? 700 : 500 }}>{label.split(' ')[1]}</span>
+                  <span style={{ color: deductibles.includes(type) ? '#ef4444' : 'var(--color-text-primary)', fontWeight: deductibles.includes(type) ? 700 : 500 }}>{label}</span>
                 </label>
               ))}
+              {/* Owner Advance toggle — sourced from OwnerAdvance table, not Expense table */}
+              <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: deductibles.includes('OWNER_ADVANCE') ? 'rgba(239,68,68,0.1)' : 'transparent', padding: '8px 10px', borderRadius: 8, transition: 'all 0.2s', border: `1px solid ${deductibles.includes('OWNER_ADVANCE') ? 'rgba(239,68,68,0.2)' : 'transparent'}` }}>
+                <input type="checkbox" checked={deductibles.includes('OWNER_ADVANCE')} style={{ width: 16, height: 16, accentColor: '#ef4444' }} onChange={e => setDeductibles(p => e.target.checked ? [...p, 'OWNER_ADVANCE'] : p.filter(t => t !== 'OWNER_ADVANCE'))} />
+                <span style={{ color: deductibles.includes('OWNER_ADVANCE') ? '#ef4444' : 'var(--color-text-primary)', fontWeight: deductibles.includes('OWNER_ADVANCE') ? 700 : 500 }}>🏦 Owner Advance</span>
+                <span style={{ fontSize: 10, color: '#8b5cf6', marginLeft: 'auto', fontWeight: 600 }}>via Owners page</span>
+              </label>
             </div>
           </div>
         </div>

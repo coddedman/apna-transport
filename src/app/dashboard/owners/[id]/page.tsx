@@ -46,6 +46,7 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
     advances: owner.advances.map(a => ({
       id: a.id, amount: a.amount, remarks: a.remarks,
       date: a.date.toISOString(),
+      projectId: a.projectId,
       project: a.project ? { projectName: a.project.projectName } : null,
     })),
     settlements: owner.settlements.map(s => ({
@@ -69,6 +70,8 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
     })),
   }
 
+  const projects = await prisma.project.findMany({ where: { transporterId }, select: { id: true, projectName: true } })
+
   return (
     <div className="page-body">
       {/* Back link */}
@@ -77,7 +80,7 @@ export default async function OwnerDetailPage({ params }: { params: Promise<{ id
           ← Back to Owners
         </Link>
       </div>
-      <OwnerDetailClient data={data} />
+      <OwnerDetailClient data={data} projects={projects} />
     </div>
   )
 }
