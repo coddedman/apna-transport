@@ -94,8 +94,10 @@ export async function generateBill(
     }
   })
 
+  // Fetch ALL owner advances up to the bill end date (not just within the period).
+  // An advance logged before the billing period start should still appear as "Already Paid".
   const ownerAdvances = await prisma.ownerAdvance.findMany({
-    where: { owner: { transporterId }, date: { gte: startDate, lte: endDate } },
+    where: { owner: { transporterId }, date: { lte: endDate } },
     include: { owner: true }
   })
 
@@ -135,38 +137,42 @@ export async function generateBill(
         ownerAdvanceTotal = ownerAdvancesForThisVehicle.reduce((a, adv) => a + adv.amount, 0)
       }
 
+      // Operational deductions only (fuel, toll, maintenance, driver advance, cash payment)
+      // Owner advances are ALWAYS "Already Paid" — they are cash given to the owner, not operational costs
       const deductionMap = {
         fuel: expByType('FUEL'), toll: expByType('TOLL'), maintenance: expByType('MAINTENANCE'),
         driverAdvance: expByType('DRIVER_ADVANCE'),
-        ownerAdvance: ownerAdvanceTotal, // Only from OwnerAdvance table
+        ownerAdvance: 0, // Owner advances never reduce netSettlement — they reduce balanceDue
         other: expByType('CASH_PAYMENT'),
       }
 
       const deductTotal = Object.entries(deductionMap).reduce((sum, [key, val]) => {
-        const expKey = key === 'ownerAdvance' ? 'OWNER_ADVANCE' : key === 'driverAdvance' ? 'DRIVER_ADVANCE' : key === 'other' ? 'CASH_PAYMENT' : key.toUpperCase()
+        const expKey = key === 'driverAdvance' ? 'DRIVER_ADVANCE' : key === 'other' ? 'CASH_PAYMENT' : key.toUpperCase()
+        // ownerAdvance is always 0 here, skip it
+        if (key === 'ownerAdvance') return sum
         return deductibleExpenseTypes.includes(expKey) ? sum + val : sum
       }, 0)
 
-      const deductionItems: DeductionItem[] = [
-        ...v.expenses.filter(e => e.type !== 'OWNER_ADVANCE' && deductibleExpenseTypes.includes(e.type)).map(e => ({
+      // Deduction items: only operational expenses
+      const deductionItems: DeductionItem[] = v.expenses
+        .filter(e => e.type !== 'OWNER_ADVANCE' && deductibleExpenseTypes.includes(e.type))
+        .map(e => ({
           type: e.type,
           label: ({ FUEL: '⛽ Fuel', TOLL: '🛣️ Toll', MAINTENANCE: '🔧 Maintenance', DRIVER_ADVANCE: '👤 Driver Advance', CASH_PAYMENT: '💵 Cash Payment' } as any)[e.type] ?? e.type,
           date: e.date.toISOString().split('T')[0], amount: e.amount, note: e.remarks ?? undefined,
-        })),
-        ...ownerAdvancesForThisVehicle.filter(() => deductibleExpenseTypes.includes('OWNER_ADVANCE')).map(a => ({
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+
+      // Already Paid: ALL owner advances (always) + any CASH_PAYMENT not in deductibles
+      const paidItems: PaidItem[] = [
+        // Owner advances are always "Already Paid" regardless of deductibles setting
+        ...ownerAdvancesForThisVehicle.map(a => ({
           type: 'OWNER_ADVANCE', label: '🏦 Owner Advance',
           date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined,
         })),
-      ].sort((a, b) => a.date.localeCompare(b.date))
-
-      const paidItems: PaidItem[] = [
         ...v.expenses.filter(e => e.type === 'CASH_PAYMENT' && !deductibleExpenseTypes.includes(e.type)).map(e => ({
           type: e.type, label: '💵 Cash Payment',
           date: e.date.toISOString().split('T')[0], amount: e.amount, note: e.remarks ?? undefined,
-        })),
-        ...ownerAdvancesForThisVehicle.filter(() => !deductibleExpenseTypes.includes('OWNER_ADVANCE')).map(a => ({
-          type: 'OWNER_ADVANCE', label: '🏦 Owner Advance',
-          date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined,
         })),
       ].sort((a, b) => a.date.localeCompare(b.date))
 
@@ -177,8 +183,10 @@ export async function generateBill(
         ownerRateOverride: v.ownerRateOverride, ownerOwnerRateOverride: (v.owner as any).ownerRateOverride ?? null,
         effectiveOwnerRate, effectiveRateSource, trips: tripLines,
         totalTrips: tripLines.length, totalWeight: tripLines.reduce((a, t) => a + t.weight, 0),
-        grossPayout, deductions: { ...deductionMap, total: deductTotal, items: deductionItems },
-        netSettlement: grossPayout - deductTotal, previouslyPaid, paidItems,
+        grossPayout,
+        deductions: { ...deductionMap, total: deductTotal, items: deductionItems },
+        netSettlement: grossPayout - deductTotal,
+        previouslyPaid, paidItems,
         balanceDue: grossPayout - deductTotal - previouslyPaid,
       }
     })
