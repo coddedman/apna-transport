@@ -61,13 +61,15 @@ export interface VehicleBillLine {
 
 export interface OwnerBillSummary {
   ownerId: string; ownerName: string; vehicles: VehicleBillLine[]
-  totalGross: number; totalDeductions: number; totalNet: number; totalPreviouslyPaid: number; totalBalanceDue: number
+  totalGross: number; totalDeductions: number; totalNet: number
+  ownerAdvanceTotal: number; ownerAdvanceItems: PaidItem[]
+  totalBalanceDue: number
 }
 
 export interface BillSummary {
   period: { start: string; end: string; label: string; isTillDate: boolean }
   vehicles: VehicleBillLine[]; ownerSummaries: OwnerBillSummary[]
-  grandTotal: { trips: number; weight: number; grossPayout: number; totalDeductions: number; netSettlement: number; totalPreviouslyPaid: number; totalBalanceDue: number }
+  grandTotal: { trips: number; weight: number; grossPayout: number; totalDeductions: number; netSettlement: number; totalAdvancesPaid: number; totalBalanceDue: number }
 }
 
 export async function generateBill(
@@ -94,17 +96,15 @@ export async function generateBill(
     }
   })
 
-  // Fetch ALL owner advances up to the bill end date (not just within the period).
-  // An advance logged before the billing period start should still appear as "Already Paid".
+  // Fetch ALL owner advances — NO date filter. Advances are cumulative lifetime totals.
   const ownerAdvances = await prisma.ownerAdvance.findMany({
-    where: { owner: { transporterId }, date: { lte: endDate } },
+    where: { owner: { transporterId } },
     include: { owner: true }
   })
 
   const project = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
   const projectOwnerRate = project?.ownerRate || 125
 
-  const appliedOwnerAdvances = new Set<string>()
   const processedOwnersWithAdvances = new Set<string>()
 
   const vehicleBills: VehicleBillLine[] = vehicles
@@ -129,13 +129,7 @@ export async function generateBill(
 
       const expByType = (type: string) => v.expenses.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
 
-      let ownerAdvanceTotal = 0
-      let ownerAdvancesForThisVehicle: typeof ownerAdvances = []
-      if (!appliedOwnerAdvances.has(v.ownerId)) {
-        appliedOwnerAdvances.add(v.ownerId)
-        ownerAdvancesForThisVehicle = ownerAdvances.filter(a => a.ownerId === v.ownerId)
-        ownerAdvanceTotal = ownerAdvancesForThisVehicle.reduce((a, adv) => a + adv.amount, 0)
-      }
+      // Owner advances are handled at the owner level, not per vehicle
 
       // Operational deductions only (fuel, toll, maintenance, driver advance, cash payment)
       // Owner advances are ALWAYS "Already Paid" — they are cash given to the owner, not operational costs
@@ -163,19 +157,11 @@ export async function generateBill(
         }))
         .sort((a, b) => a.date.localeCompare(b.date))
 
-      // Already Paid: ALL owner advances (always) + any CASH_PAYMENT not in deductibles
-      const paidItems: PaidItem[] = [
-        // Owner advances are always "Already Paid" regardless of deductibles setting
-        ...ownerAdvancesForThisVehicle.map(a => ({
-          type: 'OWNER_ADVANCE', label: '🏦 Owner Advance',
-          date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined,
-        })),
-        ...v.expenses.filter(e => e.type === 'CASH_PAYMENT' && !deductibleExpenseTypes.includes(e.type)).map(e => ({
-          type: e.type, label: '💵 Cash Payment',
-          date: e.date.toISOString().split('T')[0], amount: e.amount, note: e.remarks ?? undefined,
-        })),
-      ].sort((a, b) => a.date.localeCompare(b.date))
-
+      // Per-vehicle paid items (cash payments only — advances are at owner level)
+      const paidItems: PaidItem[] = v.expenses
+        .filter(e => e.type === 'CASH_PAYMENT' && !deductibleExpenseTypes.includes(e.type))
+        .map(e => ({ type: e.type, label: '💵 Cash Payment', date: e.date.toISOString().split('T')[0], amount: e.amount, note: e.remarks ?? undefined }))
+        .sort((a, b) => a.date.localeCompare(b.date))
       const previouslyPaid = paidItems.reduce((s, p) => s + p.amount, 0)
 
       return {
@@ -191,20 +177,41 @@ export async function generateBill(
       }
     })
 
+  // Build owner summaries — advances are cumulative at owner level
   const ownerMap = new Map<string, OwnerBillSummary>()
   for (const vb of vehicleBills) {
-    if (!ownerMap.has(vb.ownerId)) ownerMap.set(vb.ownerId, { ownerId: vb.ownerId, ownerName: vb.ownerName, vehicles: [], totalGross: 0, totalDeductions: 0, totalNet: 0, totalPreviouslyPaid: 0, totalBalanceDue: 0 })
+    if (!ownerMap.has(vb.ownerId)) {
+      const advItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId)
+      const advTotal = advItems.reduce((s, a) => s + a.amount, 0)
+      ownerMap.set(vb.ownerId, {
+        ownerId: vb.ownerId, ownerName: vb.ownerName, vehicles: [],
+        totalGross: 0, totalDeductions: 0, totalNet: 0,
+        ownerAdvanceTotal: advTotal,
+        ownerAdvanceItems: advItems.map(a => ({ type: 'OWNER_ADVANCE', label: '🏦 Owner Advance', date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined })).sort((a, b) => a.date.localeCompare(b.date)),
+        totalBalanceDue: 0,
+      })
+    }
     const os = ownerMap.get(vb.ownerId)!
-    os.vehicles.push(vb); os.totalGross += vb.grossPayout; os.totalDeductions += vb.deductions.total
-    os.totalNet += vb.netSettlement; os.totalPreviouslyPaid += vb.previouslyPaid; os.totalBalanceDue += vb.balanceDue
+    os.vehicles.push(vb)
+    os.totalGross += vb.grossPayout
+    os.totalDeductions += vb.deductions.total
+    os.totalNet += vb.netSettlement
+  }
+  // Calculate balance due at owner level: Net - Advances
+  for (const os of ownerMap.values()) {
+    os.totalBalanceDue = os.totalNet - os.ownerAdvanceTotal
   }
 
-  const grandTotal = vehicleBills.reduce((a, v) => ({
-    trips: a.trips + v.totalTrips, weight: a.weight + v.totalWeight,
-    grossPayout: a.grossPayout + v.grossPayout, totalDeductions: a.totalDeductions + v.deductions.total,
-    netSettlement: a.netSettlement + v.netSettlement, totalPreviouslyPaid: a.totalPreviouslyPaid + v.previouslyPaid,
-    totalBalanceDue: a.totalBalanceDue + v.balanceDue,
-  }), { trips: 0, weight: 0, grossPayout: 0, totalDeductions: 0, netSettlement: 0, totalPreviouslyPaid: 0, totalBalanceDue: 0 })
+  const ownerSums = [...ownerMap.values()]
+  const grandTotal = {
+    trips: vehicleBills.reduce((a, v) => a + v.totalTrips, 0),
+    weight: vehicleBills.reduce((a, v) => a + v.totalWeight, 0),
+    grossPayout: ownerSums.reduce((a, o) => a + o.totalGross, 0),
+    totalDeductions: ownerSums.reduce((a, o) => a + o.totalDeductions, 0),
+    netSettlement: ownerSums.reduce((a, o) => a + o.totalNet, 0),
+    totalAdvancesPaid: ownerSums.reduce((a, o) => a + o.ownerAdvanceTotal, 0),
+    totalBalanceDue: ownerSums.reduce((a, o) => a + o.totalBalanceDue, 0),
+  }
 
   const fmtD = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   const periodLabel = isTillDate
@@ -215,7 +222,7 @@ export async function generateBill(
 
   return {
     period: { start: isTillDate ? '' : period.startDate, end: period.endDate, label: periodLabel, isTillDate },
-    vehicles: vehicleBills, ownerSummaries: [...ownerMap.values()], grandTotal,
+    vehicles: vehicleBills, ownerSummaries: ownerSums, grandTotal,
   }
 }
 

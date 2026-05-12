@@ -99,21 +99,18 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
       }
     }
 
-    // ── ADVANCES ──
+    // ── ADVANCES (owner-level, cumulative) ──
     if (mode === 'advances' || mode === 'full') {
-      const allPaid = owner.vehicles.flatMap(v => v.paidItems.map(p => ({ ...p, plateNo: v.plateNo })))
-      const totalPaid = owner.vehicles.reduce((a, v) => a + v.previouslyPaid, 0)
-
-      if (allPaid.length > 0) {
+      if (owner.ownerAdvanceItems.length > 0) {
         if (y > 230) { doc.addPage(); y = 14 }
         doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(249, 115, 22)
-        doc.text('ADVANCES PAID TO OWNER', margin, y); y += 4
+        doc.text('ADVANCES PAID TO OWNER (ALL TIME)', margin, y); y += 4
 
         autoTable(doc, {
           startY: y,
           head: [['Date', 'Type', 'Note', 'Amount']],
-          body: allPaid.map(p => [fmtD(p.date), p.label, p.note || '—', `-${fmt(p.amount)}`]),
-          foot: [['', '', 'TOTAL ADVANCES', `-${fmt(totalPaid)}`]],
+          body: owner.ownerAdvanceItems.map(p => [fmtD(p.date), p.label, p.note || '—', `-${fmt(p.amount)}`]),
+          foot: [['', '', 'TOTAL ADVANCES', `-${fmt(owner.ownerAdvanceTotal)}`]],
           theme: 'plain',
           styles: { fontSize: 8, cellPadding: 2.5, textColor: [100, 116, 139] },
           headStyles: { fillColor: [30, 18, 5], textColor: [71, 85, 105], fontSize: 7, fontStyle: 'bold' },
@@ -131,7 +128,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
     // ── SUMMARY (full mode only) ──
     if (mode === 'full') {
       if (y > 220) { doc.addPage(); y = 14 }
-      const gross = owner.totalGross, ded = owner.totalDeductions, net = owner.totalNet, paid = owner.totalPreviouslyPaid, due = owner.totalBalanceDue
+      const gross = owner.totalGross, ded = owner.totalDeductions, net = owner.totalNet, paid = owner.ownerAdvanceTotal, due = owner.totalBalanceDue
       doc.setFillColor(11, 17, 32)
       doc.roundedRect(margin, y, W - margin * 2, 32, 3, 3, 'F')
       doc.setDrawColor(245, 158, 11); doc.setLineWidth(0.4)
