@@ -153,11 +153,11 @@ export default async function SettlementsPage() {
                       </div>
                     </div>
 
-                    {/* Financial breakdown — clean flow */}
+                    {/* Financial breakdown */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
                       padding: '16px 20px', background: 'rgba(255,255,255,.02)',
-                      borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '16px',
+                      borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', marginBottom: '12px',
                     }}>
                       <div>
                         <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 2, textTransform: 'uppercase', fontWeight: 700 }}>Owner Payout</p>
@@ -181,10 +181,9 @@ export default async function SettlementsPage() {
                         <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginBottom: 2, textTransform: 'uppercase', fontWeight: 700 }}>Advances Paid</p>
                         <p style={{ fontSize: '15px', fontWeight: 600, color: '#f97316' }}>{fmt(s.totalAdvances)}</p>
                       </div>
-                      <span style={{ color: 'var(--color-text-muted)', fontSize: 18 }}>=</span>
                     </div>
 
-                    {/* Balance Due */}
+                    {/* Balance Due + Actions */}
                     <div style={{
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '14px 18px',
@@ -192,13 +191,15 @@ export default async function SettlementsPage() {
                       borderRadius: 'var(--radius-md)',
                       border: `1px solid ${s.finalPayout > 0 ? 'rgba(34,211,238,.15)' : 'rgba(239,68,68,.15)'}`,
                     }}>
-                      <div>
-                        <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: '2px' }}>BALANCE DUE</p>
-                        <p style={{ fontSize: '24px', fontWeight: 800, color: s.finalPayout > 0 ? '#22d3ee' : 'var(--color-danger)', letterSpacing: '-0.03em' }}>
-                          {fmt(s.finalPayout)}
-                        </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div>
+                          <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '2px', textTransform: 'uppercase' }}>Balance Due</p>
+                          <p style={{ fontSize: '24px', fontWeight: 900, color: s.finalPayout > 0 ? '#22d3ee' : 'var(--color-danger)', letterSpacing: '-0.03em' }}>
+                            {fmt(s.finalPayout)}
+                          </p>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                         {s.status === 'PENDING' && <MarkSettledButton settlementId={s.id} />}
                         <SettlementActions settlement={JSON.parse(JSON.stringify(s))} />
                       </div>
