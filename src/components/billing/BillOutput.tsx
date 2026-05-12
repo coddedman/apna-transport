@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import type { BillSummary } from '@/lib/actions/billing'
+import type { PdfMode } from '@/lib/billPdf'
 
 const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 const fmtD = (s: string) => new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -11,11 +12,26 @@ export default function BillOutput({ bill }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [pdfLoading, setPdfLoading] = useState<string | null>(null)
 
-  async function handlePdf(ownerName?: string) {
-    setPdfLoading(ownerName ?? 'all')
+  async function handlePdf(mode: PdfMode, ownerName?: string) {
+    const key = `${mode}-${ownerName ?? 'all'}`
+    setPdfLoading(key)
     const { generateBillPdf } = await import('@/lib/billPdf')
-    generateBillPdf(bill, ownerName)
+    generateBillPdf(bill, ownerName, mode)
     setPdfLoading(null)
+  }
+
+  const PdfBtn = ({ mode, label, ownerName }: { mode: PdfMode; label: string; ownerName?: string }) => {
+    const key = `${mode}-${ownerName ?? 'all'}`
+    const colors: Record<PdfMode, string> = {
+      full: '#f59e0b', trips: '#10b981', expenses: '#ef4444', advances: '#f97316'
+    }
+    const c = colors[mode]
+    return (
+      <button onClick={() => handlePdf(mode, ownerName)} disabled={pdfLoading === key}
+        style={{ padding: '6px 12px', background: `${c}18`, color: c, border: `1px solid ${c}33`, borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 11, whiteSpace: 'nowrap' as const }}>
+        {pdfLoading === key ? '⏳' : '📄'} {label}
+      </button>
+    )
   }
 
   const S: Record<string, React.CSSProperties> = {
@@ -40,9 +56,7 @@ export default function BillOutput({ bill }: Props) {
             <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Overall Settlement</div>
             <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>{bill.period.label} · {bill.grandTotal.trips} trips · {bill.grandTotal.weight.toFixed(1)} MT</div>
           </div>
-          <button onClick={() => handlePdf()} disabled={pdfLoading === 'all'} style={{ padding: '10px 20px', background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
-            {pdfLoading === 'all' ? '⏳' : '📥'} Export All PDF
-          </button>
+          <PdfBtn mode="full" label="Export All PDF" />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
           {[
@@ -80,9 +94,12 @@ export default function BillOutput({ bill }: Props) {
                 <div style={{ fontSize: 10, color: '#22d3ee', fontWeight: 700 }}>BALANCE DUE</div>
                 <div style={{ fontSize: 18, fontWeight: 900, color: owner.totalBalanceDue < 0 ? '#ef4444' : '#22d3ee' }}>{fmt(owner.totalBalanceDue)}</div>
               </div>
-              <button onClick={() => handlePdf(owner.ownerName)} disabled={pdfLoading === owner.ownerName} style={{ padding: '8px 14px', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>
-                {pdfLoading === owner.ownerName ? '⏳' : '📄'} PDF
-              </button>
+              <div style={S.row}>
+                <PdfBtn mode="full" label="Full" ownerName={owner.ownerName} />
+                <PdfBtn mode="trips" label="Trips" ownerName={owner.ownerName} />
+                <PdfBtn mode="expenses" label="Expenses" ownerName={owner.ownerName} />
+                <PdfBtn mode="advances" label="Advances" ownerName={owner.ownerName} />
+              </div>
             </div>
           </div>
 

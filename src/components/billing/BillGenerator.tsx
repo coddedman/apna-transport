@@ -13,8 +13,9 @@ interface Props { vehicles: Vehicle[]; owners: Owner[]; projectDefaultOwnerRate:
 const DEDUCT_OPTS = [
   { key: 'FUEL', label: '⛽ Fuel' }, { key: 'TOLL', label: '🛣️ Toll' },
   { key: 'MAINTENANCE', label: '🔧 Maintenance' }, { key: 'DRIVER_ADVANCE', label: '👤 Driver Advance' },
-  { key: 'CASH_PAYMENT', label: '💵 Cash Payment' }, { key: 'OWNER_ADVANCE', label: '🏦 Owner Advance', hint: 'via Owners page' },
+  { key: 'CASH_PAYMENT', label: '💵 Cash Payment' },
 ]
+// Note: Owner Advances are ALWAYS shown in "Already Paid" — not configurable as deductions
 
 function getWeeks() {
   return Array.from({ length: 8 }, (_, i) => {
@@ -54,7 +55,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
   const [tillDate, setTillDate] = useState(new Date().toISOString().split('T')[0])
   const [customEnd, setCustomEnd] = useState('')
   const [selectedVehicles, setSelectedVehicles] = useState<string[]>([])
-  const [deductibles, setDeductibles] = useState<string[]>(['TOLL', 'OWNER_ADVANCE'])
+  const [deductibles, setDeductibles] = useState<string[]>(['TOLL'])
   const [bill, setBill] = useState<BillSummary | null>(null)
 
   async function saveOwnerRate(id: string) {
