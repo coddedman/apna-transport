@@ -247,7 +247,7 @@ export async function generateBill(
         toll: expByType('TOLL'),
         maintenance: expByType('MAINTENANCE'),
         driverAdvance: expByType('DRIVER_ADVANCE'),
-        ownerAdvance: expByType('OWNER_ADVANCE') + ownerAdvanceTotal,
+        ownerAdvance: ownerAdvanceTotal,   // Only from OwnerAdvance table, not Expense.OWNER_ADVANCE
         other: expByType('CASH_PAYMENT'),
       }
 
@@ -261,20 +261,22 @@ export async function generateBill(
       }, 0)
 
       // Build individual deduction items for the detail panel
+      // Expenses: exclude OWNER_ADVANCE type (that's handled by the OwnerAdvance table)
       const deductionItems: DeductionItem[] = [
         ...v.expenses
-          .filter(e => deductibleExpenseTypes.includes(e.type))
+          .filter(e => e.type !== 'OWNER_ADVANCE' && deductibleExpenseTypes.includes(e.type))
           .map(e => ({
             type: e.type,
             label: {
               FUEL: '⛽ Fuel', TOLL: '🛣️ Toll', MAINTENANCE: '🔧 Maintenance',
-              DRIVER_ADVANCE: '👤 Driver Advance', OWNER_ADVANCE: '🏦 Owner Advance',
+              DRIVER_ADVANCE: '👤 Driver Advance',
               CASH_PAYMENT: '💵 Cash Payment',
             }[e.type] ?? e.type,
             date: e.date.toISOString().split('T')[0],
             amount: e.amount,
             note: e.remarks ?? undefined,
           })),
+        // Owner advances from the dedicated OwnerAdvance table (single source of truth)
         ...ownerAdvancesForThisVehicle
           .filter(a => deductibleExpenseTypes.includes('OWNER_ADVANCE'))
           .map(a => ({
@@ -286,22 +288,25 @@ export async function generateBill(
           })),
       ].sort((a, b) => a.date.localeCompare(b.date))
 
-      // Build paid items detail
+      // Build paid items detail ("Already Paid" section)
+      // CASH_PAYMENT expenses not marked as deductible go here
+      // Owner advances NOT deductible also go here (from OwnerAdvance table only)
       const paidItems: PaidItem[] = [
         ...v.expenses
-          .filter(e => ['OWNER_ADVANCE', 'CASH_PAYMENT'].includes(e.type) && !deductibleExpenseTypes.includes(e.type))
+          .filter(e => e.type === 'CASH_PAYMENT' && !deductibleExpenseTypes.includes(e.type))
           .map(e => ({
             type: e.type,
-            label: e.type === 'OWNER_ADVANCE' ? '🏦 Owner Advance' : '💵 Cash Payment',
+            label: '💵 Cash Payment',
             date: e.date.toISOString().split('T')[0],
             amount: e.amount,
             note: e.remarks ?? undefined,
           })),
+        // Owner advances from OwnerAdvance table that are not being deducted
         ...ownerAdvancesForThisVehicle
           .filter(a => !deductibleExpenseTypes.includes('OWNER_ADVANCE'))
           .map(a => ({
             type: 'OWNER_ADVANCE',
-            label: '🏦 Owner Advance (Direct)',
+            label: '🏦 Owner Advance',
             date: a.date.toISOString().split('T')[0],
             amount: a.amount,
             note: a.remarks ?? undefined,

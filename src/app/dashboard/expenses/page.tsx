@@ -148,7 +148,6 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 <option value="">All Categories</option>
                 <option value="FUEL">Fuel</option>
                 <option value="DRIVER_ADVANCE">Driver Advance</option>
-                <option value="OWNER_ADVANCE">Owner Advance</option>
                 <option value="MAINTENANCE">Maintenance</option>
                 <option value="TOLL">Toll</option>
                 <option value="CASH_PAYMENT">Cash Payment</option>

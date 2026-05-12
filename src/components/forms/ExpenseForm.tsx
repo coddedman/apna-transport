@@ -142,7 +142,6 @@ export default function ExpenseForm({ vehicles, projects, onSuccess }: ExpenseFo
             >
               <option value="FUEL">⛽ Fuel</option>
               <option value="DRIVER_ADVANCE">👤 Driver Adv</option>
-              <option value="OWNER_ADVANCE">🏦 Owner Adv</option>
               <option value="MAINTENANCE">🔧 Maint.</option>
               <option value="TOLL">🛣️ Toll</option>
               <option value="CASH_PAYMENT">💵 Cash</option>
