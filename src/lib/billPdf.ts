@@ -4,6 +4,8 @@ import type { BillSummary } from './actions/billing'
 
 const fmt = (n: number) => `Rs.${Math.round(n).toLocaleString('en-IN')}`
 const fmtD = (s: string) => s ? new Date(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+// jsPDF's Helvetica font can't render emojis — strip them for clean PDF output
+const strip = (s: string) => s.replace(/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FEFF}]|[\u200D\uFE0F]/gu, '').trim()
 
 export type PdfMode = 'full' | 'trips' | 'expenses' | 'advances'
 
@@ -83,7 +85,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
         autoTable(doc, {
           startY: y,
           head: [['Date', 'Vehicle', 'Category', 'Note', 'Amount']],
-          body: allExpItems.map(d => [fmtD(d.date), d.plateNo, d.label, d.note || '—', `-${fmt(d.amount)}`]),
+          body: allExpItems.map(d => [fmtD(d.date), d.plateNo, strip(d.label), d.note || '—', `-${fmt(d.amount)}`]),
           foot: [['', '', '', 'TOTAL DEDUCTIONS', `-${fmt(totalDed)}`]],
           theme: 'plain',
           styles: { fontSize: 8, cellPadding: 2.5, textColor: [100, 116, 139] },
@@ -109,7 +111,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
         autoTable(doc, {
           startY: y,
           head: [['Date', 'Type', 'Note', 'Amount']],
-          body: owner.ownerAdvanceItems.map(p => [fmtD(p.date), p.label, p.note || '—', `-${fmt(p.amount)}`]),
+          body: owner.ownerAdvanceItems.map(p => [fmtD(p.date), strip(p.label), p.note || '—', `-${fmt(p.amount)}`]),
           foot: [['', '', 'TOTAL ADVANCES', `-${fmt(owner.ownerAdvanceTotal)}`]],
           theme: 'plain',
           styles: { fontSize: 8, cellPadding: 2.5, textColor: [100, 116, 139] },
