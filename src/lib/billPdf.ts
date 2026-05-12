@@ -12,7 +12,7 @@ function addPageHeader(doc: jsPDF, bill: BillSummary, ownerName: string, subtitl
   doc.setFillColor(11, 17, 32)
   doc.rect(0, 0, W, 36, 'F')
   doc.setTextColor(245, 158, 11); doc.setFontSize(16); doc.setFont('helvetica', 'bold')
-  doc.text('HYVA TRANSPORT', margin, 13)
+  doc.text('MAA BHAVANI TRANSPORT', margin, 13)
   doc.setFontSize(10); doc.setTextColor(241, 245, 249)
   doc.text(subtitle, margin, 21)
   doc.setFontSize(8); doc.setTextColor(148, 163, 184)
