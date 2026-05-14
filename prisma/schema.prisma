@@ -37,6 +37,23 @@ enum CompanyExpenseType {
   OTHER
 }
 
+enum CashFlowDirection {
+  CASH_IN
+  CASH_OUT
+}
+
+model CashFlow {
+  id            String            @id @default(cuid())
+  date          DateTime          @default(now())
+  direction     CashFlowDirection
+  amount        Float
+  category      String            // e.g. "Party Payment", "Loan", "Investment", "Office Rent", "EMI"
+  description   String?
+  transporterId String
+  transporter   Transporter       @relation(fields: [transporterId], references: [id])
+  createdAt     DateTime          @default(now())
+}
+
 model BusinessPartner {
   id              String   @id @default(cuid())
   name            String
@@ -69,6 +86,7 @@ model Transporter {
   owners           Owner[]
   partners         BusinessPartner[]
   companyExpenses  CompanyExpense[]
+  cashFlows        CashFlow[]
   createdAt        DateTime  @default(now())
 }
 
