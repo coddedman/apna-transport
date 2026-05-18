@@ -57,6 +57,15 @@ export interface AnalyticsData {
   // Period label
   periodLabel: string
 
+  // Daily trips per vehicle (for Activity tab heatmap)
+  dailyTripsByVehicle: {
+    date: string          // YYYY-MM-DD
+    plateNo: string
+    trips: number
+    weight: number
+    revenue: number
+  }[]
+
   // Weekly breakdown (for Rate Calculator)
   weeklyBreakdown: {
     weekKey: string
@@ -187,6 +196,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     timeSeriesAdvances,  // 19
     ownerPayoutTripsData, // 20
     projectRatesData,    // 21
+    dailyTripsRaw,       // 22
   ] = await Promise.all([
     // Aggregates
     prisma.trip.aggregate({
@@ -307,6 +317,18 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     prisma.project.findMany({
       where: { transporterId },
       select: { id: true, projectName: true, partyRate: true, ownerRate: true },
+    }),
+
+    // Per-vehicle daily trips (for Activity tab)
+    prisma.trip.findMany({
+      where: tripWhere,
+      select: {
+        date: true,
+        weight: true,
+        ownerFreightAmount: true,
+        vehicle: { select: { plateNo: true } },
+      },
+      orderBy: { date: 'asc' },
     }),
   ])
 
@@ -545,6 +567,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     weeklyBreakdown: buildWeeklyBreakdown(timeSeriesTrips, timeSeriesExpenses, timeSeriesAdvances),
     ownerPayoutByWeek: buildOwnerPayoutByWeek(ownerPayoutTripsData as any),
     projectRates: buildProjectRates(revenueByProjectData, projectRatesData, projectsList),
+    dailyTripsByVehicle: buildDailyTripsByVehicle(dailyTripsRaw as any),
   }
 }
 
@@ -645,4 +668,20 @@ function buildProjectRates(
     }
   }).filter(p => p.trips > 0 || p.partyRate > 0 || p.ownerRate > 0)
     .sort((a, b) => b.trips - a.trips)
+}
+
+function buildDailyTripsByVehicle(
+  trips: { date: Date | null; weight: number | null; ownerFreightAmount: number | null; vehicle: { plateNo: string } | null }[]
+) {
+  const map: Record<string, { date: string; plateNo: string; trips: number; weight: number; revenue: number }> = {}
+  trips.forEach(t => {
+    if (!t.date || !t.vehicle) return
+    const date = t.date.toISOString().split('T')[0]
+    const key = `${date}__${t.vehicle.plateNo}`
+    if (!map[key]) map[key] = { date, plateNo: t.vehicle.plateNo, trips: 0, weight: 0, revenue: 0 }
+    map[key].trips += 1
+    map[key].weight += t.weight || 0
+    map[key].revenue += t.ownerFreightAmount || 0
+  })
+  return Object.values(map).sort((a, b) => a.date.localeCompare(b.date))
 }
