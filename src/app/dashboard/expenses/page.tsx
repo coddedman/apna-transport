@@ -5,6 +5,7 @@ import AddExpenseButton from '@/components/AddExpenseButton'
 import EditExpenseButton from '@/components/EditExpenseButton'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import PageHeader from '@/components/PageHeader'
+import ExpenseFilterBar from '@/components/ExpenseFilterBar'
 import { ExpenseType, Prisma } from '@prisma/client'
 
 export const metadata = {
@@ -13,13 +14,7 @@ export const metadata = {
 }
 
 interface ExpensesPageProps {
-  searchParams: Promise<{
-    type?: string
-    vehicleId?: string
-    projectId?: string
-    from?: string
-    to?: string
-  }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
@@ -28,14 +23,19 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   if (!transporterId) return <div>Unauthorized</div>
 
   const params = await searchParams
-  const { type, vehicleId, projectId, from, to } = params
+  const toArr = (v: string | string[] | undefined) => v ? (Array.isArray(v) ? v : [v]) : []
+  const vehicleIds = toArr(params['vehicleId'])
+  const projectIds = toArr(params['projectId'])
+  const types = toArr(params['type'])
+  const from = Array.isArray(params['from']) ? params['from'][0] : params['from']
+  const to = Array.isArray(params['to']) ? params['to'][0] : params['to']
 
-  // Build server-side filter
+  // Build server-side filter (multi-select via IN clause)
   const where: Prisma.ExpenseWhereInput = {
     vehicle: { owner: { transporterId } },
-    ...(type ? { type: type as ExpenseType } : {}),
-    ...(vehicleId ? { vehicleId } : {}),
-    ...(projectId ? { projectId } : {}),
+    ...(types.length > 0 ? { type: { in: types as ExpenseType[] } } : {}),
+    ...(vehicleIds.length > 0 ? { vehicleId: { in: vehicleIds } } : {}),
+    ...(projectIds.length > 0 ? { projectId: { in: projectIds } } : {}),
     ...(from || to ? {
       date: {
         ...(from ? { gte: new Date(from + 'T00:00:00') } : {}),
@@ -85,7 +85,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const simpleVehicles = vehicles.map(v => ({ id: v.id, plateNo: v.plateNo }))
   const simpleProjects = projects.map(p => ({ id: p.id, projectName: p.projectName }))
 
-  const hasFilter = type || vehicleId || projectId || from || to
+  const hasFilter = vehicleIds.length > 0 || projectIds.length > 0 || types.length > 0 || from || to
 
   const csvData = expensesData.map(e => ({
     date: new Date(e.date).toLocaleDateString('en-IN'),
@@ -139,58 +139,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
           </div>
         </div>
 
-        {/* Filter Bar — server-side via GET form */}
-        <div className="card" style={{ marginBottom: '16px' }}>
-          <form className="expense-filter-form" method="GET" action="/dashboard/expenses" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end', padding: '14px 16px' }}>
-            <div className="form-group" style={{ minWidth: '140px', marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '11px' }}>Category</label>
-              <select className="form-select" name="type" style={{ padding: '6px 10px', fontSize: '12px' }} defaultValue={type || ''}>
-                <option value="">All Categories</option>
-                <option value="FUEL">Fuel</option>
-                <option value="DRIVER_ADVANCE">Driver Advance</option>
-                <option value="MAINTENANCE">Maintenance</option>
-                <option value="TOLL">Toll</option>
-                <option value="CASH_PAYMENT">Cash Payment</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ minWidth: '140px', marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '11px' }}>Vehicle</label>
-              <select className="form-select" name="vehicleId" style={{ padding: '6px 10px', fontSize: '12px' }} defaultValue={vehicleId || ''}>
-                <option value="">All Vehicles</option>
-                {simpleVehicles.map(v => (
-                  <option key={v.id} value={v.id}>{v.plateNo}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group" style={{ minWidth: '140px', marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '11px' }}>Project</label>
-              <select className="form-select" name="projectId" style={{ padding: '6px 10px', fontSize: '12px' }} defaultValue={projectId || ''}>
-                <option value="">All Projects</option>
-                {simpleProjects.map(p => (
-                  <option key={p.id} value={p.id}>{p.projectName}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '11px' }}>From</label>
-              <input className="form-input" name="from" type="date" defaultValue={from || ''} style={{ padding: '6px 10px', fontSize: '12px' }} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" style={{ fontSize: '11px' }}>To</label>
-              <input className="form-input" name="to" type="date" defaultValue={to || ''} style={{ padding: '6px 10px', fontSize: '12px' }} />
-            </div>
-            <div style={{ display: 'flex', gap: '6px', width: '100%', maxWidth: '280px' }}>
-              <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '6px 14px', alignSelf: 'flex-end', flex: 1 }}>
-                🔍 Filter
-              </button>
-              {hasFilter && (
-                <a href="/dashboard/expenses" className="btn btn-secondary btn-sm" style={{ padding: '6px 14px', alignSelf: 'flex-end', textDecoration: 'none' }}>
-                  ✕ Clear
-                </a>
-              )}
-            </div>
-          </form>
-        </div>
+        {/* Multi-select Filter Bar */}
+        <ExpenseFilterBar vehicles={simpleVehicles} projects={simpleProjects} />
 
         {/* Table */}
         <div className="card">
