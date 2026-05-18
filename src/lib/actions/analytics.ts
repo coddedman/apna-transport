@@ -59,12 +59,30 @@ export interface AnalyticsData {
 
   // Weekly breakdown (for Rate Calculator)
   weeklyBreakdown: {
-    weekKey: string       // YYYY-MM-DD of week start (Monday)
+    weekKey: string
     trips: number
     weight: number
-    revenue: number       // actual ownerFreightAmount
-    payout: number        // actual partyFreightAmount
-    expByType: Record<string, number>  // FUEL, TOLL etc → amount
+    revenue: number
+    payout: number
+    expByType: Record<string, number>
+  }[]
+
+  // Per-owner weekly payout
+  ownerPayoutByWeek: {
+    weekKey: string
+    owners: { ownerId: string; ownerName: string; amount: number; trips: number }[]
+  }[]
+
+  // Per-project rates for Rate Calculator
+  projectRates: {
+    projectId: string
+    projectName: string
+    partyRate: number
+    ownerRate: number
+    trips: number
+    totalWeight: number
+    totalRevenue: number
+    totalPayout: number
   }[]
 }
 
@@ -164,9 +182,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     revenueByOwnerData,  // 14
     revenueByVehicleData, // 15
     expenseByVehicleData, // 16
-    timeSeriesTrips,     // 16
-    timeSeriesExpenses,  // 17
-    timeSeriesAdvances,  // 18
+    timeSeriesTrips,     // 17
+    timeSeriesExpenses,  // 18
+    timeSeriesAdvances,  // 19
+    ownerPayoutTripsData, // 20
+    projectRatesData,    // 21
   ] = await Promise.all([
     // Aggregates
     prisma.trip.aggregate({
@@ -271,6 +291,22 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     prisma.ownerAdvance.findMany({
       where: { ...advanceWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
       select: { date: true, amount: true }
+    }),
+
+    // Per-owner trips for weekly payout chart
+    prisma.trip.findMany({
+      where: tripWhere,
+      select: {
+        date: true,
+        partyFreightAmount: true,
+        vehicle: { select: { ownerId: true, owner: { select: { ownerName: true } } } },
+      }
+    }),
+
+    // Project rates
+    prisma.project.findMany({
+      where: { transporterId },
+      select: { id: true, projectName: true, partyRate: true, ownerRate: true },
     }),
   ])
 
@@ -507,6 +543,8 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     vehicles: vehiclesList.map(v => ({ id: v.id, plateNo: v.plateNo })),
     periodLabel: periodLabels[filters.period] || 'All Time',
     weeklyBreakdown: buildWeeklyBreakdown(timeSeriesTrips, timeSeriesExpenses, timeSeriesAdvances),
+    ownerPayoutByWeek: buildOwnerPayoutByWeek(ownerPayoutTripsData as any),
+    projectRates: buildProjectRates(revenueByProjectData, projectRatesData, projectsList),
   }
 }
 
@@ -557,4 +595,54 @@ function buildWeeklyBreakdown(
   return Object.entries(weekMap)
     .map(([weekKey, v]) => ({ weekKey, ...v }))
     .sort((a, b) => b.weekKey.localeCompare(a.weekKey))
+}
+
+function buildOwnerPayoutByWeek(
+  trips: { date: Date | null; partyFreightAmount: number | null; vehicle: { ownerId: string; owner: { ownerName: string } | null } | null }[]
+) {
+  const weekMap: Record<string, Map<string, { ownerName: string; amount: number; trips: number }>> = {}
+
+  trips.forEach(t => {
+    if (!t.date || !t.vehicle) return
+    const k = getMonday(t.date)
+    const ownerId = t.vehicle.ownerId
+    const ownerName = t.vehicle.owner?.ownerName || 'Unknown'
+    if (!weekMap[k]) weekMap[k] = new Map()
+    const existing = weekMap[k].get(ownerId)
+    if (existing) {
+      existing.amount += t.partyFreightAmount || 0
+      existing.trips += 1
+    } else {
+      weekMap[k].set(ownerId, { ownerName, amount: t.partyFreightAmount || 0, trips: 1 })
+    }
+  })
+
+  return Object.entries(weekMap)
+    .map(([weekKey, ownerMap]) => ({
+      weekKey,
+      owners: Array.from(ownerMap.entries()).map(([ownerId, v]) => ({ ownerId, ...v }))
+        .sort((a, b) => b.amount - a.amount),
+    }))
+    .sort((a, b) => b.weekKey.localeCompare(a.weekKey))
+}
+
+function buildProjectRates(
+  revenueByProjectData: any[],
+  projectRatesData: { id: string; projectName: string; partyRate: number; ownerRate: number }[],
+  projectsList: { id: string; projectName: string }[]
+) {
+  return projectRatesData.map(p => {
+    const tripData = revenueByProjectData.find((r: any) => r.projectId === p.id)
+    return {
+      projectId: p.id,
+      projectName: p.projectName,
+      partyRate: p.partyRate,
+      ownerRate: p.ownerRate,
+      trips: tripData?._count?.id || 0,
+      totalWeight: tripData?._sum?.weight || 0,
+      totalRevenue: tripData?._sum?.ownerFreightAmount || 0,
+      totalPayout: tripData?._sum?.partyFreightAmount || 0,
+    }
+  }).filter(p => p.trips > 0 || p.partyRate > 0 || p.ownerRate > 0)
+    .sort((a, b) => b.trips - a.trips)
 }
