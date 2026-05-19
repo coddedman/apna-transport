@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
  * Revalidates all common dashboard paths after any data mutation.
  * This prevents the fragile pattern of manually listing paths in every action.
  */
-export function revalidateDashboard() {
+export async function revalidateDashboard() {
   revalidatePath('/dashboard')
   revalidatePath('/dashboard/trips')
   revalidatePath('/dashboard/expenses')

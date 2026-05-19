@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import SimulatorTab from '@/components/analytics/SimulatorTab'
 import ActivityTab from '@/components/analytics/ActivityTab'
 import PnLTab from '@/components/analytics/PnLTab'
+import TabErrorBoundary from '@/components/analytics/TabErrorBoundary'
 
 // ============================================
 // Mini Chart Components (Pure CSS, no library)
@@ -1307,17 +1308,23 @@ export default function DashboardAnalytics({ initialData }: Props) {
 
         {/* ============ ACTIVITY TAB ============ */}
         {activeTab === 'activity' && (
-          <ActivityTab data={data} />
+          <TabErrorBoundary fallbackTitle="Activity tab failed to load">
+            <ActivityTab data={data} />
+          </TabErrorBoundary>
         )}
 
         {/* ============ P&L TAB ============ */}
         {activeTab === 'pnl' && (
-          <PnLTab data={data} />
+          <TabErrorBoundary fallbackTitle="P&L tab failed to load">
+            <PnLTab data={data} />
+          </TabErrorBoundary>
         )}
 
         {/* ============ SIMULATOR TAB ============ */}
         {activeTab === 'simulator' && (
-          <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />
+          <TabErrorBoundary fallbackTitle="Rate Calculator failed to load">
+            <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />
+          </TabErrorBoundary>
         )}
 
       </div>
