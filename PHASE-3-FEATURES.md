@@ -110,7 +110,7 @@
 | CQ-4 | Settlement-to-Trip linkage (prevent double-settlement) | P2 | 🔲 Planned |
 | CQ-5 | Input sanitization with Zod validation | P3 | 🔲 Planned |
 | CQ-6 | ~~Reduce analytics query count (30 → ~8)~~ | P2 | ✅ Done (30→22) |
-| CQ-7 | Move Rate Calculator to Project-level tab | P2 | 🔲 Planned |
+| CQ-7 | ~~Move Rate Calculator to Project-level tab~~ | P2 | ✅ Done |
 
 ---
 
