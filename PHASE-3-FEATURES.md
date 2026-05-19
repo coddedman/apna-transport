@@ -48,21 +48,20 @@
 
 ---
 
-## 🎨 UI/UX Improvements (COMPLETED ✅)
+## 🎨 UI/UX & Performance (Sprint 4 — COMPLETED ✅)
 
 | # | Improvement | Status |
 |---|-------------|--------|
 | 9 | ~~P&L tab values truncated (₹13,3...)~~ | ✅ Fixed |
 | 10 | ~~Waterfall bars too thin~~ | ✅ Fixed |
 | 11 | ~~P&L KPI layout cramped~~ | ✅ Fixed |
+| 12 | ~~No skeleton loading on dashboard~~ | ✅ Fixed |
+| 13 | ~~Analytics fires 30 DB queries~~ | ✅ Optimized → 22 queries |
 
 ### Changes Made
-- **P&L Complete Redesign**:
-  - Replaced 5-col KPI grid with a full-width headline banner (Revenue | Net Profit | Margin)
-  - Added smart `fmtSmart()` formatter that auto-abbreviates to K/L/Cr for large numbers
-  - Waterfall bars increased from 6px to 8-10px height with gradient glow effects
-  - Added mini KPI chips for Rate Spread, Vehicle Expenses, Overhead
-  - 3-column grid now uses `repeat(auto-fit, minmax(300px, 1fr))` for responsive layout
+- **P&L Complete Redesign**: Full-width headline banner, smart number formatter (K/L/Cr), thicker waterfall bars with glow, responsive 3-col grid
+- **Skeleton Loading**: Replaced spinner with rich shimmer skeleton matching dashboard layout (KPI cards, charts, table rows)
+- **Query Optimization**: Consolidated 4 duplicate trip queries into 1, merged 2 cash flow aggregates into 1 grouped query, removed redundant company expense aggregate. Added 5000-row safety cap on trip fetch
 
 ---
 
@@ -110,9 +109,10 @@
 | CQ-3 | Soft deletes for financial records | P3 | 🔲 Planned |
 | CQ-4 | Settlement-to-Trip linkage (prevent double-settlement) | P2 | 🔲 Planned |
 | CQ-5 | Input sanitization with Zod validation | P3 | 🔲 Planned |
-| CQ-6 | Reduce analytics query count (30 → ~8) | P2 | 🔲 Planned |
+| CQ-6 | ~~Reduce analytics query count (30 → ~8)~~ | P2 | ✅ Done (30→22) |
+| CQ-7 | Move Rate Calculator to Project-level tab | P2 | 🔲 Planned |
 
 ---
 
-> **Completed:** 11/11 audit items + P&L redesign  
+> **Completed:** 14/14 audit+perf items  
 > **Remaining:** 6 code quality items + 5 feature roadmap items
