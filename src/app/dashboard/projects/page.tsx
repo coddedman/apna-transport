@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import AddProjectButton from '@/components/AddProjectButton'
 import EditProjectButton from '@/components/EditProjectButton'
 import DeleteProjectButton from '@/components/DeleteProjectButton'
+import RateCalculatorButton from '@/components/projects/RateCalculatorButton'
 
 export const metadata = {
   title: 'Projects — Hyva Transport',
@@ -35,6 +36,7 @@ export default async function ProjectsPage() {
       revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
       status: 'active',
       ownerRate: p.ownerRate,
+      partyRate: p.partyRate,
       vehicleCount: 0, // will be enriched below
     }
   })
@@ -111,6 +113,12 @@ export default async function ProjectsPage() {
                         {project.status === 'active' ? '● Active' : '○ Inactive'}
                       </span>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <RateCalculatorButton
+                        projectId={project.id}
+                        projectName={project.name}
+                        partyRate={project.partyRate}
+                        ownerRate={project.ownerRate}
+                      />
                       <EditProjectButton project={project} />
                       <DeleteProjectButton
                         projectId={project.id}
@@ -122,7 +130,7 @@ export default async function ProjectsPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '14px', borderTop: '1px solid var(--color-border)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', paddingTop: '14px', borderTop: '1px solid var(--color-border)' }}>
                     <div>
                       <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Trips Logged</p>
                       <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{project.trips}</p>
@@ -130,6 +138,14 @@ export default async function ProjectsPage() {
                     <div>
                       <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Total Revenue</p>
                       <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-success)' }}>{project.revenue}</p>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Rates (₹/MT)</p>
+                      <p style={{ fontSize: '13px', fontWeight: 700 }}>
+                        <span style={{ color: '#10b981' }}>₹{project.partyRate}</span>
+                        <span style={{ color: 'var(--color-text-muted)', margin: '0 4px' }}>/</span>
+                        <span style={{ color: '#f59e0b' }}>₹{project.ownerRate}</span>
+                      </p>
                     </div>
                   </div>
                 </div>
