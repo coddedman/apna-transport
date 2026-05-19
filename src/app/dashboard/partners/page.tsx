@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
 import { getPartners, getCompanyExpenses } from '@/lib/actions/partners'
 import { getCashFlows } from '@/lib/actions/cashflow'
-import { fetchAnalytics } from '@/lib/actions/analytics'
 import PageHeader from '@/components/PageHeader'
 import PartnersClient from '@/components/partners/PartnersClient'
 import CashFlowSection from '@/components/partners/CashFlowSection'
@@ -16,14 +16,21 @@ export default async function PartnersPage() {
   const transporterId = (session?.user as any)?.transporterId
   if (!transporterId) return <div>Unauthorized</div>
 
-  const [partners, expenses, analytics, cashFlows] = await Promise.all([
+  const [partners, expenses, cashFlows, tripTotals] = await Promise.all([
     getPartners(),
     getCompanyExpenses(100),
-    fetchAnalytics({ period: 'all' }),
     getCashFlows(200),
+    // Single aggregate replaces the 25-query fetchAnalytics call
+    prisma.trip.aggregate({
+      where: { project: { transporterId } },
+      _sum: { ownerFreightAmount: true, partyFreightAmount: true },
+    }),
   ])
 
-  const netProfit = analytics.netProfit
+  // ownerFreightAmount = company revenue, partyFreightAmount = owner payout
+  const netProfit =
+    (tripTotals._sum.ownerFreightAmount || 0) -
+    (tripTotals._sum.partyFreightAmount || 0)
 
   return (
     <div className="page-container">
