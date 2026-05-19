@@ -44,14 +44,21 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     } : {}),
   }
 
-  const [expensesData, vehicles, projects] = await Promise.all([
+  const [expensesData, vehicles, projects, statsAgg] = await Promise.all([
     prisma.expense.findMany({
       where,
       include: { vehicle: true, project: true },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
+      take: 300,
     }),
     getVehicles(),
-    prisma.project.findMany({ where: { transporterId } })
+    prisma.project.findMany({ where: { transporterId } }),
+    // Single groupBy replaces the second full-table findMany
+    prisma.expense.groupBy({
+      by: ['type'],
+      where: { vehicle: { owner: { transporterId } } },
+      _sum: { amount: true },
+    }),
   ])
 
   const typeColors: Record<string, string> = {
@@ -72,15 +79,12 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     CASH_PAYMENT: '💵',
   }
 
-  // Stats always computed from full unfiltered set for accuracy
-  const allExpenses = await prisma.expense.findMany({
-    where: { vehicle: { owner: { transporterId } } },
-    select: { type: true, amount: true }
-  })
-  const totalFuel   = allExpenses.filter(e => e.type === 'FUEL').reduce((a, e) => a + e.amount, 0)
-  const totalDriver = allExpenses.filter(e => e.type === 'DRIVER_ADVANCE').reduce((a, e) => a + e.amount, 0)
-  const totalOwner  = allExpenses.filter(e => e.type === 'OWNER_ADVANCE').reduce((a, e) => a + e.amount, 0)
-  const totalAll    = allExpenses.reduce((a, e) => a + e.amount, 0)
+  // Derive stats from the groupBy result — no second round-trip
+  const statMap = Object.fromEntries(statsAgg.map(s => [s.type, s._sum.amount || 0]))
+  const totalFuel   = statMap['FUEL'] || 0
+  const totalDriver = statMap['DRIVER_ADVANCE'] || 0
+  const totalOwner  = statMap['OWNER_ADVANCE'] || 0
+  const totalAll    = statsAgg.reduce((a, s) => a + (s._sum.amount || 0), 0)
 
   const simpleVehicles = vehicles.map(v => ({ id: v.id, plateNo: v.plateNo }))
   const simpleProjects = projects.map(p => ({ id: p.id, projectName: p.projectName }))

@@ -93,6 +93,32 @@ export interface AnalyticsData {
     totalRevenue: number
     totalPayout: number
   }[]
+
+  // Financial Tabs Data
+  pnl: {
+    grossRevenue: number
+    ownerPayout: number
+    rateSpread: number
+    vehicleExpenses: number
+    companyOverhead: number
+    netProfitBeforePartners: number
+    margin: number
+  }
+  companyOverhead: {
+    totalOverhead: number
+    byType: { type: string; amount: number }[]
+    recentExpenses: { id: string; date: string; type: string; description: string; amount: number }[]
+  }
+  partnerData: {
+    totalEquity: number
+    partners: { id: string; name: string; equityPct: number; investedAmount: number; paidOutAmount: number }[]
+  }
+  cashFlowSummary: {
+    balance: number
+    totalIn: number
+    totalOut: number
+    recentFlows: { id: string; direction: string; category: string; date: string; amount: number }[]
+  }
 }
 
 function getDateRange(filters: AnalyticsFilters): { startDate?: Date; endDate: Date } {
@@ -197,6 +223,13 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     ownerPayoutTripsData, // 20
     projectRatesData,    // 21
     dailyTripsRaw,       // 22
+    companyExpensesAggr, // 23
+    companyExpensesType, // 24
+    recentCompanyExp,    // 25
+    partnersList,        // 26
+    cashFlowIn,          // 27
+    cashFlowOut,         // 28
+    recentCashFlows,     // 29
   ] = await Promise.all([
     // Aggregates
     prisma.trip.aggregate({
@@ -329,6 +362,42 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
         vehicle: { select: { plateNo: true } },
       },
       orderBy: { date: 'asc' },
+    }),
+
+    // Company Expenses & PnL Data
+    prisma.companyExpense.aggregate({
+      _sum: { amount: true },
+      where: { transporterId, ...dateFilter },
+    }),
+    prisma.companyExpense.groupBy({
+      by: ['type'],
+      _sum: { amount: true },
+      where: { transporterId, ...dateFilter },
+    }),
+    prisma.companyExpense.findMany({
+      where: { transporterId, ...dateFilter },
+      orderBy: { date: 'desc' },
+      take: 10,
+    }),
+
+    // Partners Data
+    prisma.businessPartner.findMany({
+      where: { transporterId },
+    }),
+
+    // Cash Flow Data
+    prisma.cashFlow.aggregate({
+      _sum: { amount: true },
+      where: { transporterId, direction: 'CASH_IN', ...dateFilter },
+    }),
+    prisma.cashFlow.aggregate({
+      _sum: { amount: true },
+      where: { transporterId, direction: 'CASH_OUT', ...dateFilter },
+    }),
+    prisma.cashFlow.findMany({
+      where: { transporterId, ...dateFilter },
+      orderBy: { date: 'desc' },
+      take: 10,
     }),
   ])
 
@@ -500,6 +569,64 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     custom: 'Custom Range',
   }
 
+  // === P&L, Overhead, Partners, Cash Flow Computations ===
+  const overheadTotal = companyExpensesAggr._sum.amount || 0
+  const rateSpread = totalRevenue - vehiclePayoutCost
+  const netProfitBeforePartners = rateSpread - totalCombinedExpense - overheadTotal
+  const margin = totalRevenue > 0 ? (netProfitBeforePartners / totalRevenue) * 100 : 0
+
+  const pnl = {
+    grossRevenue: totalRevenue,
+    ownerPayout: vehiclePayoutCost,
+    rateSpread,
+    vehicleExpenses: totalCombinedExpense,
+    companyOverhead: overheadTotal,
+    netProfitBeforePartners,
+    margin,
+  }
+
+  const companyOverhead = {
+    totalOverhead: overheadTotal,
+    byType: companyExpensesType.map(e => ({
+      type: e.type,
+      amount: e._sum.amount || 0,
+    })).sort((a, b) => b.amount - a.amount),
+    recentExpenses: recentCompanyExp.map(e => ({
+      id: e.id,
+      date: new Date(e.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      type: e.type.replace(/_/g, ' '),
+      description: e.description || '',
+      amount: e.amount,
+    })),
+  }
+
+  const totalEquity = partnersList.reduce((acc, p) => acc + (p.equityPct || 0), 0)
+  const partnerData = {
+    totalEquity,
+    partners: partnersList.map(p => ({
+      id: p.id,
+      name: p.name,
+      equityPct: p.equityPct,
+      investedAmount: p.investedAmount,
+      paidOutAmount: p.paidOutAmount,
+    })).sort((a, b) => b.equityPct - a.equityPct),
+  }
+
+  const cashIn = cashFlowIn._sum.amount || 0
+  const cashOut = cashFlowOut._sum.amount || 0
+  const cashFlowSummary = {
+    balance: cashIn - cashOut,
+    totalIn: cashIn,
+    totalOut: cashOut,
+    recentFlows: recentCashFlows.map(f => ({
+      id: f.id,
+      direction: f.direction,
+      category: f.category,
+      date: new Date(f.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+      amount: f.amount,
+    })),
+  }
+
   return {
     totalTrips: tripCount,
     totalRevenue,
@@ -568,6 +695,10 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     ownerPayoutByWeek: buildOwnerPayoutByWeek(ownerPayoutTripsData as any),
     projectRates: buildProjectRates(revenueByProjectData, projectRatesData, projectsList),
     dailyTripsByVehicle: buildDailyTripsByVehicle(dailyTripsRaw as any),
+    pnl,
+    companyOverhead,
+    partnerData,
+    cashFlowSummary,
   }
 }
 
