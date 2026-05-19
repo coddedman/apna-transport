@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 export async function getProjects() {
   const session = await auth()
@@ -42,8 +42,7 @@ export async function createProject(formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/projects')
-  revalidatePath('/dashboard')
+  revalidateDashboard()
   return project
 }
 
@@ -72,8 +71,7 @@ export async function updateProject(projectId: string, formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/projects')
-  revalidatePath('/dashboard')
+  revalidateDashboard()
   return project
 }
 
@@ -99,6 +97,5 @@ export async function deleteProject(projectId: string) {
 
   await prisma.project.delete({ where: { id: projectId } })
 
-  revalidatePath('/dashboard/projects')
-  revalidatePath('/dashboard')
+  revalidateDashboard()
 }

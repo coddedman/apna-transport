@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 export async function getVehicles() {
   const session = await auth()
@@ -63,8 +63,7 @@ export async function createVehicle(formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard')
+  revalidateDashboard()
   return vehicle
 }
 
@@ -90,8 +89,7 @@ export async function updateVehicle(vehicleId: string, formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard')
+  revalidateDashboard()
 }
 
 export async function deleteVehicle(vehicleId: string) {
@@ -112,7 +110,5 @@ export async function deleteVehicle(vehicleId: string) {
 
   await prisma.vehicle.delete({ where: { id: vehicleId } })
 
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/owners')
+  revalidateDashboard()
 }

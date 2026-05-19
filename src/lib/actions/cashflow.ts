@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 async function getTransporterId() {
   const session = await auth()
@@ -39,13 +39,13 @@ export async function addCashFlow(data: {
       transporterId: tid,
     }
   })
-  revalidatePath('/dashboard/partners')
+  revalidateDashboard()
 }
 
 export async function deleteCashFlow(id: string) {
   const tid = await getTransporterId()
   await prisma.cashFlow.deleteMany({ where: { id, transporterId: tid } })
-  revalidatePath('/dashboard/partners')
+  revalidateDashboard()
 }
 
 export async function getCashFlowSummary() {

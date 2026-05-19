@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 export async function createOwnerAdvance(formData: FormData) {
   const session = await auth()
@@ -28,8 +28,7 @@ export async function createOwnerAdvance(formData: FormData) {
     data: { ownerId, amount, remarks: remarks || null, projectId: projectId || null, date: advanceDate }
   })
 
-  revalidatePath('/dashboard/owners')
-  revalidatePath('/dashboard/expenses')
+  revalidateDashboard()
 }
 
 export async function updateOwnerAdvance(formData: FormData) {
@@ -62,9 +61,7 @@ export async function updateOwnerAdvance(formData: FormData) {
     data: { amount, remarks: remarks || null, projectId: projectId || null, date: advanceDate }
   })
 
-  revalidatePath('/dashboard/owners')
-  revalidatePath(`/dashboard/owners/${advance.ownerId}`)
-  revalidatePath('/dashboard/expenses')
+  revalidateDashboard()
 }
 
 export async function deleteOwnerAdvance(advanceId: string) {
@@ -82,7 +79,5 @@ export async function deleteOwnerAdvance(advanceId: string) {
 
   await prisma.ownerAdvance.delete({ where: { id: advanceId } })
 
-  revalidatePath('/dashboard/owners')
-  revalidatePath(`/dashboard/owners/${advance.ownerId}`)
-  revalidatePath('/dashboard/expenses')
+  revalidateDashboard()
 }

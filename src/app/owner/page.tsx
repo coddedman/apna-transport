@@ -27,10 +27,15 @@ export default async function OwnerPortalPage() {
           trips: {
             include: { project: true },
             orderBy: { date: 'desc' },
+            take: 25, // Paginate: show only recent 25 trips per vehicle
           },
           expenses: {
             orderBy: { date: 'desc' },
+            take: 20, // Paginate: show only recent 20 expenses per vehicle
           },
+          _count: {
+            select: { trips: true, expenses: true }
+          }
         }
       }
     }

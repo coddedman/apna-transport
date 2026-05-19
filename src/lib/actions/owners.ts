@@ -185,13 +185,18 @@ export async function deleteOwner(ownerId: string) {
     throw new Error(`Cannot delete: ${owner.ownerName} has ${owner.vehicles.length} vehicle(s) linked. Remove them first.`)
   }
 
-  // Delete linked user account if exists
-  if (owner.userId) {
-    await prisma.owner.delete({ where: { id: ownerId } })
-    await prisma.user.delete({ where: { id: owner.userId } })
-  } else {
-    await prisma.owner.delete({ where: { id: ownerId } })
-  }
+  // Delete linked user account if exists — use transaction to prevent orphaned records
+  await prisma.$transaction(async (tx) => {
+    // Clean up financial records first
+    await tx.ownerAdvance.deleteMany({ where: { ownerId } })
+    await tx.settlement.deleteMany({ where: { ownerId } })
+    // Delete owner
+    await tx.owner.delete({ where: { id: ownerId } })
+    // Delete linked user account
+    if (owner.userId) {
+      await tx.user.delete({ where: { id: owner.userId } })
+    }
+  })
 
   revalidateDashboard()
 }
