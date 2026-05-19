@@ -3001,7 +3001,8 @@ body {
   display: none !important;
 }
 
-.app-layout.sidebar-collapsed .sidebar-signout-btn {
+.app-layout.sidebar-collapsed .sidebar-signout-btn,
+.app-layout.sidebar-collapsed .desktop-collapse-btn {
   padding: 8px 0 !important;
   display: flex !important;
   justify-content: center !important;

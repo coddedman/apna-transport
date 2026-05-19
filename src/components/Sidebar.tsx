@@ -78,40 +78,12 @@ export default function Sidebar() {
         ✕
       </button>
       {/* Brand */}
-      <div className="sidebar-brand" style={{ position: 'relative' }}>
+      <div className="sidebar-brand">
         <div className="sidebar-brand-icon">{getInitials(transporterName)}</div>
         <div className="sidebar-brand-text">
           <span className="sidebar-brand-name">{transporterName}</span>
           <span className="sidebar-brand-tag">Fleet Management</span>
         </div>
-
-        {/* Collapse toggle button for Desktop */}
-        <button
-          onClick={toggleCollapse}
-          className="desktop-collapse-btn"
-          style={{
-            position: 'absolute',
-            right: '-12px',
-            top: '22px',
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            background: 'var(--color-bg-card)',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            zIndex: 60,
-            fontSize: '10px',
-            boxShadow: 'var(--shadow-sm)',
-            transition: 'all 0.2s ease',
-          }}
-          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {isCollapsed ? '▶' : '◀'}
-        </button>
       </div>
 
       {/* Navigation */}
@@ -136,6 +108,25 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar-footer">
+        {/* Collapse toggle button for Desktop */}
+        <button
+          onClick={toggleCollapse}
+          className="desktop-collapse-btn btn btn-secondary btn-sm"
+          style={{
+            width: '100%',
+            justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '12px',
+            padding: '8px 12px',
+          }}
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <span>{isCollapsed ? '▶' : '◀'}</span>
+          <span className="sidebar-signout-text">Collapse Menu</span>
+        </button>
+
         <div className="sidebar-user">
           <div className="sidebar-user-avatar">{getInitials(userName)}</div>
           <div className="sidebar-user-info">
