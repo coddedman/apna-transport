@@ -195,6 +195,7 @@ export default function ExpenseFilterBar({ vehicles, projects }: Props) {
       background: 'rgba(30, 41, 59, 0.25)',
       backdropFilter: 'blur(12px)',
       border: '1px solid rgba(255, 255, 255, 0.08)',
+      overflow: 'visible',
     }}>
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const, alignItems: 'flex-end', padding: '16px 20px' }}>
         
