@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 import { ExpenseType } from '@prisma/client'
 
 export async function createExpense(formData: FormData) {
@@ -40,7 +40,7 @@ export async function createExpense(formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
   
   return expense
 }
@@ -85,10 +85,7 @@ export async function createMultipleExpenses(expensesData: {
     data: validData
   })
 
-  revalidatePath('/dashboard/expenses')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
   
   return { count: result.count }
 }
@@ -133,10 +130,7 @@ export async function updateExpense(formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/expenses')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
 }
 
 export async function deleteExpense(expenseId: string) {
@@ -154,8 +148,5 @@ export async function deleteExpense(expenseId: string) {
 
   await prisma.expense.delete({ where: { id: expenseId } })
 
-  revalidatePath('/dashboard/expenses')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
 }

@@ -11,6 +11,11 @@ export default async function OwnerPortalPage() {
   const session = await auth()
   const user = session?.user as any
 
+  // Security guard: ensure user is authenticated and has OWNER role
+  if (!session || !user || !user.id || user.role !== 'OWNER') {
+    redirect('/login')
+  }
+
   // Get owner record with all related data
   const owner = await prisma.owner.findUnique({
     where: { userId: user.id },

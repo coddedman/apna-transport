@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 import bcrypt from 'bcryptjs'
 
 export async function getOwners() {
@@ -64,12 +64,11 @@ export async function createOwner(formData: FormData) {
       phone,
       transporterId,
       userId: userId || null,
-      defaultPassword: password || null, // Store plaintext for admin visibility
+      defaultPassword: null, // Never store plaintext passwords
     }
   })
 
-  revalidatePath('/dashboard/owners')
-  revalidatePath('/dashboard/vehicles')
+  revalidateDashboard()
   return owner
 }
 
@@ -151,7 +150,7 @@ export async function updateOwner(formData: FormData) {
       }
     })
 
-    revalidatePath('/dashboard/owners')
+    revalidateDashboard()
     return
   }
 
@@ -161,12 +160,11 @@ export async function updateOwner(formData: FormData) {
     data: {
       ownerName,
       phone,
-      ...(resetPassword ? { defaultPassword: resetPassword } : {}),
+      ...(resetPassword ? { defaultPassword: null } : {}), // Never store plaintext passwords
     }
   })
 
-  revalidatePath('/dashboard/owners')
-  revalidatePath('/dashboard/vehicles')
+  revalidateDashboard()
 }
 
 export async function deleteOwner(ownerId: string) {
@@ -195,6 +193,5 @@ export async function deleteOwner(ownerId: string) {
     await prisma.owner.delete({ where: { id: ownerId } })
   }
 
-  revalidatePath('/dashboard/owners')
-  revalidatePath('/dashboard/vehicles')
+  revalidateDashboard()
 }

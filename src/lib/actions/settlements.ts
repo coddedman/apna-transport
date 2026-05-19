@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 export async function generateSettlement(formData: FormData) {
   const session = await auth()
@@ -39,9 +39,9 @@ export async function generateSettlement(formData: FormData) {
   const ownerAdvances = await prisma.ownerAdvance.findMany({ where: { ownerId } })
   const ownerAdvanceTotal = ownerAdvances.reduce((a, adv) => a + adv.amount, 0)
 
-  // Get project default rate
-  const project = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
-  const projectOwnerRate = project?.ownerRate || 125
+  // Get default project rate as a last-resort fallback
+  const defaultProject = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
+  const defaultOwnerRate = defaultProject?.ownerRate || 125
 
   let totalOwnerPayout = 0
   let totalFuel = 0
@@ -52,7 +52,8 @@ export async function generateSettlement(formData: FormData) {
   let tripsCount = 0
 
   owner.vehicles.forEach((v: any) => {
-    const effectiveRate = v.ownerRateOverride ?? owner.ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
+    // Use proper rate override chain: vehicle override → owner override → vehicle's assigned project rate → default
+    const effectiveRate = v.ownerRateOverride ?? owner.ownerRateOverride ?? v.project?.ownerRate ?? defaultOwnerRate
     tripsCount += v.trips.length
     totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * effectiveRate), 0)
 
@@ -93,8 +94,7 @@ export async function generateSettlement(formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/settlements')
-  revalidatePath('/dashboard/billing')
+  revalidateDashboard()
   return settlement
 }
 
@@ -117,7 +117,7 @@ export async function markSettled(settlementId: string) {
     data: { status: 'SETTLED', settledAt: new Date() }
   })
 
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
 }
 
 export async function deleteSettlement(settlementId: string) {
@@ -135,7 +135,7 @@ export async function deleteSettlement(settlementId: string) {
   }
 
   await prisma.settlement.delete({ where: { id: settlementId } })
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
 }
 
 export async function updateSettlement(
@@ -169,7 +169,7 @@ export async function updateSettlement(
     data: { totalRevenue: rev, totalFuel: fuel, totalAdvances: adv, totalMaint: maint, totalTolls: tolls, totalOther: other, finalPayout }
   })
 
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
 }
 
 export async function getSettlementById(settlementId: string) {

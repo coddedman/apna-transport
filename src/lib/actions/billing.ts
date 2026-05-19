@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 // ========================
 // Rate Override Management
@@ -15,8 +15,7 @@ export async function setVehicleRateOverride(vehicleId: string, ownerRateOverrid
   const vehicle = await prisma.vehicle.findFirst({ where: { id: vehicleId, owner: { transporterId } } })
   if (!vehicle) throw new Error('Vehicle not found')
   await prisma.vehicle.update({ where: { id: vehicleId }, data: { ownerRateOverride } })
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/billing')
+  revalidateDashboard()
   return { success: true }
 }
 
@@ -27,8 +26,7 @@ export async function setOwnerRateOverride(ownerId: string, ownerRateOverride: n
   const owner = await prisma.owner.findFirst({ where: { id: ownerId, transporterId } })
   if (!owner) throw new Error('Owner not found')
   await prisma.owner.update({ where: { id: ownerId }, data: { ownerRateOverride } })
-  revalidatePath('/dashboard/owners')
-  revalidatePath('/dashboard/billing')
+  revalidateDashboard()
   return { success: true }
 }
 

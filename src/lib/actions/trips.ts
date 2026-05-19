@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 export async function createTrip(formData: FormData) {
   const session = await auth()
@@ -51,11 +51,7 @@ export async function createTrip(formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/trips')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/projects')
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
   
   return trip
 }
@@ -111,11 +107,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
     }
   })
 
-  revalidatePath('/dashboard/trips')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/projects')
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
   
   return trip
 }
@@ -134,9 +126,5 @@ export async function deleteTrip(tripId: string) {
 
   await prisma.trip.delete({ where: { id: tripId } })
 
-  revalidatePath('/dashboard/trips')
-  revalidatePath('/dashboard')
-  revalidatePath('/dashboard/projects')
-  revalidatePath('/dashboard/vehicles')
-  revalidatePath('/dashboard/settlements')
+  revalidateDashboard()
 }

@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
-import { revalidatePath } from 'next/cache'
+import { revalidateDashboard } from '@/lib/actions/revalidate'
 
 async function getTransporterId() {
   const session = await auth()
@@ -39,13 +39,13 @@ export async function upsertPartner(data: {
       data: { ...data, transporterId: tid, paidOutAmount: data.paidOutAmount || 0 },
     })
   }
-  revalidatePath('/dashboard/partners')
+  revalidateDashboard()
 }
 
 export async function deletePartner(id: string) {
   const tid = await getTransporterId()
   await prisma.businessPartner.deleteMany({ where: { id, transporterId: tid } })
-  revalidatePath('/dashboard/partners')
+  revalidateDashboard()
 }
 
 // ── Company Expenses ──
@@ -74,13 +74,13 @@ export async function addCompanyExpense(data: {
       transporterId: tid,
     },
   })
-  revalidatePath('/dashboard/partners')
+  revalidateDashboard()
 }
 
 export async function deleteCompanyExpense(id: string) {
   const tid = await getTransporterId()
   await prisma.companyExpense.deleteMany({ where: { id, transporterId: tid } })
-  revalidatePath('/dashboard/partners')
+  revalidateDashboard()
 }
 
 // ── Summary for P&L ──
