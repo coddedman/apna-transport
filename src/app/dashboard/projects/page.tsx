@@ -120,9 +120,6 @@ export default async function ProjectsPage() {
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <RateCalculatorButton
                         projectId={project.id}
-                        projectName={project.name}
-                        partyRate={project.partyRate}
-                        ownerRate={project.ownerRate}
                       />
                       <EditProjectButton project={project} />
                       <DeleteProjectButton

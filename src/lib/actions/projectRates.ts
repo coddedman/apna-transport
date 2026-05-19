@@ -105,3 +105,23 @@ export async function fetchProjectRateData(projectId: string): Promise<ProjectRa
     weeklyData,
   }
 }
+
+export async function updateProjectRates(projectId: string, partyRate: number, ownerRate: number) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { transporterId: true },
+  })
+
+  if (!project || project.transporterId !== transporterId) throw new Error('Project not found')
+
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { partyRate, ownerRate },
+  })
+
+  return { success: true }
+}
