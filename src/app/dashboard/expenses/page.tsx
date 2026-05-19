@@ -47,7 +47,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const [expensesData, vehicles, projects, statsAgg] = await Promise.all([
     prisma.expense.findMany({
       where,
-      include: { vehicle: true, project: true },
+      include: { vehicle: { select: { plateNo: true } }, project: { select: { projectName: true } } },
       orderBy: { date: 'desc' },
       take: 300,
     }),

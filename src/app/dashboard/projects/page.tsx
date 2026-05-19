@@ -16,35 +16,40 @@ export default async function ProjectsPage() {
 
   if (!transporterId) return <div>Unauthorized</div>
 
-  const projectsData = await prisma.project.findMany({
-    where: { transporterId },
-    include: {
-      trips: true
-    }
-  })
+  const [projectsRaw, revenueByProject] = await Promise.all([
+    prisma.project.findMany({
+      where: { transporterId },
+      include: {
+        _count: { select: { trips: true } },
+      },
+    }),
+    prisma.trip.groupBy({
+      by: ['projectId'],
+      _sum: { ownerFreightAmount: true },
+      where: { project: { transporterId } },
+    }),
+  ])
 
-  // Calculate aggregates based on DB real trips
-  const projects = projectsData.map(p => {
-    const totalTrips = p.trips.length
-    const totalRevenue = p.trips.reduce((acc, t) => acc + t.ownerFreightAmount, 0)
-    
+  const revenueMap = new Map(revenueByProject.map(r => [r.projectId, r._sum.ownerFreightAmount || 0]))
+
+  // Calculate aggregates efficiently (no raw trip data loaded)
+  const projects = projectsRaw.map(p => {
+    const totalRevenue = revenueMap.get(p.id) || 0
     return {
       id: p.id,
       name: p.projectName,
       location: p.location,
-      trips: totalTrips,
+      trips: p._count.trips,
       revenue: `₹${totalRevenue.toLocaleString('en-IN')}`,
       status: 'active',
       ownerRate: p.ownerRate,
       partyRate: p.partyRate,
-      vehicleCount: 0, // will be enriched below
+      vehicleCount: 0,
     }
   })
 
-  const totalTripsOverall = projectsData.reduce((acc, p) => acc + p.trips.length, 0)
-  const totalRevenueOverall = projectsData.reduce((acc, p) => 
-    acc + p.trips.reduce((tAcc, t) => tAcc + t.ownerFreightAmount, 0)
-  , 0)
+  const totalTripsOverall = projects.reduce((acc, p) => acc + p.trips, 0)
+  const totalRevenueOverall = revenueByProject.reduce((acc, r) => acc + (r._sum.ownerFreightAmount || 0), 0)
 
   return (
     <>

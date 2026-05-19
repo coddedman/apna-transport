@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect } from 'react'
 import { fetchProjectRateData, type ProjectRateData } from '@/lib/actions/projectRates'
 import toast from 'react-hot-toast'
 
@@ -35,26 +35,35 @@ interface Props {
 
 export default function ProjectRateCalculator({ projectId, projectName, partyRate, ownerRate, onClose }: Props) {
   const [data, setData] = useState<ProjectRateData | null>(null)
-  const [isPending, startTransition] = useTransition()
-  const [loaded, setLoaded] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [companyRate, setCompanyRate] = useState(partyRate || 133)
   const [ownerRateVal, setOwnerRateVal] = useState(ownerRate || 125)
   const [projectionMode, setProjectionMode] = useState<'week' | 'month' | 'year'>('month')
 
-  // Fetch data on first open
-  if (!loaded) {
-    setLoaded(true)
-    startTransition(async () => {
-      try {
-        const result = await fetchProjectRateData(projectId)
+  // Fetch data on mount
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetchProjectRateData(projectId)
+      .then(result => {
+        if (cancelled) return
         setData(result)
         if (result.partyRate > 0) setCompanyRate(result.partyRate)
         if (result.ownerRate > 0) setOwnerRateVal(result.ownerRate)
-      } catch {
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('Rate calculator fetch error:', err)
+        setError('Failed to load project rate data')
         toast.error('Failed to load project rate data')
-      }
-    })
-  }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [projectId])
 
   const spread = companyRate - ownerRateVal
   const totalWeight = data?.totalWeight || 0
@@ -93,7 +102,7 @@ export default function ProjectRateCalculator({ projectId, projectName, partyRat
         </div>
 
         <div className="modal-body" style={{ padding: '20px 24px' }}>
-          {isPending ? (
+          {loading ? (
             /* Skeleton while loading */
             <div style={{ padding: 20 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
@@ -103,6 +112,12 @@ export default function ProjectRateCalculator({ projectId, projectName, partyRat
               </div>
               <div className="skeleton" style={{ height: 120, borderRadius: 12, marginBottom: 16 }} />
               <div className="skeleton" style={{ height: 200, borderRadius: 12 }} />
+            </div>
+          ) : error ? (
+            <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>{error}</div>
+              <button onClick={onClose} className="btn btn-secondary btn-sm" style={{ marginTop: 12 }}>Close</button>
             </div>
           ) : data ? (
             <>

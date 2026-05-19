@@ -49,10 +49,11 @@ export default async function TripsPage({ searchParams }: TripsPageProps) {
     prisma.trip.findMany({
       where,
       include: {
-        vehicle: true,
-        project: true
+        vehicle: { select: { plateNo: true } },
+        project: { select: { projectName: true } }
       },
-      orderBy: { date: 'desc' }
+      orderBy: { date: 'desc' },
+      take: 500,
     }),
     getVehicles(),
     getProjects()
