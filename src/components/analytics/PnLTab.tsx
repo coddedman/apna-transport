@@ -22,6 +22,23 @@ interface Props {
 export default function PnLTab({ data }: Props) {
   const { pnl, companyOverhead, partnerData, cashFlowSummary } = data
 
+  // Defensive check for stale cache / old data formats
+  if (!pnl) {
+    return (
+      <div className="analytics-empty" style={{ padding: '40px', textAlign: 'center', opacity: 0.7 }}>
+        <div style={{ fontSize: '32px', marginBottom: '16px' }}>🔄</div>
+        <h3>Dashboard Update in Progress</h3>
+        <p style={{ marginTop: '8px', marginBottom: '24px' }}>
+          We've just released a major performance update to the dashboard.<br/>
+          Your browser is currently holding onto an older version of the data.
+        </p>
+        <button className="btn btn-primary" onClick={() => window.location.reload()}>
+          Click here to Refresh
+        </button>
+      </div>
+    )
+  }
+
   // Waterfall items
   const waterfall = [
     { label: 'Gross Revenue (Billings)', value: pnl.grossRevenue, color: '#10b981', icon: '🏢' },
