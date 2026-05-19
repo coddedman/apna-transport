@@ -7,6 +7,7 @@ import { useSidebar } from '@/lib/context/SidebarContext'
 import toast from 'react-hot-toast'
 import SimulatorTab from '@/components/analytics/SimulatorTab'
 import ActivityTab from '@/components/analytics/ActivityTab'
+import PnLTab from '@/components/analytics/PnLTab'
 
 // ============================================
 // Mini Chart Components (Pure CSS, no library)
@@ -162,10 +163,11 @@ const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 // Tab Definitions
 // ===========================
 
-type TabKey = 'overview' | 'revenue' | 'expenses' | 'vehicles' | 'projects' | 'owners' | 'activity' | 'simulator'
+type TabKey = 'overview' | 'revenue' | 'expenses' | 'pnl' | 'vehicles' | 'projects' | 'owners' | 'activity' | 'simulator'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'overview', label: 'Overview', icon: '📊' },
+  { key: 'pnl', label: 'P&L', icon: '📑' },
   { key: 'revenue', label: 'Revenue', icon: '💰' },
   { key: 'expenses', label: 'Expenses', icon: '📉' },
   { key: 'vehicles', label: 'Vehicles', icon: '🚛' },
@@ -1306,6 +1308,11 @@ export default function DashboardAnalytics({ initialData }: Props) {
         {/* ============ ACTIVITY TAB ============ */}
         {activeTab === 'activity' && (
           <ActivityTab data={data} />
+        )}
+
+        {/* ============ P&L TAB ============ */}
+        {activeTab === 'pnl' && (
+          <PnLTab data={data} />
         )}
 
         {/* ============ SIMULATOR TAB ============ */}
