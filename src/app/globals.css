@@ -2934,3 +2934,83 @@ body {
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
+
+/* ======= COLLAPSIBLE SIDEBAR ON DESKTOP ======= */
+.sidebar {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.main-content {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.desktop-collapse-btn:hover {
+  border-color: var(--color-accent) !important;
+  color: var(--color-text-primary) !important;
+  background: var(--color-bg-card-hover) !important;
+  transform: scale(1.1);
+}
+
+.desktop-collapse-btn:active {
+  transform: scale(0.95);
+}
+
+/* Sidebar Collapsed Styles */
+.app-layout.sidebar-collapsed {
+  --sidebar-width: 76px;
+}
+
+.app-layout.sidebar-collapsed .sidebar-brand {
+  justify-content: center !important;
+  padding: 20px 8px !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-brand-text {
+  display: none !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-section-label {
+  height: 1px;
+  background: var(--color-border);
+  padding: 0;
+  margin: 12px 14px 6px;
+  overflow: hidden;
+  text-indent: -9999px;
+}
+
+.app-layout.sidebar-collapsed .sidebar-link {
+  justify-content: center !important;
+  padding: 10px 0 !important;
+  gap: 0 !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-link-text {
+  display: none !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-user {
+  justify-content: center !important;
+  padding: 8px 0 !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-user-info {
+  display: none !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-signout-text {
+  display: none !important;
+}
+
+.app-layout.sidebar-collapsed .sidebar-signout-btn {
+  padding: 8px 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+@media (max-width: 767px) {
+  .desktop-collapse-btn {
+    display: none !important;
+  }
+}
+

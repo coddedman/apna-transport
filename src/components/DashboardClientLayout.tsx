@@ -5,10 +5,10 @@ import Sidebar from '@/components/Sidebar'
 import MobileBottomNav from '@/components/MobileBottomNav'
 
 function LayoutInner({ children }: { children: React.ReactNode }) {
-  const { toggle, close } = useSidebar()
+  const { toggle, close, isCollapsed } = useSidebar()
   
   return (
-    <div className="app-layout">
+    <div className={`app-layout${isCollapsed ? ' sidebar-collapsed' : ''}`}>
       <Sidebar />
       
       <div className="main-content">

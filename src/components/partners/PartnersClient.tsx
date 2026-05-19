@@ -113,43 +113,43 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
 
             {/* Equity ring visual */}
             {partners.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginBottom: 16 }}>
                 {partners.map((p, i) => {
                   const colors = ['#8b5cf6', '#3b82f6', '#f59e0b', '#10b981', '#ef4444']
                   const color = colors[i % colors.length]
                   const share = netAfterOverhead > 0 ? (p.equityPct / 100) * netAfterOverhead : 0
                   return (
-                    <div key={p.id} style={{ flex: 1, minWidth: 140, background: 'var(--color-bg-primary)', borderRadius: 10, padding: '12px 14px', border: `1px solid ${color}40` }}>
+                    <div key={p.id} style={{ background: 'var(--color-bg-primary)', borderRadius: 10, padding: '16px', border: `1px solid ${color}40`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>{p.name}</div>
-                          {p.phone && <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{p.phone}</div>}
+                          <div style={{ fontSize: 14, fontWeight: 700 }}>{p.name}</div>
+                          {p.phone && <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>{p.phone}</div>}
                         </div>
-                        <div style={{ display: 'flex', gap: 4 }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
                           <button onClick={() => handleEditPartner(p)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>✏️</button>
                           <button onClick={() => handleDeletePartner(p.id, p.name)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}>🗑️</button>
                         </div>
                       </div>
-                      <div style={{ marginTop: 10, display: 'flex', gap: 12 }}>
+                      <div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
                         <div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color }}>{p.equityPct}%</div>
-                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>EQUITY</div>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Equity</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color, marginTop: 2 }}>{p.equityPct}%</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#3b82f6' }}>{fmt(p.investedAmount)}</div>
-                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>INVESTED</div>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Invested</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#3b82f6', marginTop: 2 }}>{fmt(p.investedAmount)}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>{fmt(share)}</div>
-                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>EST. SHARE</div>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Est. Share</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981', marginTop: 2 }}>{fmt(share)}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>{fmt(share - p.paidOutAmount)}</div>
-                          <div style={{ fontSize: 9, color: 'var(--color-text-muted)' }}>REMAINING</div>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Remaining</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b', marginTop: 2 }}>{fmt(share - p.paidOutAmount)}</div>
                         </div>
                       </div>
                       {/* Equity bar */}
-                      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', marginTop: 10 }}>
+                      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', marginTop: 14 }}>
                         <div style={{ height: '100%', borderRadius: 2, background: color, width: `${Math.min(p.equityPct, 100)}%` }} />
                       </div>
                     </div>

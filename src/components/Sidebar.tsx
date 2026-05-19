@@ -58,7 +58,7 @@ const roleLabels: Record<string, string> = {
 export default function Sidebar() {
   const pathname = usePathname()
   const { setLoading } = useLoading()
-  const { isOpen, close } = useSidebar()
+  const { isOpen, close, isCollapsed, toggleCollapse } = useSidebar()
   const { data: session } = useSession()
 
   const user = session?.user as any
@@ -78,12 +78,40 @@ export default function Sidebar() {
         ✕
       </button>
       {/* Brand */}
-      <div className="sidebar-brand">
+      <div className="sidebar-brand" style={{ position: 'relative' }}>
         <div className="sidebar-brand-icon">{getInitials(transporterName)}</div>
         <div className="sidebar-brand-text">
           <span className="sidebar-brand-name">{transporterName}</span>
           <span className="sidebar-brand-tag">Fleet Management</span>
         </div>
+
+        {/* Collapse toggle button for Desktop */}
+        <button
+          onClick={toggleCollapse}
+          className="desktop-collapse-btn"
+          style={{
+            position: 'absolute',
+            right: '-12px',
+            top: '22px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            zIndex: 60,
+            fontSize: '10px',
+            boxShadow: 'var(--shadow-sm)',
+            transition: 'all 0.2s ease',
+          }}
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {isCollapsed ? '▶' : '◀'}
+        </button>
       </div>
 
       {/* Navigation */}
@@ -96,9 +124,10 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={`sidebar-link${pathname === item.href ? ' active' : ''}`}
+                title={isCollapsed ? item.label : undefined}
               >
                 <span className="sidebar-link-icon">{item.icon}</span>
-                {item.label}
+                <span className="sidebar-link-text">{item.label}</span>
               </Link>
             ))}
           </div>
@@ -116,10 +145,11 @@ export default function Sidebar() {
         </div>
         <button
           onClick={handleSignOut}
-          className="btn btn-secondary btn-sm"
+          className="btn btn-secondary btn-sm sidebar-signout-btn"
           style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
+          title={isCollapsed ? "Sign Out" : undefined}
         >
-          🚪 Sign Out
+          🚪 <span className="sidebar-signout-text">Sign Out</span>
         </button>
       </div>
     </aside>
