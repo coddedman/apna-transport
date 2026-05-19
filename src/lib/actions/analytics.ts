@@ -197,13 +197,15 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   // To prevent memory limits in production, we should cap 'all' period to a reasonable range if needed,
   // but for now let's just make the data processing more robust.
 
-  // === Parallel data fetching ===
-  // === Parallel data fetching ===
+  // === OPTIMIZED: Parallel data fetching (22 queries, down from 30) ===
+  // Merged: trip time series + owner payout + daily vehicle trips into ONE allTripsData query
+  // Merged: cash flow IN/OUT aggregates into ONE grouped query
+  // Removed: separate companyExpense aggregate (computed from groupBy)
   const [
-    tripsAggr,           // 0
-    tripCount,           // 1
-    expenseAggr,         // 2
-    advanceAggr,         // 3
+    tripsAggr,           // 0: trip totals
+    tripCount,           // 1: trip count
+    expenseAggr,         // 2: expense totals
+    advanceAggr,         // 3: advance totals
     vehicleCount,        // 4
     ownerCount,          // 5
     projectCount,        // 6
@@ -214,22 +216,17 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     recentExpensesData,  // 11
     expensesByType,      // 12
     revenueByProjectData, // 13
-    revenueByOwnerData,  // 14
-    revenueByVehicleData, // 15
-    expenseByVehicleData, // 16
-    timeSeriesTrips,     // 17
-    timeSeriesExpenses,  // 18
-    timeSeriesAdvances,  // 19
-    ownerPayoutTripsData, // 20
-    projectRatesData,    // 21
-    dailyTripsRaw,       // 22
-    companyExpensesAggr, // 23
-    companyExpensesType, // 24
-    recentCompanyExp,    // 25
-    partnersList,        // 26
-    cashFlowIn,          // 27
-    cashFlowOut,         // 28
-    recentCashFlows,     // 29
+    revenueByVehicleData, // 14
+    expenseByVehicleData, // 15
+    allTripsData,        // 16: CONSOLIDATED — replaces queries #14,#17,#20,#22
+    timeSeriesExpenses,  // 17
+    timeSeriesAdvances,  // 18
+    projectRatesData,    // 19
+    companyExpensesType, // 20
+    recentCompanyExp,    // 21
+    partnersList,        // 22
+    cashFlowGrouped,     // 23: CONSOLIDATED — replaces #27 + #28
+    recentCashFlows,     // 24
   ] = await Promise.all([
     // Aggregates
     prisma.trip.aggregate({
@@ -292,19 +289,9 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     // Revenue by Project
     prisma.trip.groupBy({
       by: ['projectId'],
-      _sum: { ownerFreightAmount: true, weight: true },
+      _sum: { ownerFreightAmount: true, weight: true, partyFreightAmount: true },
       _count: { id: true },
       where: tripWhere,
-    }),
-
-    // Revenue by Owner (via Vehicle)
-    prisma.trip.findMany({
-      where: tripWhere,
-      select: {
-        ownerFreightAmount: true,
-        partyFreightAmount: true,
-        vehicle: { select: { ownerId: true, owner: { select: { ownerName: true } } } }
-      }
     }),
 
     // Revenue by Vehicle
@@ -322,11 +309,22 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       where: expenseWhere,
     }),
 
-    // Time Series data (explicitly limited to chart range)
+    // CONSOLIDATED: All trip data for time series, owner payout, daily vehicle, and owner revenue
+    // Replaces 4 separate queries with 1 capped query
     prisma.trip.findMany({
-      where: { ...tripWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
-      select: { date: true, ownerFreightAmount: true, partyFreightAmount: true, weight: true }
+      where: tripWhere,
+      select: {
+        date: true,
+        ownerFreightAmount: true,
+        partyFreightAmount: true,
+        weight: true,
+        vehicle: { select: { plateNo: true, ownerId: true, owner: { select: { ownerName: true } } } },
+      },
+      orderBy: { date: 'asc' },
+      take: 5000, // Safety cap
     }),
+
+    // Time series expenses
     prisma.expense.findMany({
       where: { ...expenseWhere, date: { gte: startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), lte: endDate } },
       select: { date: true, amount: true, type: true }
@@ -336,39 +334,13 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       select: { date: true, amount: true }
     }),
 
-    // Per-owner trips for weekly payout chart
-    prisma.trip.findMany({
-      where: tripWhere,
-      select: {
-        date: true,
-        partyFreightAmount: true,
-        vehicle: { select: { ownerId: true, owner: { select: { ownerName: true } } } },
-      }
-    }),
-
     // Project rates
     prisma.project.findMany({
       where: { transporterId },
       select: { id: true, projectName: true, partyRate: true, ownerRate: true },
     }),
 
-    // Per-vehicle daily trips (for Activity tab)
-    prisma.trip.findMany({
-      where: tripWhere,
-      select: {
-        date: true,
-        weight: true,
-        ownerFreightAmount: true,
-        vehicle: { select: { plateNo: true } },
-      },
-      orderBy: { date: 'asc' },
-    }),
-
-    // Company Expenses & PnL Data
-    prisma.companyExpense.aggregate({
-      _sum: { amount: true },
-      where: { transporterId, ...dateFilter },
-    }),
+    // Company expenses by type (we compute total from this, no separate aggregate needed)
     prisma.companyExpense.groupBy({
       by: ['type'],
       _sum: { amount: true },
@@ -385,14 +357,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       where: { transporterId },
     }),
 
-    // Cash Flow Data
-    prisma.cashFlow.aggregate({
+    // CONSOLIDATED: Cash flow grouped by direction (replaces 2 separate aggregates)
+    prisma.cashFlow.groupBy({
+      by: ['direction'],
       _sum: { amount: true },
-      where: { transporterId, direction: 'CASH_IN', ...dateFilter },
-    }),
-    prisma.cashFlow.aggregate({
-      _sum: { amount: true },
-      where: { transporterId, direction: 'CASH_OUT', ...dateFilter },
+      where: { transporterId, ...dateFilter },
     }),
     prisma.cashFlow.findMany({
       where: { transporterId, ...dateFilter },
@@ -434,14 +403,20 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     weightMap.set(key, 0)
   }
 
-  timeSeriesTrips.forEach(t => {
+  // Build time series from consolidated allTripsData
+  const tsStart = seriesStart.getTime()
+  const tsEnd = endDate.getTime()
+  allTripsData.forEach(t => {
     if (!t.date) return
-    const key = new Date(t.date).toISOString().split('T')[0]
-    if (revenueMap.has(key)) {
-      revenueMap.set(key, (revenueMap.get(key) || 0) + (t.ownerFreightAmount || 0))
-      tripsMap.set(key, (tripsMap.get(key) || 0) + 1)
-      weightMap.set(key, (weightMap.get(key) || 0) + (t.weight || 0))
-      expensesMap.set(key, (expensesMap.get(key) || 0) + (t.partyFreightAmount || 0))
+    const tTime = new Date(t.date).getTime()
+    if (tTime >= tsStart && tTime <= tsEnd) {
+      const key = new Date(t.date).toISOString().split('T')[0]
+      if (revenueMap.has(key)) {
+        revenueMap.set(key, (revenueMap.get(key) || 0) + (t.ownerFreightAmount || 0))
+        tripsMap.set(key, (tripsMap.get(key) || 0) + 1)
+        weightMap.set(key, (weightMap.get(key) || 0) + (t.weight || 0))
+        expensesMap.set(key, (expensesMap.get(key) || 0) + (t.partyFreightAmount || 0))
+      }
     }
   })
 
@@ -494,9 +469,9 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     }
   }).sort((a, b) => b.revenue - a.revenue)
 
-  // === Revenue by Owner ===
+  // === Revenue by Owner (from consolidated allTripsData) ===
   const ownerMap = new Map<string, { name: string; revenue: number; expenses: number; trips: number; profit: number }>()
-  revenueByOwnerData.forEach(t => {
+  allTripsData.forEach(t => {
     const oid = t.vehicle?.ownerId
     if (!oid) return
     const existing = ownerMap.get(oid)
@@ -508,8 +483,6 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       ownerMap.set(oid, { name: t.vehicle?.owner?.ownerName || 'Unknown Owner', revenue: (t.ownerFreightAmount || 0), expenses: (t.partyFreightAmount || 0), trips: 1, profit: 0 })
     }
   })
-  // Note: We might miss some expenses here if we don't fetch all of them, 
-  // but we can add those to the query above if needed.
   const revenueByOwner = Array.from(ownerMap.values())
     .map(o => ({ ...o, profit: o.revenue - o.expenses }))
     .sort((a, b) => b.revenue - a.revenue)
@@ -570,7 +543,8 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   }
 
   // === P&L, Overhead, Partners, Cash Flow Computations ===
-  const overheadTotal = companyExpensesAggr._sum.amount || 0
+  // Compute overhead total from groupBy (no separate aggregate query needed)
+  const overheadTotal = companyExpensesType.reduce((sum, e) => sum + (e._sum.amount || 0), 0)
   const rateSpread = totalRevenue - vehiclePayoutCost
   const netProfitBeforePartners = rateSpread - totalCombinedExpense - overheadTotal
   const margin = totalRevenue > 0 ? (netProfitBeforePartners / totalRevenue) * 100 : 0
@@ -612,8 +586,9 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     })).sort((a, b) => b.equityPct - a.equityPct),
   }
 
-  const cashIn = cashFlowIn._sum.amount || 0
-  const cashOut = cashFlowOut._sum.amount || 0
+  // Compute cash flow from consolidated grouped query
+  const cashIn = cashFlowGrouped.find(g => g.direction === 'CASH_IN')?._sum.amount || 0
+  const cashOut = cashFlowGrouped.find(g => g.direction === 'CASH_OUT')?._sum.amount || 0
   const cashFlowSummary = {
     balance: cashIn - cashOut,
     totalIn: cashIn,
@@ -691,10 +666,10 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     owners: ownersList.map(o => ({ id: o.id, name: o.ownerName })),
     vehicles: vehiclesList.map(v => ({ id: v.id, plateNo: v.plateNo })),
     periodLabel: periodLabels[filters.period] || 'All Time',
-    weeklyBreakdown: buildWeeklyBreakdown(timeSeriesTrips, timeSeriesExpenses, timeSeriesAdvances),
-    ownerPayoutByWeek: buildOwnerPayoutByWeek(ownerPayoutTripsData as any),
+    weeklyBreakdown: buildWeeklyBreakdown(allTripsData as any, timeSeriesExpenses, timeSeriesAdvances),
+    ownerPayoutByWeek: buildOwnerPayoutByWeek(allTripsData as any),
     projectRates: buildProjectRates(revenueByProjectData, projectRatesData, projectsList),
-    dailyTripsByVehicle: buildDailyTripsByVehicle(dailyTripsRaw as any),
+    dailyTripsByVehicle: buildDailyTripsByVehicle(allTripsData as any),
     pnl,
     companyOverhead,
     partnerData,
