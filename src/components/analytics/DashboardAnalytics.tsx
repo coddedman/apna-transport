@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition, useCallback, useEffect } from 'react'
 import { fetchAnalytics, type AnalyticsData, type AnalyticsFilters } from '@/lib/actions/analytics'
 import { useLoading } from '@/lib/context/LoadingContext'
 import { useSidebar } from '@/lib/context/SidebarContext'
 import toast from 'react-hot-toast'
+import DashboardLoading from '@/app/dashboard/loading'
 
 import ActivityTab from '@/components/analytics/ActivityTab'
 import PnLTab from '@/components/analytics/PnLTab'
@@ -209,13 +210,13 @@ const expenseColors: Record<string, string> = {
 // ===========================
 
 interface Props {
-  initialData: AnalyticsData
+  initialData?: AnalyticsData
 }
 
 export default function DashboardAnalytics({ initialData }: Props) {
   const { setLoading } = useLoading()
   const { toggle } = useSidebar()
-  const [data, setData] = useState<AnalyticsData>(initialData)
+  const [data, setData] = useState<AnalyticsData | null>(initialData || null)
   const [isPending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [chartMetric, setChartMetric] = useState<string>('revenue')
@@ -227,17 +228,6 @@ export default function DashboardAnalytics({ initialData }: Props) {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [deductibleTypes, setDeductibleTypes] = useState<Set<string>>(new Set(['TOLL', 'OWNER_ADVANCE']))
   const [modalData, setModalData] = useState<{ title: string; content: React.ReactNode } | null>(null)
-
-  // Calculated values based on deductible config
-  const totalDeductions = data.expenseByType
-    .filter(e => deductibleTypes.has(e.type.replace(/ /g, '_').toUpperCase()))
-    .reduce((a, e) => a + e.amount, 0)
-  
-  const netSettlement = data.ownerPayout - totalDeductions
-  const rateSpread = data.totalRevenue - data.ownerPayout
-  const nonDeductibleExpenses = data.totalExpenses - totalDeductions
-  const adjustedNetProfit = rateSpread - nonDeductibleExpenses
-  const adjustedMargin = data.totalRevenue > 0 ? (adjustedNetProfit / data.totalRevenue) * 100 : 0
 
   const loadData = useCallback((newFilters: AnalyticsFilters) => {
     setFilters(newFilters)
@@ -253,6 +243,27 @@ export default function DashboardAnalytics({ initialData }: Props) {
       }
     })
   }, [setLoading])
+
+  useEffect(() => {
+    if (!data) {
+      loadData({ period: 'all' })
+    }
+  }, [data, loadData])
+
+  if (!data) {
+    return <DashboardLoading />
+  }
+
+  // Calculated values based on deductible config
+  const totalDeductions = data.expenseByType
+    .filter(e => deductibleTypes.has(e.type.replace(/ /g, '_').toUpperCase()))
+    .reduce((a, e) => a + e.amount, 0)
+  
+  const netSettlement = data.ownerPayout - totalDeductions
+  const rateSpread = data.totalRevenue - data.ownerPayout
+  const nonDeductibleExpenses = data.totalExpenses - totalDeductions
+  const adjustedNetProfit = rateSpread - nonDeductibleExpenses
+  const adjustedMargin = data.totalRevenue > 0 ? (adjustedNetProfit / data.totalRevenue) * 100 : 0
 
   const handlePeriodChange = (period: string) => {
     if (period === 'custom') {
