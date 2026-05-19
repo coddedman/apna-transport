@@ -5,7 +5,7 @@ import { fetchAnalytics, type AnalyticsData, type AnalyticsFilters } from '@/lib
 import { useLoading } from '@/lib/context/LoadingContext'
 import { useSidebar } from '@/lib/context/SidebarContext'
 import toast from 'react-hot-toast'
-import SimulatorTab from '@/components/analytics/SimulatorTab'
+
 import ActivityTab from '@/components/analytics/ActivityTab'
 import PnLTab from '@/components/analytics/PnLTab'
 import TabErrorBoundary from '@/components/analytics/TabErrorBoundary'
@@ -164,7 +164,7 @@ const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 // Tab Definitions
 // ===========================
 
-type TabKey = 'overview' | 'revenue' | 'expenses' | 'pnl' | 'vehicles' | 'projects' | 'owners' | 'activity' | 'simulator'
+type TabKey = 'overview' | 'revenue' | 'expenses' | 'pnl' | 'vehicles' | 'projects' | 'owners' | 'activity'
 
 const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'overview', label: 'Overview', icon: '📊' },
@@ -175,7 +175,7 @@ const TABS: { key: TabKey; label: string; icon: string }[] = [
   { key: 'projects', label: 'Projects', icon: '📁' },
   { key: 'owners', label: 'Owners', icon: '👤' },
   { key: 'activity', label: 'Activity', icon: '📅' },
-  { key: 'simulator', label: 'Rate Calculator', icon: '🧮' },
+
 ]
 
 const PERIODS = [
@@ -1320,12 +1320,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
           </TabErrorBoundary>
         )}
 
-        {/* ============ SIMULATOR TAB ============ */}
-        {activeTab === 'simulator' && (
-          <TabErrorBoundary fallbackTitle="Rate Calculator failed to load">
-            <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />
-          </TabErrorBoundary>
-        )}
+
 
       </div>
 
