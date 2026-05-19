@@ -466,7 +466,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     const maintenance = vExpenses.find((e: any) => e.type === 'MAINTENANCE')?.amount || 0
     const toll = vExpenses.find((e: any) => e.type === 'TOLL')?.amount || 0
     const driverAdvance = vExpenses.find((e: any) => e.type === 'DRIVER_ADVANCE')?.amount || 0
-    const otherExp = vExpenses.filter((e: any) => !['FUEL','MAINTENANCE','TOLL','DRIVER_ADVANCE'].includes(e.type)).reduce((a: number, e: any) => a + e.amount, 0)
+    const otherExp = vExpenses.filter((e: any) => !['FUEL', 'MAINTENANCE', 'TOLL', 'DRIVER_ADVANCE'].includes(e.type)).reduce((a: number, e: any) => a + e.amount, 0)
     const totalRunningExp = fuel + maintenance + toll + driverAdvance + otherExp
     return {
       plateNo: vehicle?.plateNo || 'Unknown',
