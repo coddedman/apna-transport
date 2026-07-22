@@ -6,6 +6,7 @@ import EditExpenseButton from '@/components/EditExpenseButton'
 import ExportCSVButton from '@/components/ExportCSVButton'
 import PageHeader from '@/components/PageHeader'
 import ExpenseFilterBar from '@/components/ExpenseFilterBar'
+import ExpenseTallyView from '@/components/expenses/ExpenseTallyView'
 import { ExpenseType, Prisma } from '@prisma/client'
 
 export const metadata = {
@@ -142,6 +143,24 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
             <div className="stat-card-label">All Expenses</div>
           </div>
         </div>
+
+        {/* Expense Tally / Audit */}
+        <details style={{ marginBottom: 16 }}>
+          <summary style={{
+            cursor: 'pointer', padding: '14px 20px', borderRadius: 16,
+            background: '#111827', border: '1px solid rgba(255,255,255,0.06)',
+            fontSize: 14, fontWeight: 800, color: 'var(--color-text-primary)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            listStyle: 'none',
+          }}>
+            <span style={{ background: 'rgba(239,68,68,0.1)', padding: '5px 8px', borderRadius: 8 }}>🔍</span>
+            Expense Tally — Check for Missing Expenses
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-text-muted)' }}>Click to expand</span>
+          </summary>
+          <div style={{ marginTop: 8 }}>
+            <ExpenseTallyView vehicles={simpleVehicles} projects={simpleProjects} />
+          </div>
+        </details>
 
         {/* Multi-select Filter Bar */}
         <ExpenseFilterBar vehicles={simpleVehicles} projects={simpleProjects} />
