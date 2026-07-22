@@ -53,6 +53,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
       const allTrips = owner.vehicles.flatMap(v => v.trips.map(t => ({ ...t, plateNo: v.plateNo, rate: v.effectiveOwnerRate })))
       const totalGross = owner.vehicles.reduce((a, v) => a + v.grossPayout, 0)
       const totalWeight = owner.vehicles.reduce((a, v) => a + v.totalWeight, 0)
+      const totalTripCount = owner.vehicles.reduce((a, v) => a + v.totalTrips, 0)
 
       doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(16, 185, 129)
       doc.text('TRIP EARNINGS', margin, y); y += 4
@@ -61,7 +62,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
         startY: y,
         head: [['Date', 'Vehicle', 'Inv/LR', 'Weight (MT)', 'Rate', 'Payout']],
         body: allTrips.map(t => [fmtD(t.date), t.plateNo, t.invoiceNo || t.lrNo || '—', t.weight.toFixed(2), fmt(t.rate), fmt(t.ownerPayout)]),
-        foot: [['', '', '', `${totalWeight.toFixed(2)} MT`, 'GROSS TOTAL', fmt(totalGross)]],
+        foot: [[`Total: ${totalTripCount} trips`, '', '', `${totalWeight.toFixed(2)} MT`, 'GROSS TOTAL', fmt(totalGross)]],
         theme: 'plain',
         styles: { fontSize: 8, cellPadding: 2.5, textColor: [100, 116, 139] },
         headStyles: { fillColor: [15, 23, 42], textColor: [71, 85, 105], fontSize: 7, fontStyle: 'bold' },
@@ -130,6 +131,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
     // ── SUMMARY (full mode only) ──
     if (mode === 'full') {
       if (y > 220) { doc.addPage(); y = 14 }
+      const tripCount = owner.vehicles.reduce((a, v) => a + v.totalTrips, 0)
       const gross = owner.totalGross, ded = owner.totalDeductions, net = owner.totalNet, paid = owner.ownerAdvanceTotal, due = owner.totalBalanceDue
       doc.setFillColor(11, 17, 32)
       doc.roundedRect(margin, y, W - margin * 2, 32, 3, 3, 'F')
@@ -138,6 +140,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
 
       doc.setFontSize(8); doc.setFont('helvetica', 'bold')
       const cols = [
+        { label: 'Total Trips', val: `${tripCount}`, color: [59, 130, 246] as [number,number,number] },
         { label: 'Gross Payout', val: fmt(gross), color: [245, 158, 11] as [number,number,number] },
         { label: 'Deductions', val: `-${fmt(ded)}`, color: [239, 68, 68] as [number,number,number] },
         { label: 'Net Settlement', val: fmt(net), color: [16, 185, 129] as [number,number,number] },
@@ -145,7 +148,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
         { label: 'BALANCE DUE', val: fmt(due), color: due < 0 ? [239, 68, 68] as [number,number,number] : [34, 211, 238] as [number,number,number] },
       ]
       cols.forEach((c, i) => {
-        const x = margin + 5 + i * 36
+        const x = margin + 5 + i * 30
         doc.setTextColor(100, 116, 139); doc.text(c.label, x, y + 11)
         doc.setTextColor(...c.color); doc.setFontSize(9); doc.text(c.val, x, y + 20)
         doc.setFontSize(8)

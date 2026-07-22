@@ -4,6 +4,24 @@ import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidateDashboard } from '@/lib/actions/revalidate'
 
+// Helper: find the applicable rate for a project on a given date
+async function resolveRates(projectId: string, tripDate: Date, project: { partyRate: number; ownerRate: number }) {
+  // Check if there's a rate period covering this date
+  const period = await prisma.ratePeriod.findFirst({
+    where: {
+      projectId,
+      periodStart: { lte: tripDate },
+      periodEnd: { gte: tripDate },
+    }
+  })
+
+  if (period) {
+    return { partyRate: period.partyRate, ownerRate: period.ownerRate, source: 'period' as const }
+  }
+
+  return { partyRate: project.partyRate || 0, ownerRate: project.ownerRate, source: 'project' as const }
+}
+
 export async function createTrip(formData: FormData) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
@@ -22,9 +40,6 @@ export async function createTrip(formData: FormData) {
   const project = await prisma.project.findUnique({ where: { id: projectId } })
   if (!project) throw new Error('Project not found')
 
-  const ownerRate = project.ownerRate
-  const partyRate = project.partyRate || 0
-
   // Combine date and time
   let tripDate = new Date()
   if (dateStr) {
@@ -32,6 +47,9 @@ export async function createTrip(formData: FormData) {
     const [hours, minutes] = (timeStr || '00:00').split(':').map(Number)
     tripDate = new Date(year, month - 1, day, hours, minutes)
   }
+
+  // Resolve rates: check rate period first, then fall back to project defaults
+  const { partyRate, ownerRate } = await resolveRates(projectId, tripDate, project)
 
   const invoiceNo = formData.get('invoiceNo') as string
   const lrNo = formData.get('lrNo') as string
@@ -74,9 +92,6 @@ export async function updateTrip(tripId: string, formData: FormData) {
   const project = await prisma.project.findUnique({ where: { id: projectId } })
   if (!project || project.transporterId !== transporterId) throw new Error('Project not found')
 
-  const ownerRate = project.ownerRate
-  const partyRate = project.partyRate || 0
-
   // Combine date and time
   let tripDate = undefined
   if (dateStr && timeStr) {
@@ -84,6 +99,10 @@ export async function updateTrip(tripId: string, formData: FormData) {
     const [hours, minutes] = timeStr.split(':').map(Number)
     tripDate = new Date(year, month - 1, day, hours, minutes)
   }
+
+  // Resolve rates: check rate period first, then fall back to project defaults
+  const rateDate = tripDate || new Date()
+  const { partyRate, ownerRate } = await resolveRates(projectId, rateDate, project)
 
   const invoiceNo = formData.get('invoiceNo') as string
   const lrNo = formData.get('lrNo') as string

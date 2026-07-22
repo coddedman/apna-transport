@@ -4,6 +4,7 @@ import AddProjectButton from '@/components/AddProjectButton'
 import EditProjectButton from '@/components/EditProjectButton'
 import DeleteProjectButton from '@/components/DeleteProjectButton'
 import RateCalculatorButton from '@/components/projects/RateCalculatorButton'
+import RatePeriodManager from '@/components/projects/RatePeriodManager'
 
 export const metadata = {
   title: 'Projects — Hyva Transport',
@@ -150,6 +151,14 @@ export default async function ProjectsPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Rate Period Manager */}
+                  <RatePeriodManager
+                    projectId={project.id}
+                    projectName={project.name}
+                    defaultPartyRate={project.partyRate}
+                    defaultOwnerRate={project.ownerRate}
+                  />
                 </div>
               </div>
             ))

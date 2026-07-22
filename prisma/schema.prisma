@@ -42,6 +42,20 @@ enum CashFlowDirection {
   CASH_OUT
 }
 
+enum TransactionType {
+  PARTY_PAYMENT    // Money received from client/party
+  OWNER_PAYMENT    // Money paid to vehicle owner
+  ADVANCE_GIVEN    // Advance given to owner
+  REFUND           // Any refund
+  OTHER
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
 model CashFlow {
   id            String            @id @default(cuid())
   date          DateTime          @default(now())
@@ -95,6 +109,7 @@ model Transporter {
   partners         BusinessPartner[]
   companyExpenses  CompanyExpense[]
   cashFlows        CashFlow[]
+  transactions     Transaction[]
   createdAt        DateTime  @default(now())
 }
 
@@ -121,6 +136,8 @@ model Project {
   vehicles      Vehicle[]
   expenses      Expense[]
   advances      OwnerAdvance[]
+  ratePeriods   RatePeriod[]
+  transactions  Transaction[]
 
   @@index([transporterId])
 }
@@ -138,6 +155,7 @@ model Owner {
   vehicles          Vehicle[]
   settlements       Settlement[]
   advances          OwnerAdvance[]
+  transactions      Transaction[]
 }
 
 model Vehicle {
@@ -214,6 +232,7 @@ model Settlement {
   status        SettlementStatus @default(PENDING)
   settledAt     DateTime?
   createdAt     DateTime         @default(now())
+  transactions  Transaction[]
 
   @@index([ownerId])
   @@index([status])
@@ -232,4 +251,54 @@ model OwnerAdvance {
   @@index([ownerId])
   @@index([projectId])
   @@index([date])
+}
+
+// ========================
+// Fortnightly Rate Periods
+// ========================
+
+model RatePeriod {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id])
+  periodStart   DateTime // e.g., 2026-07-01 or 2026-07-16
+  periodEnd     DateTime // e.g., 2026-07-15 or 2026-07-31
+  partyRate     Float    // Client billing rate for this period
+  ownerRate     Float    // Owner payout rate for this period
+  label         String?  // e.g., "Jul 1-15, 2026"
+  createdAt     DateTime @default(now())
+
+  @@unique([projectId, periodStart])
+  @@index([projectId])
+  @@index([periodStart])
+}
+
+// ========================
+// Transaction Tracking
+// ========================
+
+model Transaction {
+  id              String            @id @default(cuid())
+  date            DateTime          @default(now())
+  type            TransactionType
+  status          TransactionStatus @default(PENDING)
+  amount          Float
+  description     String?
+  referenceNo     String?           // Cheque no, UTR, bank reference
+  projectId       String?
+  project         Project?          @relation(fields: [projectId], references: [id])
+  ownerId         String?
+  owner           Owner?            @relation(fields: [ownerId], references: [id])
+  settlementId    String?
+  settlement      Settlement?       @relation(fields: [settlementId], references: [id])
+  transporterId   String
+  transporter     Transporter       @relation(fields: [transporterId], references: [id])
+  createdAt       DateTime          @default(now())
+
+  @@index([transporterId])
+  @@index([type])
+  @@index([date])
+  @@index([ownerId])
+  @@index([projectId])
+  @@index([status])
 }

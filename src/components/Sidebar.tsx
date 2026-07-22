@@ -25,6 +25,7 @@ const navItems = [
     items: [
       { href: '/dashboard/trips', icon: '🛣️', label: 'Trip Logger' },
       { href: '/dashboard/expenses', icon: '💰', label: 'Expenses' },
+      { href: '/dashboard/transactions', icon: '💳', label: 'Transactions' },
     ],
   },
   {
@@ -32,6 +33,7 @@ const navItems = [
     items: [
       { href: '/dashboard/settlements', icon: '🧾', label: 'Settlements' },
       { href: '/dashboard/billing', icon: '📋', label: 'Bill Generator' },
+      { href: '/dashboard/reports', icon: '📈', label: 'Reports' },
       { href: '/dashboard/partners', icon: '🤝', label: 'Partners & Overhead' },
     ],
   },
