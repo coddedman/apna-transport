@@ -110,6 +110,7 @@ model Transporter {
   companyExpenses  CompanyExpense[]
   cashFlows        CashFlow[]
   transactions     Transaction[]
+  dailyLumpsums    DailyLumpsum[]
   createdAt        DateTime  @default(now())
 }
 
@@ -301,4 +302,24 @@ model Transaction {
   @@index([ownerId])
   @@index([projectId])
   @@index([status])
+}
+
+// ========================
+// Daily Lumpsum Expense Log
+// ========================
+
+model DailyLumpsum {
+  id            String      @id @default(cuid())
+  date          DateTime
+  category      String      // Maps to ExpenseType: FUEL, TOLL, MAINTENANCE, etc.
+  amount        Float
+  remarks       String?
+  transporterId String
+  transporter   Transporter @relation(fields: [transporterId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@unique([transporterId, date, category])
+  @@index([transporterId])
+  @@index([date])
+  @@index([category])
 }

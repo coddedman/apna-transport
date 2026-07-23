@@ -25,6 +25,7 @@ const navItems = [
     items: [
       { href: '/dashboard/trips', icon: '🛣️', label: 'Trip Logger' },
       { href: '/dashboard/expenses', icon: '💰', label: 'Expenses' },
+      { href: '/dashboard/tally', icon: '📊', label: 'Expense Tally' },
       { href: '/dashboard/transactions', icon: '💳', label: 'Transactions' },
     ],
   },
