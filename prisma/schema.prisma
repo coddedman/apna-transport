@@ -56,6 +56,13 @@ enum TransactionStatus {
   CANCELLED
 }
 
+enum BillStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
 model CashFlow {
   id            String            @id @default(cuid())
   date          DateTime          @default(now())
@@ -111,6 +118,7 @@ model Transporter {
   cashFlows        CashFlow[]
   transactions     Transaction[]
   dailyLumpsums    DailyLumpsum[]
+  partyBills       PartyBill[]
   createdAt        DateTime  @default(now())
 }
 
@@ -139,6 +147,7 @@ model Project {
   advances      OwnerAdvance[]
   ratePeriods   RatePeriod[]
   transactions  Transaction[]
+  partyBills    PartyBill[]
 
   @@index([transporterId])
 }
@@ -322,4 +331,48 @@ model DailyLumpsum {
   @@index([transporterId])
   @@index([date])
   @@index([category])
+}
+
+// ========================
+// Party Bill Tracking (Receivables)
+// ========================
+
+model PartyBill {
+  id              String      @id @default(cuid())
+  billNo          String      // Your invoice/bill number
+  projectId       String
+  project         Project     @relation(fields: [projectId], references: [id])
+  periodStart     DateTime
+  periodEnd       DateTime
+  totalTrips      Int         @default(0)
+  totalWeight     Float       @default(0)
+  billAmount      Float       // Total amount billed to company
+  receivedAmount  Float       @default(0) // Auto-calculated from payments
+  status          BillStatus  @default(PENDING)
+  submittedAt     DateTime?   // When bill was submitted to company
+  dueDate         DateTime?   // Payment due date
+  remarks         String?
+  transporterId   String
+  transporter     Transporter @relation(fields: [transporterId], references: [id])
+  payments        BillPayment[]
+  createdAt       DateTime    @default(now())
+
+  @@index([transporterId])
+  @@index([projectId])
+  @@index([status])
+  @@index([periodStart])
+}
+
+model BillPayment {
+  id          String    @id @default(cuid())
+  billId      String
+  bill        PartyBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  date        DateTime
+  amount      Float
+  referenceNo String?   // UTR / Cheque / Bank reference
+  remarks     String?
+  createdAt   DateTime  @default(now())
+
+  @@index([billId])
+  @@index([date])
 }

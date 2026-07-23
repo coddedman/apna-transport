@@ -34,6 +34,7 @@ const navItems = [
     items: [
       { href: '/dashboard/settlements', icon: '🧾', label: 'Settlements' },
       { href: '/dashboard/billing', icon: '📋', label: 'Bill Generator' },
+      { href: '/dashboard/bills', icon: '📄', label: 'Bill Tracker' },
       { href: '/dashboard/reports', icon: '📈', label: 'Reports' },
       { href: '/dashboard/partners', icon: '🤝', label: 'Partners & Overhead' },
     ],
