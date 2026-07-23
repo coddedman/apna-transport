@@ -1,7 +1,12 @@
-import { auth } from '@/lib/auth'
+import { auth, signOut } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
 import OwnerChangePasswordButton from '@/components/OwnerChangePasswordButton'
+
+async function handleSignOut() {
+  'use server'
+  await signOut()
+}
 
 export const metadata = {
   title: 'My Dashboard — Hyva Transport',
@@ -90,7 +95,7 @@ export default async function OwnerPortalPage() {
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <OwnerChangePasswordButton />
-          <form action={async () => { 'use server'; const { signOut } = await import('@/lib/auth'); await signOut(); }}>
+          <form action={async () => { 'use server'; await handleSignOut(); }}>
             <button type="submit" className="btn btn-secondary btn-sm">🚪 Sign Out</button>
           </form>
         </div>
