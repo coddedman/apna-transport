@@ -17,6 +17,12 @@ export async function generateSettlement(formData: FormData) {
   const customRateStr = formData.get('customRate') as string
   const customRate = customRateStr ? parseFloat(customRateStr) : null
 
+  // Deductible expense types selected by user (defaults to all operational types if none passed)
+  const rawDeductibleTypes = formData.getAll('deductibleTypes') as string[]
+  const deductibleTypes = rawDeductibleTypes.length > 0
+    ? rawDeductibleTypes
+    : ['FUEL', 'TOLL', 'MAINTENANCE', 'DRIVER_ADVANCE', 'CASH_PAYMENT']
+
   if (!ownerId || !periodEndStr) throw new Error('Owner and end date are required')
 
   const useTillDate = !periodStartStr
@@ -121,6 +127,8 @@ export async function generateSettlement(formData: FormData) {
     totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * effectiveRate), 0)
 
     v.expenses.forEach((e: any) => {
+      if (!deductibleTypes.includes(e.type)) return
+
       switch (e.type) {
         case 'FUEL': totalFuel += e.amount; break
         case 'DRIVER_ADVANCE': totalDriverAdvances += e.amount; break
