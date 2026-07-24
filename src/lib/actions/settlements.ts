@@ -33,7 +33,29 @@ export async function generateSettlement(formData: FormData) {
       // Start immediately after the last settlement's periodEnd
       periodStart = new Date(lastSettlement.periodEnd.getTime() + 1)
     } else {
-      periodStart = new Date('2000-01-01')
+      // Find earliest activity date for this owner
+      const earliestTrip = await prisma.trip.findFirst({
+        where: { vehicle: { ownerId } },
+        orderBy: { date: 'asc' },
+        select: { date: true }
+      })
+      const earliestExpense = await prisma.expense.findFirst({
+        where: { vehicle: { ownerId } },
+        orderBy: { date: 'asc' },
+        select: { date: true }
+      })
+      const earliestAdvance = await prisma.ownerAdvance.findFirst({
+        where: { ownerId },
+        orderBy: { date: 'asc' },
+        select: { date: true }
+      })
+
+      const dates = [earliestTrip?.date, earliestExpense?.date, earliestAdvance?.date].filter(Boolean) as Date[]
+      if (dates.length > 0) {
+        periodStart = new Date(Math.min(...dates.map(d => d.getTime())))
+      } else {
+        periodStart = new Date('2000-01-01')
+      }
     }
   } else {
     periodStart = new Date(periodStartStr + 'T00:00:00')
@@ -107,7 +129,7 @@ export async function generateSettlement(formData: FormData) {
   const settlement = await prisma.settlement.create({
     data: {
       ownerId,
-      periodStart: useTillDate ? new Date('2000-01-01') : periodStart,
+      periodStart,
       periodEnd,
       totalRevenue: totalOwnerPayout, // using owner payout (weight × rate) not party revenue
       totalFuel,

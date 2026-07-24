@@ -34,7 +34,7 @@ export default async function SettlementsPage() {
 
   const csvData = settlements.map(s => ({
     owner: s.owner.ownerName,
-    period: isTillDate(s) ? `Till ${fmtDate(s.periodEnd)}` : `${fmtDate(s.periodStart)} — ${fmtDate(s.periodEnd)}`,
+    period: fmtPeriod(s),
     trips: s.tripsCount,
     ownerPayout: s.totalRevenue,
     fuel: s.totalFuel,
@@ -138,7 +138,7 @@ export default async function SettlementsPage() {
             {settlements.map((s) => {
               const operationalDeductions = s.totalFuel + s.totalMaint + s.totalTolls + s.totalOther
               const netSettlement = s.totalRevenue - operationalDeductions
-              const till = isTillDate(s)
+              const periodText = fmtPeriod(s)
 
               return (
                 <div key={s.id} className="card animate-in" style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)' }}>
@@ -159,7 +159,7 @@ export default async function SettlementsPage() {
                             {s.owner.ownerName}
                           </h3>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '4px', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                            <span>📅 {till ? `All records till ${fmtDate(s.periodEnd)}` : `${fmtDate(s.periodStart)} — ${fmtDate(s.periodEnd)}`}</span>
+                            <span>📅 {periodText}</span>
                             <span>•</span>
                             <span>🚚 {s.owner.vehicles.length} {s.owner.vehicles.length === 1 ? 'vehicle' : 'vehicles'}</span>
                             <span>•</span>
@@ -169,14 +169,6 @@ export default async function SettlementsPage() {
                       </div>
 
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {till && (
-                          <span style={{
-                            fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
-                            background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)'
-                          }}>
-                            Till Date
-                          </span>
-                        )}
                         <span className={`badge ${s.status === 'SETTLED' ? 'active' : 'fuel'}`} style={{ fontSize: '11px', padding: '4px 10px' }}>
                           {s.status === 'SETTLED' ? '✓ Settled' : '◷ Pending'}
                         </span>
@@ -301,6 +293,11 @@ function fmtDate(d: Date | string) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function isTillDate(s: { periodStart: Date }) {
-  return new Date(s.periodStart).getFullYear() <= 2000
+function fmtPeriod(s: { periodStart: Date | string; periodEnd: Date | string }) {
+  const start = new Date(s.periodStart)
+  const end = new Date(s.periodEnd)
+  if (start.getFullYear() <= 2000) {
+    return `Till ${fmtDate(end)}`
+  }
+  return `${fmtDate(start)} — ${fmtDate(end)}`
 }
