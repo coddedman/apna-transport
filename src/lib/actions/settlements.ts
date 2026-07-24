@@ -13,6 +13,9 @@ export async function generateSettlement(formData: FormData) {
   const periodEndStr = formData.get('periodEnd') as string
   // periodStart is optional — if not provided, we use "till date" (all time)
   const periodStartStr = formData.get('periodStart') as string
+  // customRate is optional — if provided, overrides all rate hierarchy
+  const customRateStr = formData.get('customRate') as string
+  const customRate = customRateStr ? parseFloat(customRateStr) : null
 
   if (!ownerId || !periodEndStr) throw new Error('Owner and end date are required')
 
@@ -52,8 +55,8 @@ export async function generateSettlement(formData: FormData) {
   let tripsCount = 0
 
   owner.vehicles.forEach((v: any) => {
-    // Use proper rate override chain: vehicle override → owner override → vehicle's assigned project rate → default
-    const effectiveRate = v.ownerRateOverride ?? owner.ownerRateOverride ?? v.project?.ownerRate ?? defaultOwnerRate
+    // Use custom rate if provided; otherwise use proper rate override chain: vehicle override → owner override → vehicle's assigned project rate → default
+    const effectiveRate = customRate ?? v.ownerRateOverride ?? owner.ownerRateOverride ?? v.project?.ownerRate ?? defaultOwnerRate
     tripsCount += v.trips.length
     totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * effectiveRate), 0)
 

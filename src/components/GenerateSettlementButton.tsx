@@ -78,6 +78,15 @@ export default function GenerateSettlementButton({ owners }: Props) {
             </div>
           )}
 
+          {/* Custom Rate Override */}
+          <div className="form-group">
+            <label className="form-label">Custom Rate per MT (₹) <span style={{ color: '#64748b', fontWeight: 400 }}>— optional</span></label>
+            <input name="customRate" type="number" step="0.01" min="0" className="form-input" placeholder="Leave blank to use default rates" />
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+              If set, this rate will override all default/owner/vehicle rates for this settlement.
+            </div>
+          </div>
+
           <div style={{
             padding: '12px 16px', background: 'rgba(245,158,11,0.05)',
             border: '1px solid rgba(245,158,11,0.1)', borderRadius: 'var(--radius-md)',

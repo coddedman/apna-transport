@@ -10,7 +10,7 @@ interface Vehicle { id: string; plateNo: string; ownerRateOverride: number | nul
 
 interface Props { vehicles: Vehicle[]; owners: Owner[]; projectDefaultOwnerRate: number }
 
-const DEDUCT_OPTS = [
+const DEDUCT_OPTS: { key: string; label: string; hint?: string }[] = [
   { key: 'FUEL', label: '⛽ Fuel' }, { key: 'TOLL', label: '🛣️ Toll' },
   { key: 'MAINTENANCE', label: '🔧 Maintenance' }, { key: 'DRIVER_ADVANCE', label: '👤 Driver Advance' },
   { key: 'CASH_PAYMENT', label: '💵 Cash Payment' },
