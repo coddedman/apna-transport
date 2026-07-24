@@ -107,7 +107,7 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
       if (owner.ownerAdvanceItems.length > 0) {
         if (y > 230) { doc.addPage(); y = 14 }
         doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(249, 115, 22)
-        doc.text('ADVANCES PAID TO OWNER (ALL TIME)', margin, y); y += 4
+        doc.text('ADVANCES PAID TO OWNER', margin, y); y += 4
 
         autoTable(doc, {
           startY: y,

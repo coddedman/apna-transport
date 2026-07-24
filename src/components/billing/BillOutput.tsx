@@ -102,7 +102,7 @@ export default function BillOutput({ bill }: Props) {
           {owner.ownerAdvanceItems.length > 0 && (
             <div style={{ padding: '12px 20px', background: 'rgba(249,115,22,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                🏦 Owner Advances (All Time) — Total: {fmt(owner.ownerAdvanceTotal)}
+                🏦 Owner Advances — Total: {fmt(owner.ownerAdvanceTotal)}
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {owner.ownerAdvanceItems.map((a, i) => (

@@ -20,7 +20,25 @@ export async function generateSettlement(formData: FormData) {
   if (!ownerId || !periodEndStr) throw new Error('Owner and end date are required')
 
   const useTillDate = !periodStartStr
-  const periodStart = useTillDate ? new Date('2000-01-01') : new Date(periodStartStr + 'T00:00:00')
+
+  // Find previous settlement for this owner to prevent double-deducting past advances
+  const lastSettlement = await prisma.settlement.findFirst({
+    where: { ownerId },
+    orderBy: { periodEnd: 'desc' }
+  })
+
+  let periodStart: Date
+  if (useTillDate) {
+    if (lastSettlement) {
+      // Start immediately after the last settlement's periodEnd
+      periodStart = new Date(lastSettlement.periodEnd.getTime() + 1)
+    } else {
+      periodStart = new Date('2000-01-01')
+    }
+  } else {
+    periodStart = new Date(periodStartStr + 'T00:00:00')
+  }
+
   const periodEnd = new Date(periodEndStr + 'T23:59:59')
 
   const owner = await prisma.owner.findUnique({
@@ -38,8 +56,13 @@ export async function generateSettlement(formData: FormData) {
 
   if (!owner || owner.transporterId !== transporterId) throw new Error('Owner not found')
 
-  // Owner advances: ALL time, no date filter (cumulative)
-  const ownerAdvances = await prisma.ownerAdvance.findMany({ where: { ownerId } })
+  // Owner advances: filtered for this settlement period (gte: periodStart, lte: periodEnd)
+  const ownerAdvances = await prisma.ownerAdvance.findMany({
+    where: {
+      ownerId,
+      date: { gte: periodStart, lte: periodEnd }
+    }
+  })
   const ownerAdvanceTotal = ownerAdvances.reduce((a, adv) => a + adv.amount, 0)
 
   // Get default project rate as a last-resort fallback

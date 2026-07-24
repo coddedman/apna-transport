@@ -80,10 +80,21 @@ export async function generateBill(
   if (!transporterId) throw new Error('Unauthorized')
 
   const isTillDate = period.type === 'till_date'
-  // For till_date: fetch from the very beginning of records up to endDate
   const startDate = isTillDate ? new Date('2000-01-01') : new Date(period.startDate)
   const endDate = new Date(period.endDate)
   endDate.setHours(23, 59, 59, 999)
+
+  // Find previous settlement per owner to prevent double-counting already-settled periods/advances
+  const lastSettlements = await prisma.settlement.findMany({
+    where: { owner: { transporterId } },
+    orderBy: { periodEnd: 'desc' },
+  })
+  const lastSettlementDateByOwner = new Map<string, Date>()
+  for (const s of lastSettlements) {
+    if (!lastSettlementDateByOwner.has(s.ownerId)) {
+      lastSettlementDateByOwner.set(s.ownerId, s.periodEnd)
+    }
+  }
 
   const vehicles = await prisma.vehicle.findMany({
     where: { owner: { transporterId }, ...(vehicleIds?.length ? { id: { in: vehicleIds } } : {}) },
@@ -94,9 +105,9 @@ export async function generateBill(
     }
   })
 
-  // Fetch ALL owner advances — NO date filter. Advances are cumulative lifetime totals.
+  // Fetch owner advances up to endDate
   const ownerAdvances = await prisma.ownerAdvance.findMany({
-    where: { owner: { transporterId } },
+    where: { owner: { transporterId }, date: { gte: startDate, lte: endDate } },
     include: { owner: true }
   })
 
@@ -107,17 +118,27 @@ export async function generateBill(
 
   const vehicleBills: VehicleBillLine[] = vehicles
     .filter(v => {
-      if (v.trips.length > 0 || v.expenses.length > 0) return true
-      if (ownerAdvances.some(a => a.ownerId === v.ownerId) && !processedOwnersWithAdvances.has(v.ownerId)) {
+      const lastEnd = lastSettlementDateByOwner.get(v.ownerId)
+      const vStartDate = isTillDate && lastEnd ? new Date(lastEnd.getTime() + 1) : startDate
+      const activeTrips = v.trips.filter(t => t.date >= vStartDate)
+      const activeExp = v.expenses.filter(e => e.date >= vStartDate)
+      if (activeTrips.length > 0 || activeExp.length > 0) return true
+      if (ownerAdvances.some(a => a.ownerId === v.ownerId && a.date >= vStartDate) && !processedOwnersWithAdvances.has(v.ownerId)) {
         processedOwnersWithAdvances.add(v.ownerId); return true
       }
       return false
     })
     .map(v => {
+      const lastEnd = lastSettlementDateByOwner.get(v.ownerId)
+      const vStartDate = isTillDate && lastEnd ? new Date(lastEnd.getTime() + 1) : startDate
+
       const effectiveOwnerRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
       const effectiveRateSource = v.ownerRateOverride != null ? 'vehicle' : (v.owner as any).ownerRateOverride != null ? 'owner' : v.project?.ownerRate != null ? 'project' : 'default'
 
-      const tripLines = v.trips.map(t => ({
+      const activeTrips = v.trips.filter(t => t.date >= vStartDate)
+      const activeExp = v.expenses.filter(e => e.date >= vStartDate)
+
+      const tripLines = activeTrips.map(t => ({
         id: t.id, date: t.date.toISOString().split('T')[0],
         invoiceNo: t.invoiceNo, lrNo: t.lrNo, weight: t.weight,
         appliedOwnerRate: effectiveOwnerRate, ownerFreightAmount: t.ownerFreightAmount,
@@ -125,7 +146,7 @@ export async function generateBill(
       }))
       const grossPayout = tripLines.reduce((a, t) => a + t.ownerPayout, 0)
 
-      const expByType = (type: string) => v.expenses.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
+      const expByType = (type: string) => activeExp.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
 
       // Owner advances are handled at the owner level, not per vehicle
 
@@ -146,7 +167,7 @@ export async function generateBill(
       }, 0)
 
       // Deduction items: only operational expenses
-      const deductionItems: DeductionItem[] = v.expenses
+      const deductionItems: DeductionItem[] = activeExp
         .filter(e => e.type !== 'OWNER_ADVANCE' && deductibleExpenseTypes.includes(e.type))
         .map(e => ({
           type: e.type,
@@ -156,7 +177,7 @@ export async function generateBill(
         .sort((a, b) => a.date.localeCompare(b.date))
 
       // Per-vehicle paid items (cash payments only — advances are at owner level)
-      const paidItems: PaidItem[] = v.expenses
+      const paidItems: PaidItem[] = activeExp
         .filter(e => e.type === 'CASH_PAYMENT' && !deductibleExpenseTypes.includes(e.type))
         .map(e => ({ type: e.type, label: '💵 Cash Payment', date: e.date.toISOString().split('T')[0], amount: e.amount, note: e.remarks ?? undefined }))
         .sort((a, b) => a.date.localeCompare(b.date))
@@ -175,11 +196,13 @@ export async function generateBill(
       }
     })
 
-  // Build owner summaries — advances are cumulative at owner level
+  // Build owner summaries — advances are cumulative at owner level for this period
   const ownerMap = new Map<string, OwnerBillSummary>()
   for (const vb of vehicleBills) {
     if (!ownerMap.has(vb.ownerId)) {
-      const advItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId)
+      const lastEnd = lastSettlementDateByOwner.get(vb.ownerId)
+      const oStartDate = isTillDate && lastEnd ? new Date(lastEnd.getTime() + 1) : startDate
+      const advItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId && a.date >= oStartDate && a.date <= endDate)
       const advTotal = advItems.reduce((s, a) => s + a.amount, 0)
       ownerMap.set(vb.ownerId, {
         ownerId: vb.ownerId, ownerName: vb.ownerName, vehicles: [],
