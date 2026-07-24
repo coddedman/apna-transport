@@ -90,6 +90,19 @@ export default function BillOutput({ bill }: Props) {
               <div><span style={{ fontSize: 10, color: '#64748b' }}>Net </span><span style={{ fontSize: 15, fontWeight: 700, color: '#10b981' }}>{fmt(owner.totalNet)}</span></div>
               <span style={{ color: '#334155' }}>−</span>
               <div><span style={{ fontSize: 10, color: '#64748b' }}>Advances Paid </span><span style={{ fontSize: 15, fontWeight: 700, color: '#f97316' }}>{fmt(owner.ownerAdvanceTotal)}</span></div>
+              {owner.carryForwardBalance !== 0 && (
+                <>
+                  <span style={{ color: '#334155' }}>{owner.carryForwardBalance > 0 ? '+' : '−'}</span>
+                  <div>
+                    <span style={{ fontSize: 10, color: '#64748b' }}>
+                      {owner.carryForwardBalance < 0 ? 'Prior Debt (Carried Fwd)' : 'Prior Underpaid (Carried Fwd)'}{' '}
+                    </span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: owner.carryForwardBalance < 0 ? '#ef4444' : '#22d3ee' }}>
+                      {fmt(Math.abs(owner.carryForwardBalance))}
+                    </span>
+                  </div>
+                </>
+              )}
               <span style={{ color: '#334155' }}>=</span>
               <div style={{ background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 10, padding: '6px 14px' }}>
                 <span style={{ fontSize: 10, color: '#22d3ee', fontWeight: 700 }}>BALANCE DUE </span>

@@ -61,13 +61,14 @@ export interface OwnerBillSummary {
   ownerId: string; ownerName: string; vehicles: VehicleBillLine[]
   totalGross: number; totalDeductions: number; totalNet: number
   ownerAdvanceTotal: number; ownerAdvanceItems: PaidItem[]
+  carryForwardBalance: number
   totalBalanceDue: number
 }
 
 export interface BillSummary {
   period: { start: string; end: string; label: string; isTillDate: boolean }
   vehicles: VehicleBillLine[]; ownerSummaries: OwnerBillSummary[]
-  grandTotal: { trips: number; weight: number; grossPayout: number; totalDeductions: number; netSettlement: number; totalAdvancesPaid: number; totalBalanceDue: number }
+  grandTotal: { trips: number; weight: number; grossPayout: number; totalDeductions: number; netSettlement: number; totalAdvancesPaid: number; totalCarryForward: number; totalBalanceDue: number }
 }
 
 export async function generateBill(
@@ -229,7 +230,7 @@ export async function generateBill(
       }
     })
 
-  // Build owner summaries — advances calculated from all-time cumulative unrecovered advances
+  // Build owner summaries — advances calculated from all-time cumulative unrecovered advances + prior carryForward balance
   const ownerMap = new Map<string, OwnerBillSummary>()
   for (const vb of vehicleBills) {
     if (!ownerMap.has(vb.ownerId)) {
@@ -238,6 +239,7 @@ export async function generateBill(
 
       const prevSettlements = lastSettlements.filter(s => s.ownerId === vb.ownerId)
       const alreadyDeductedAdv = prevSettlements.reduce((s, st) => s + (st.totalAdvances || 0), 0)
+      const priorCarryForward = prevSettlements.reduce((s, st) => s + (st.carryForward || 0), 0)
 
       const availableAdv = Math.max(0, totalAdvGiven - alreadyDeductedAdv)
 
@@ -246,6 +248,7 @@ export async function generateBill(
         totalGross: 0, totalDeductions: 0, totalNet: 0,
         ownerAdvanceTotal: availableAdv,
         ownerAdvanceItems: allAdvItems.map(a => ({ type: 'OWNER_ADVANCE', label: '🏦 Owner Advance', date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined })).sort((a, b) => a.date.localeCompare(b.date)),
+        carryForwardBalance: priorCarryForward,
         totalBalanceDue: 0,
       })
     }
@@ -255,9 +258,9 @@ export async function generateBill(
     os.totalDeductions += vb.deductions.total
     os.totalNet += vb.netSettlement
   }
-  // Calculate balance due at owner level
+  // Calculate balance due at owner level: Net - Advances + CarryForwardBalance
   for (const os of ownerMap.values()) {
-    os.totalBalanceDue = os.totalNet - os.ownerAdvanceTotal
+    os.totalBalanceDue = os.totalNet - os.ownerAdvanceTotal + os.carryForwardBalance
   }
 
   const ownerSums = [...ownerMap.values()]
@@ -268,6 +271,7 @@ export async function generateBill(
     totalDeductions: ownerSums.reduce((a, o) => a + o.totalDeductions, 0),
     netSettlement: ownerSums.reduce((a, o) => a + o.totalNet, 0),
     totalAdvancesPaid: ownerSums.reduce((a, o) => a + o.ownerAdvanceTotal, 0),
+    totalCarryForward: ownerSums.reduce((a, o) => a + o.carryForwardBalance, 0),
     totalBalanceDue: ownerSums.reduce((a, o) => a + o.totalBalanceDue, 0),
   }
 

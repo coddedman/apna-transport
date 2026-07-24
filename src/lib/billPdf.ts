@@ -139,16 +139,19 @@ export function generateBillPdf(bill: BillSummary, ownerName?: string, mode: Pdf
       doc.roundedRect(margin, y, W - margin * 2, 32, 3, 3, 'S')
 
       doc.setFontSize(8); doc.setFont('helvetica', 'bold')
+      const cf = owner.carryForwardBalance || 0
       const cols = [
         { label: 'Total Trips', val: `${tripCount}`, color: [59, 130, 246] as [number,number,number] },
         { label: 'Gross Payout', val: fmt(gross), color: [245, 158, 11] as [number,number,number] },
         { label: 'Deductions', val: `-${fmt(ded)}`, color: [239, 68, 68] as [number,number,number] },
         { label: 'Net Settlement', val: fmt(net), color: [16, 185, 129] as [number,number,number] },
         { label: 'Advances Paid', val: `-${fmt(paid)}`, color: [249, 115, 22] as [number,number,number] },
+        ...(cf !== 0 ? [{ label: cf < 0 ? 'Prior Debt' : 'Prior Underpaid', val: `${cf < 0 ? '-' : '+'}${fmt(Math.abs(cf))}`, color: (cf < 0 ? [239, 68, 68] : [34, 211, 238]) as [number,number,number] }] : []),
         { label: 'BALANCE DUE', val: fmt(due), color: due < 0 ? [239, 68, 68] as [number,number,number] : [34, 211, 238] as [number,number,number] },
       ]
+      const colWidth = (W - margin * 2 - 10) / cols.length
       cols.forEach((c, i) => {
-        const x = margin + 5 + i * 30
+        const x = margin + 5 + i * colWidth
         doc.setTextColor(100, 116, 139); doc.text(c.label, x, y + 11)
         doc.setTextColor(...c.color); doc.setFontSize(9); doc.text(c.val, x, y + 20)
         doc.setFontSize(8)
