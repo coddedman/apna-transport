@@ -238,6 +238,8 @@ model Settlement {
   totalTolls    Float            @default(0)
   totalOther    Float            @default(0)
   finalPayout   Float
+  paidAmount    Float?           // Actual amount paid/received when settled
+  carryForward  Float            @default(0) // Balance carried forward to next settlement
   tripsCount    Int              @default(0)
   status        SettlementStatus @default(PENDING)
   settledAt     DateTime?

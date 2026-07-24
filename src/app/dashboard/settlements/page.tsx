@@ -279,10 +279,31 @@ export default async function SettlementsPage() {
                         }}>
                           {fmt(s.finalPayout)}
                         </div>
+                        {s.status === 'SETTLED' && s.paidAmount !== null && (
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '6px', fontSize: '11px' }}>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>Paid: {fmt(s.paidAmount)}</span>
+                            {s.carryForward !== 0 && (
+                              <span style={{ color: s.carryForward < 0 ? '#ef4444' : '#22d3ee', fontWeight: 700 }}>
+                                • Carry Forward: {s.carryForward < 0 ? `−${fmt(s.carryForward)}` : fmt(s.carryForward)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        {s.status === 'PENDING' && <MarkSettledButton settlementId={s.id} />}
+                        {s.status === 'PENDING' && (
+                          <MarkSettledButton
+                            settlement={{
+                              id: s.id,
+                              finalPayout: s.finalPayout,
+                              ownerName: s.owner.ownerName,
+                              status: s.status,
+                              paidAmount: s.paidAmount,
+                              carryForward: s.carryForward,
+                            }}
+                          />
+                        )}
                         <SettlementActions settlement={JSON.parse(JSON.stringify(s))} />
                       </div>
                     </div>

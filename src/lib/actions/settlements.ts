@@ -150,11 +150,18 @@ export async function generateSettlement(formData: FormData) {
   const totalDeductions = totalFuel + totalDriverAdvances + totalMaint + totalTolls + totalOther
   const netSettlement = totalOwnerPayout - totalDeductions
 
-  // Full cumulative unrecovered advances deducted in this settlement
-  const advanceToDeduct = availableAdvance
-  const finalPayout = netSettlement - advanceToDeduct // balance due to owner
+  // Check for prior carryForward balance from previous settlements for this owner
+  const priorCarryForwardAgg = await prisma.settlement.aggregate({
+    _sum: { carryForward: true },
+    where: { ownerId }
+  })
+  const priorCarryForward = priorCarryForwardAgg._sum.carryForward || 0
 
-  if (tripsCount === 0 && totalDeductions === 0 && availableAdvance === 0) {
+  // Full cumulative unrecovered advances deducted in this settlement + prior carryForward balance
+  const advanceToDeduct = availableAdvance
+  const finalPayout = netSettlement - advanceToDeduct + priorCarryForward // balance due to owner
+
+  if (tripsCount === 0 && totalDeductions === 0 && availableAdvance === 0 && priorCarryForward === 0) {
     throw new Error('No trip or expense activity found in this period')
   }
 
@@ -170,6 +177,7 @@ export async function generateSettlement(formData: FormData) {
       totalTolls,
       totalOther: totalOther + totalDriverAdvances,
       finalPayout,
+      carryForward: 0, // initial carryForward before settlement is finalized
       tripsCount,
     }
   })
@@ -178,24 +186,48 @@ export async function generateSettlement(formData: FormData) {
   return settlement
 }
 
-export async function markSettled(settlementId: string) {
+export async function markSettled(settlementId: string, paidAmountInput?: number, carryForwardInput?: number) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
   if (!transporterId) throw new Error('Unauthorized')
 
   const settlement = await prisma.settlement.findUnique({
     where: { id: settlementId },
-    include: { owner: { select: { transporterId: true } } }
+    include: { owner: { select: { id: true, ownerName: true, transporterId: true } } }
   })
 
   if (!settlement || settlement.owner.transporterId !== transporterId) {
     throw new Error('Settlement not found')
   }
 
+  // Determine paidAmount and carryForward
+  const paidAmount = paidAmountInput !== undefined ? paidAmountInput : settlement.finalPayout
+  const carryForward = carryForwardInput !== undefined ? carryForwardInput : (settlement.finalPayout - paidAmount)
+
   await prisma.settlement.update({
     where: { id: settlementId },
-    data: { status: 'SETTLED', settledAt: new Date() }
+    data: {
+      status: 'SETTLED',
+      settledAt: new Date(),
+      paidAmount,
+      carryForward,
+    }
   })
+
+  // Create transaction if paidAmount != 0
+  if (paidAmount !== 0) {
+    await prisma.transaction.create({
+      data: {
+        transporterId,
+        ownerId: settlement.ownerId,
+        settlementId: settlement.id,
+        type: paidAmount > 0 ? 'OWNER_PAYMENT' : 'REFUND',
+        amount: Math.abs(paidAmount),
+        status: 'COMPLETED',
+        description: `Settlement payout/adjustment for period ${settlement.periodStart.toISOString().split('T')[0]} to ${settlement.periodEnd.toISOString().split('T')[0]}`
+      }
+    })
+  }
 
   revalidateDashboard()
 }
