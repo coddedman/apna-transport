@@ -80,7 +80,7 @@ export async function generateBill(
   if (!transporterId) throw new Error('Unauthorized')
 
   const isTillDate = period.type === 'till_date'
-  const startDate = isTillDate ? new Date('2000-01-01') : new Date(period.startDate)
+  const rawStartDate = isTillDate ? new Date('2000-01-01') : new Date(period.startDate)
   const endDate = new Date(period.endDate)
   endDate.setHours(23, 59, 59, 999)
 
@@ -96,18 +96,53 @@ export async function generateBill(
     }
   }
 
+  // For till_date with no previous settlement, find earliest activity across all owners
+  let globalEarliestDate: Date | null = null
+  if (isTillDate) {
+    const [earliestTrip, earliestExpense, earliestAdvance] = await Promise.all([
+      prisma.trip.findFirst({
+        where: { vehicle: { owner: { transporterId } } },
+        orderBy: { date: 'asc' },
+        select: { date: true }
+      }),
+      prisma.expense.findFirst({
+        where: { vehicle: { owner: { transporterId } } },
+        orderBy: { date: 'asc' },
+        select: { date: true }
+      }),
+      prisma.ownerAdvance.findFirst({
+        where: { owner: { transporterId } },
+        orderBy: { date: 'asc' },
+        select: { date: true }
+      }),
+    ])
+    const dates = [earliestTrip?.date, earliestExpense?.date, earliestAdvance?.date].filter(Boolean) as Date[]
+    if (dates.length > 0) {
+      globalEarliestDate = new Date(Math.min(...dates.map(d => d.getTime())))
+    }
+  }
+
+  // Compute actual start date per owner (used for filtering)
+  function getOwnerStartDate(ownerId: string): Date {
+    if (!isTillDate) return rawStartDate
+    const lastEnd = lastSettlementDateByOwner.get(ownerId)
+    if (lastEnd) return new Date(lastEnd.getTime() + 1)
+    if (globalEarliestDate) return globalEarliestDate
+    return rawStartDate
+  }
+
   const vehicles = await prisma.vehicle.findMany({
     where: { owner: { transporterId }, ...(vehicleIds?.length ? { id: { in: vehicleIds } } : {}) },
     include: {
       owner: true, project: true,
-      trips: { where: { date: { gte: startDate, lte: endDate } }, orderBy: { date: 'asc' } },
-      expenses: { where: { date: { gte: startDate, lte: endDate } } }
+      trips: { where: { date: { gte: rawStartDate, lte: endDate } }, orderBy: { date: 'asc' } },
+      expenses: { where: { date: { gte: rawStartDate, lte: endDate } } }
     }
   })
 
-  // Fetch owner advances up to endDate
+  // Fetch owner advances within the broad period
   const ownerAdvances = await prisma.ownerAdvance.findMany({
-    where: { owner: { transporterId }, date: { gte: startDate, lte: endDate } },
+    where: { owner: { transporterId }, date: { gte: rawStartDate, lte: endDate } },
     include: { owner: true }
   })
 
@@ -118,8 +153,7 @@ export async function generateBill(
 
   const vehicleBills: VehicleBillLine[] = vehicles
     .filter(v => {
-      const lastEnd = lastSettlementDateByOwner.get(v.ownerId)
-      const vStartDate = isTillDate && lastEnd ? new Date(lastEnd.getTime() + 1) : startDate
+      const vStartDate = getOwnerStartDate(v.ownerId)
       const activeTrips = v.trips.filter(t => t.date >= vStartDate)
       const activeExp = v.expenses.filter(e => e.date >= vStartDate)
       if (activeTrips.length > 0 || activeExp.length > 0) return true
@@ -129,8 +163,7 @@ export async function generateBill(
       return false
     })
     .map(v => {
-      const lastEnd = lastSettlementDateByOwner.get(v.ownerId)
-      const vStartDate = isTillDate && lastEnd ? new Date(lastEnd.getTime() + 1) : startDate
+      const vStartDate = getOwnerStartDate(v.ownerId)
 
       const effectiveOwnerRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
       const effectiveRateSource = v.ownerRateOverride != null ? 'vehicle' : (v.owner as any).ownerRateOverride != null ? 'owner' : v.project?.ownerRate != null ? 'project' : 'default'
@@ -196,12 +229,11 @@ export async function generateBill(
       }
     })
 
-  // Build owner summaries — advances are cumulative at owner level for this period
+  // Build owner summaries — advances filtered for this period
   const ownerMap = new Map<string, OwnerBillSummary>()
   for (const vb of vehicleBills) {
     if (!ownerMap.has(vb.ownerId)) {
-      const lastEnd = lastSettlementDateByOwner.get(vb.ownerId)
-      const oStartDate = isTillDate && lastEnd ? new Date(lastEnd.getTime() + 1) : startDate
+      const oStartDate = getOwnerStartDate(vb.ownerId)
       const advItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId && a.date >= oStartDate && a.date <= endDate)
       const advTotal = advItems.reduce((s, a) => s + a.amount, 0)
       ownerMap.set(vb.ownerId, {
@@ -234,15 +266,27 @@ export async function generateBill(
     totalBalanceDue: ownerSums.reduce((a, o) => a + o.totalBalanceDue, 0),
   }
 
+  // Compute the actual display start date for the period label
   const fmtD = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  let actualStartDate = rawStartDate
+  if (isTillDate) {
+    // Use the earliest owner start date across all owners in this bill
+    const ownerStartDates = ownerSums.map(o => getOwnerStartDate(o.ownerId))
+    if (ownerStartDates.length > 0) {
+      actualStartDate = new Date(Math.min(...ownerStartDates.map(d => d.getTime())))
+    } else if (globalEarliestDate) {
+      actualStartDate = globalEarliestDate
+    }
+  }
+
   const periodLabel = isTillDate
-    ? `All records till ${fmtD(endDate)}`
-    : period.type === 'weekly' ? `Week of ${fmtD(startDate)}`
-    : period.type === 'monthly' ? startDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
-    : `${fmtD(startDate)} – ${fmtD(endDate)}`
+    ? `${fmtD(actualStartDate)} – ${fmtD(endDate)}`
+    : period.type === 'weekly' ? `Week of ${fmtD(rawStartDate)}`
+    : period.type === 'monthly' ? rawStartDate.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    : `${fmtD(rawStartDate)} – ${fmtD(endDate)}`
 
   return {
-    period: { start: isTillDate ? '' : period.startDate, end: period.endDate, label: periodLabel, isTillDate },
+    period: { start: isTillDate ? actualStartDate.toISOString().split('T')[0] : period.startDate, end: period.endDate, label: periodLabel, isTillDate },
     vehicles: vehicleBills, ownerSummaries: ownerSums, grandTotal,
   }
 }
