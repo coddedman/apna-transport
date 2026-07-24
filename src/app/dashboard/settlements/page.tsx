@@ -27,6 +27,14 @@ export default async function SettlementsPage() {
     orderBy: { createdAt: 'desc' }
   })
 
+  // Build last settlement date per owner to pass to the generate button
+  const lastSettlementByOwner: Record<string, string> = {}
+  for (const s of settlements) {
+    if (!lastSettlementByOwner[s.ownerId]) {
+      lastSettlementByOwner[s.ownerId] = s.periodEnd.toISOString().split('T')[0]
+    }
+  }
+
   const totalPending = settlements.filter(s => s.status === 'PENDING').reduce((a, s) => a + s.finalPayout, 0)
   const totalSettled = settlements.filter(s => s.status === 'SETTLED').reduce((a, s) => a + s.finalPayout, 0)
 
@@ -71,7 +79,7 @@ export default async function SettlementsPage() {
         </div>
         <div className="page-header-right" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <ExportCSVButton data={csvData} filename="settlements_export" columns={csvColumns} />
-          <GenerateSettlementButton owners={owners} />
+          <GenerateSettlementButton owners={owners} lastSettlementByOwner={lastSettlementByOwner} />
         </div>
       </header>
 

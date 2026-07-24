@@ -63,6 +63,21 @@ export async function generateSettlement(formData: FormData) {
 
   const periodEnd = new Date(periodEndStr + 'T23:59:59')
 
+  // Prevent overlapping settlements for the same owner
+  const overlapping = await prisma.settlement.findFirst({
+    where: {
+      ownerId,
+      AND: [
+        { periodStart: { lte: periodEnd } },
+        { periodEnd: { gte: periodStart } },
+      ]
+    }
+  })
+  if (overlapping) {
+    const fmtD = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    throw new Error(`Overlapping settlement exists (${fmtD(overlapping.periodStart)} – ${fmtD(overlapping.periodEnd)}). Delete it first or adjust dates.`)
+  }
+
   const owner = await prisma.owner.findUnique({
     where: { id: ownerId },
     include: {

@@ -1,27 +1,36 @@
 'use client'
 
 import { generateSettlement } from '@/lib/actions/settlements'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Modal from './Modal'
 import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
 
-interface Props { owners: { id: string; ownerName: string }[] }
+interface Props {
+  owners: { id: string; ownerName: string }[]
+  lastSettlementByOwner: Record<string, string> // ownerId → last periodEnd date string (YYYY-MM-DD)
+}
 
-export default function GenerateSettlementButton({ owners }: Props) {
+export default function GenerateSettlementButton({ owners, lastSettlementByOwner }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const { setLoading: setGlobalLoading } = useLoading()
   const [error, setError] = useState<string | null>(null)
-  const [tillDate, setTillDate] = useState(true)
+  const [selectedOwnerId, setSelectedOwnerId] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+
+  // Compute auto "from" date: day after last settlement for this owner
+  const autoFromDate = useMemo(() => {
+    if (!selectedOwnerId || !lastSettlementByOwner[selectedOwnerId]) return ''
+    const lastEnd = new Date(lastSettlementByOwner[selectedOwnerId])
+    lastEnd.setDate(lastEnd.getDate() + 1)
+    return lastEnd.toISOString().split('T')[0]
+  }, [selectedOwnerId, lastSettlementByOwner])
+
+  const hasLastSettlement = !!selectedOwnerId && !!lastSettlementByOwner[selectedOwnerId]
 
   async function handleSubmit(formData: FormData) {
-    // If "till date" mode, remove periodStart so server uses all-time
-    if (tillDate) formData.delete('periodStart')
-
     setLoading(true)
     setGlobalLoading(true)
     setError(null)
@@ -44,46 +53,60 @@ export default function GenerateSettlementButton({ owners }: Props) {
         <form action={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Vehicle Owner</label>
-            <select name="ownerId" className="form-select" required defaultValue="">
+            <select
+              name="ownerId"
+              className="form-select"
+              required
+              defaultValue=""
+              onChange={e => setSelectedOwnerId(e.target.value)}
+            >
               <option value="" disabled>Select owner</option>
               {owners.map(o => <option key={o.id} value={o.id}>{o.ownerName}</option>)}
             </select>
           </div>
 
-          {/* Till Date toggle */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
-              <input type="checkbox" checked={tillDate} onChange={e => setTillDate(e.target.checked)} style={{ accentColor: '#f59e0b' }} />
-              <span style={{ fontWeight: tillDate ? 700 : 400, color: tillDate ? '#f59e0b' : '#94a3b8' }}>
-                Settle till a specific date (all trips from beginning)
-              </span>
-            </label>
-          </div>
-
-          {tillDate ? (
-            <div className="form-group">
-              <label className="form-label">Settle everything up to</label>
-              <input name="periodEnd" type="date" className="form-input" defaultValue={today} max={today} required />
-            </div>
-          ) : (
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Period Start</label>
-                <input name="periodStart" type="date" className="form-input" defaultValue={monthStart} max={today} required />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Period End</label>
-                <input name="periodEnd" type="date" className="form-input" defaultValue={today} max={today} required />
-              </div>
+          {/* Last settlement info badge */}
+          {selectedOwnerId && (
+            <div style={{
+              padding: '10px 14px', marginBottom: 16, borderRadius: 'var(--radius-md)',
+              fontSize: 12, lineHeight: 1.5,
+              background: hasLastSettlement ? 'rgba(34,211,238,0.08)' : 'rgba(245,158,11,0.08)',
+              border: `1px solid ${hasLastSettlement ? 'rgba(34,211,238,0.2)' : 'rgba(245,158,11,0.2)'}`,
+              color: hasLastSettlement ? '#22d3ee' : '#f59e0b',
+            }}>
+              {hasLastSettlement
+                ? <>📋 Last settled till <strong>{new Date(lastSettlementByOwner[selectedOwnerId]).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>. From date is set to the next day.</>
+                : <>🆕 No previous settlement found for this owner. Set the start date manually.</>
+              }
             </div>
           )}
+
+          {/* From-To date fields */}
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">From Date</label>
+              <input
+                name="periodStart"
+                type="date"
+                className="form-input"
+                key={autoFromDate || 'no-auto'} // reset when owner changes
+                defaultValue={autoFromDate || ''}
+                max={today}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">To Date</label>
+              <input name="periodEnd" type="date" className="form-input" defaultValue={today} max={today} required />
+            </div>
+          </div>
 
           {/* Custom Rate Override */}
           <div className="form-group">
             <label className="form-label">Custom Rate per MT (₹) <span style={{ color: '#64748b', fontWeight: 400 }}>— optional</span></label>
             <input name="customRate" type="number" step="0.01" min="0" className="form-input" placeholder="Leave blank to use default rates" />
             <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-              If set, this rate will override all default/owner/vehicle rates for this settlement.
+              If set, this rate will override all default/owner/vehicle rates for this settlement only.
             </div>
           </div>
 
@@ -92,10 +115,7 @@ export default function GenerateSettlementButton({ owners }: Props) {
             border: '1px solid rgba(245,158,11,0.1)', borderRadius: 'var(--radius-md)',
             marginBottom: '16px', fontSize: '12px', color: 'var(--color-text-muted)', lineHeight: 1.5,
           }}>
-            💡 {tillDate
-              ? 'This will calculate owner payout (weight × rate) for all trips up to the selected date, deduct operational expenses, and subtract all cumulative advances ever given.'
-              : 'This will calculate owner payout for trips within the selected date range, deduct expenses, and subtract all cumulative advances.'
-            }
+            💡 Only trips, expenses and advances within the selected date range will be included. The rate (custom or default) applies to this period only.
           </div>
 
           {error && <p style={{ color: 'var(--color-danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
