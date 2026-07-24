@@ -166,7 +166,27 @@ export default function GenerateSettlementButton({ owners, lastSettlementByOwner
 
           <div className="modal-footer" style={{ padding: '0', border: 'none' }}>
             <button type="submit" className="btn btn-primary" disabled={loading || owners.length === 0}>
-              {loading ? 'Generating...' : 'Generate Settlement'}
+              {loading ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <svg
+                    style={{ animation: 'spin 0.8s linear infinite' }}
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                    <path d="M12 2a10 10 0 0 1 10 10" />
+                  </svg>
+                  Generating Settlement...
+                </span>
+              ) : (
+                'Generate Settlement'
+              )}
             </button>
           </div>
         </form>
