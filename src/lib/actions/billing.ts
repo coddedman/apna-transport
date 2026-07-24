@@ -229,18 +229,23 @@ export async function generateBill(
       }
     })
 
-  // Build owner summaries — advances filtered for this period
+  // Build owner summaries — advances calculated from unrecovered advances up to endDate
   const ownerMap = new Map<string, OwnerBillSummary>()
   for (const vb of vehicleBills) {
     if (!ownerMap.has(vb.ownerId)) {
-      const oStartDate = getOwnerStartDate(vb.ownerId)
-      const advItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId && a.date >= oStartDate && a.date <= endDate)
-      const advTotal = advItems.reduce((s, a) => s + a.amount, 0)
+      const allAdvItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId && a.date <= endDate)
+      const totalAdvGiven = allAdvItems.reduce((s, a) => s + a.amount, 0)
+
+      const prevSettlements = lastSettlements.filter(s => s.ownerId === vb.ownerId)
+      const alreadyDeductedAdv = prevSettlements.reduce((s, st) => s + (st.totalAdvances || 0), 0)
+
+      const availableAdv = Math.max(0, totalAdvGiven - alreadyDeductedAdv)
+
       ownerMap.set(vb.ownerId, {
         ownerId: vb.ownerId, ownerName: vb.ownerName, vehicles: [],
         totalGross: 0, totalDeductions: 0, totalNet: 0,
-        ownerAdvanceTotal: advTotal,
-        ownerAdvanceItems: advItems.map(a => ({ type: 'OWNER_ADVANCE', label: '🏦 Owner Advance', date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined })).sort((a, b) => a.date.localeCompare(b.date)),
+        ownerAdvanceTotal: availableAdv,
+        ownerAdvanceItems: allAdvItems.map(a => ({ type: 'OWNER_ADVANCE', label: '🏦 Owner Advance', date: a.date.toISOString().split('T')[0], amount: a.amount, note: a.remarks ?? undefined })).sort((a, b) => a.date.localeCompare(b.date)),
         totalBalanceDue: 0,
       })
     }
@@ -250,9 +255,11 @@ export async function generateBill(
     os.totalDeductions += vb.deductions.total
     os.totalNet += vb.netSettlement
   }
-  // Calculate balance due at owner level: Net - Advances
+  // Calculate advance to deduct and balance due at owner level
   for (const os of ownerMap.values()) {
-    os.totalBalanceDue = os.totalNet - os.ownerAdvanceTotal
+    const advanceToDeduct = os.totalNet > 0 ? Math.min(os.ownerAdvanceTotal, os.totalNet) : 0
+    os.ownerAdvanceTotal = advanceToDeduct
+    os.totalBalanceDue = os.totalNet - advanceToDeduct
   }
 
   const ownerSums = [...ownerMap.values()]

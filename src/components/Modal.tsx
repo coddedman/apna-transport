@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ModalProps {
@@ -12,6 +12,12 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, maxWidth = '520px' }: ModalProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -26,7 +32,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '52
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
   return createPortal(
     <div className="modal-overlay" onClick={onClose}>

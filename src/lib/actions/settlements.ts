@@ -99,14 +99,21 @@ export async function generateSettlement(formData: FormData) {
 
   if (!owner || owner.transporterId !== transporterId) throw new Error('Owner not found')
 
-  // Owner advances: filtered for this settlement period (gte: periodStart, lte: periodEnd)
-  const ownerAdvances = await prisma.ownerAdvance.findMany({
-    where: {
-      ownerId,
-      date: { gte: periodStart, lte: periodEnd }
-    }
+  // Owner advances: all-time advances given up to periodEnd minus advances already deducted in prior settlements
+  const totalAdvancesGivenAgg = await prisma.ownerAdvance.aggregate({
+    _sum: { amount: true },
+    where: { ownerId, date: { lte: periodEnd } }
   })
-  const ownerAdvanceTotal = ownerAdvances.reduce((a, adv) => a + adv.amount, 0)
+  const totalAdvancesGiven = totalAdvancesGivenAgg._sum.amount || 0
+
+  const priorDeductionsAgg = await prisma.settlement.aggregate({
+    _sum: { totalAdvances: true },
+    where: { ownerId, periodEnd: { lt: periodStart } }
+  })
+  const alreadyDeductedAdvances = priorDeductionsAgg._sum.totalAdvances || 0
+
+  // Available unrecovered advance balance
+  const availableAdvance = Math.max(0, totalAdvancesGiven - alreadyDeductedAdvances)
 
   // Get default project rate as a last-resort fallback
   const defaultProject = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
@@ -140,12 +147,16 @@ export async function generateSettlement(formData: FormData) {
     })
   })
 
-  // totalAdvances = only owner advances (cumulative, from OwnerAdvance table)
   const totalDeductions = totalFuel + totalDriverAdvances + totalMaint + totalTolls + totalOther
   const netSettlement = totalOwnerPayout - totalDeductions
-  const finalPayout = netSettlement - ownerAdvanceTotal // balance due
 
-  if (tripsCount === 0 && totalDeductions === 0 && ownerAdvanceTotal === 0) {
+  // Determine advance amount to deduct in this settlement:
+  // Deduct from available un-deducted advance balance up to netSettlement.
+  // Any remaining un-deducted advance balance automatically rolls over to future settlements.
+  const advanceToDeduct = netSettlement > 0 ? Math.min(availableAdvance, netSettlement) : 0
+  const finalPayout = netSettlement - advanceToDeduct // balance due to owner
+
+  if (tripsCount === 0 && totalDeductions === 0 && availableAdvance === 0) {
     throw new Error('No trip or expense activity found in this period')
   }
 
@@ -156,7 +167,7 @@ export async function generateSettlement(formData: FormData) {
       periodEnd,
       totalRevenue: totalOwnerPayout, // using owner payout (weight × rate) not party revenue
       totalFuel,
-      totalAdvances: ownerAdvanceTotal, // cumulative owner advances (all time)
+      totalAdvances: advanceToDeduct, // advances deducted in this settlement
       totalMaint,
       totalTolls,
       totalOther: totalOther + totalDriverAdvances,
