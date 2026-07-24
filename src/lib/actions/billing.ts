@@ -140,9 +140,9 @@ export async function generateBill(
     }
   })
 
-  // Fetch owner advances within the broad period
+  // Fetch all owner advances
   const ownerAdvances = await prisma.ownerAdvance.findMany({
-    where: { owner: { transporterId }, date: { gte: rawStartDate, lte: endDate } },
+    where: { owner: { transporterId } },
     include: { owner: true }
   })
 
@@ -229,11 +229,11 @@ export async function generateBill(
       }
     })
 
-  // Build owner summaries — advances calculated from unrecovered advances up to endDate
+  // Build owner summaries — advances calculated from all-time cumulative unrecovered advances
   const ownerMap = new Map<string, OwnerBillSummary>()
   for (const vb of vehicleBills) {
     if (!ownerMap.has(vb.ownerId)) {
-      const allAdvItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId && a.date <= endDate)
+      const allAdvItems = ownerAdvances.filter(a => a.ownerId === vb.ownerId)
       const totalAdvGiven = allAdvItems.reduce((s, a) => s + a.amount, 0)
 
       const prevSettlements = lastSettlements.filter(s => s.ownerId === vb.ownerId)
@@ -255,11 +255,9 @@ export async function generateBill(
     os.totalDeductions += vb.deductions.total
     os.totalNet += vb.netSettlement
   }
-  // Calculate advance to deduct and balance due at owner level
+  // Calculate balance due at owner level
   for (const os of ownerMap.values()) {
-    const advanceToDeduct = os.totalNet > 0 ? Math.min(os.ownerAdvanceTotal, os.totalNet) : 0
-    os.ownerAdvanceTotal = advanceToDeduct
-    os.totalBalanceDue = os.totalNet - advanceToDeduct
+    os.totalBalanceDue = os.totalNet - os.ownerAdvanceTotal
   }
 
   const ownerSums = [...ownerMap.values()]

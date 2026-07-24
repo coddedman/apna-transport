@@ -99,20 +99,20 @@ export async function generateSettlement(formData: FormData) {
 
   if (!owner || owner.transporterId !== transporterId) throw new Error('Owner not found')
 
-  // Owner advances: all-time advances given up to periodEnd minus advances already deducted in prior settlements
+  // Owner advances: all-time cumulative advances given to owner minus advances already deducted in prior settlements
   const totalAdvancesGivenAgg = await prisma.ownerAdvance.aggregate({
     _sum: { amount: true },
-    where: { ownerId, date: { lte: periodEnd } }
+    where: { ownerId }
   })
   const totalAdvancesGiven = totalAdvancesGivenAgg._sum.amount || 0
 
   const priorDeductionsAgg = await prisma.settlement.aggregate({
     _sum: { totalAdvances: true },
-    where: { ownerId, periodEnd: { lt: periodStart } }
+    where: { ownerId }
   })
   const alreadyDeductedAdvances = priorDeductionsAgg._sum.totalAdvances || 0
 
-  // Available unrecovered advance balance
+  // Available all-time cumulative unrecovered advance balance
   const availableAdvance = Math.max(0, totalAdvancesGiven - alreadyDeductedAdvances)
 
   // Get default project rate as a last-resort fallback
@@ -150,10 +150,8 @@ export async function generateSettlement(formData: FormData) {
   const totalDeductions = totalFuel + totalDriverAdvances + totalMaint + totalTolls + totalOther
   const netSettlement = totalOwnerPayout - totalDeductions
 
-  // Determine advance amount to deduct in this settlement:
-  // Deduct from available un-deducted advance balance up to netSettlement.
-  // Any remaining un-deducted advance balance automatically rolls over to future settlements.
-  const advanceToDeduct = netSettlement > 0 ? Math.min(availableAdvance, netSettlement) : 0
+  // Full cumulative unrecovered advances deducted in this settlement
+  const advanceToDeduct = availableAdvance
   const finalPayout = netSettlement - advanceToDeduct // balance due to owner
 
   if (tripsCount === 0 && totalDeductions === 0 && availableAdvance === 0) {
