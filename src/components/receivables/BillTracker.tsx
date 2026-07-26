@@ -5,6 +5,7 @@ import BillForm from './BillForm'
 import PaymentForm from './PaymentForm'
 import OverallPaymentForm from './OverallPaymentForm'
 import EditBillModal from './EditBillModal'
+import ExportCSVButton from '@/components/ExportCSVButton'
 import { deletePartyBill } from '@/lib/actions/receivables'
 
 interface Project { id: string; projectName: string; partyRate: number }
@@ -139,7 +140,7 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
         ))}
       </div>
 
-      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL ═══ */}
+      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & EXPORT ═══ */}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24, alignItems: 'flex-start' }}>
         <OverallPaymentForm
           projects={projects}
@@ -147,6 +148,39 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
           totalPending={summary.totalPending}
         />
         <BillForm projects={projects} />
+        <ExportCSVButton
+          data={filteredBills.map(b => ({
+            billNo: b.billNo,
+            project: b.project.projectName,
+            periodStart: new Date(b.periodStart).toLocaleDateString('en-IN'),
+            periodEnd: new Date(b.periodEnd).toLocaleDateString('en-IN'),
+            trips: b.totalTrips,
+            weight: b.totalWeight.toFixed(2),
+            billAmount: Math.round(b.billAmount),
+            receivedAmount: Math.round(b.receivedAmount),
+            pendingAmount: Math.round(b.billAmount - b.receivedAmount),
+            status: b.status,
+            dueDate: b.dueDate ? new Date(b.dueDate).toLocaleDateString('en-IN') : '—',
+            submittedAt: b.submittedAt ? new Date(b.submittedAt).toLocaleDateString('en-IN') : '—',
+            remarks: b.remarks || '',
+          }))}
+          filename="bills_report"
+          columns={[
+            { key: 'billNo', label: 'Bill / Invoice No' },
+            { key: 'project', label: 'Project' },
+            { key: 'periodStart', label: 'Period Start' },
+            { key: 'periodEnd', label: 'Period End' },
+            { key: 'trips', label: 'Trips' },
+            { key: 'weight', label: 'Weight (MT)' },
+            { key: 'billAmount', label: 'Bill Amount (₹)' },
+            { key: 'receivedAmount', label: 'Received (₹)' },
+            { key: 'pendingAmount', label: 'Pending (₹)' },
+            { key: 'status', label: 'Status' },
+            { key: 'dueDate', label: 'Due Date' },
+            { key: 'submittedAt', label: 'Submitted On' },
+            { key: 'remarks', label: 'Remarks' },
+          ]}
+        />
       </div>
 
       {/* ═══ FILTER BAR ═══ */}

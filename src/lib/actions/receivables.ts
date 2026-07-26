@@ -34,6 +34,12 @@ export async function createPartyBill(data: {
   if (!data.projectId) throw new Error('Project is required')
   if (data.billAmount <= 0) throw new Error('Bill amount must be positive')
 
+  // Check for duplicate bill number
+  const existing = await prisma.partyBill.findFirst({
+    where: { transporterId: tid, billNo: data.billNo }
+  })
+  if (existing) throw new Error(`Duplicate bill number: "${data.billNo}" already exists`)
+
   const bill = await prisma.partyBill.create({
     data: {
       billNo: data.billNo,
@@ -353,7 +359,16 @@ export async function updatePartyBill(billId: string, data: {
   if (!bill) throw new Error('Bill not found')
 
   const updateData: any = {}
-  if (data.billNo !== undefined) updateData.billNo = data.billNo
+  if (data.billNo !== undefined) {
+    // Check for duplicate bill number (excluding current bill)
+    if (data.billNo !== bill.billNo) {
+      const dup = await prisma.partyBill.findFirst({
+        where: { transporterId: tid, billNo: data.billNo, id: { not: billId } }
+      })
+      if (dup) throw new Error(`Duplicate bill number: "${data.billNo}" already exists`)
+    }
+    updateData.billNo = data.billNo
+  }
   if (data.periodStart !== undefined) updateData.periodStart = new Date(data.periodStart)
   if (data.periodEnd !== undefined) updateData.periodEnd = new Date(data.periodEnd)
   if (data.totalTrips !== undefined) updateData.totalTrips = data.totalTrips
