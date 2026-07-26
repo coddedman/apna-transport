@@ -92,13 +92,13 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`✏️ Edit Bill: ${bill.billNo}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={`✏️ Edit Bill: ${bill.billNo}`} maxWidth="720px">
       <form onSubmit={handleSubmit}>
         <div style={{ padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, marginBottom: 16, fontSize: 12, color: '#94a3b8' }}>
           Project: <strong style={{ color: '#fff' }}>{bill.project.projectName}</strong>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11 }}>Bill / Invoice No *</label>
             <input
@@ -148,7 +148,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11 }}>Bill Amount (₹) *</label>
             <input
