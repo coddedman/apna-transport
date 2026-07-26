@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import BillForm from './BillForm'
 import PaymentForm from './PaymentForm'
 import OverallPaymentForm from './OverallPaymentForm'
+import EditBillModal from './EditBillModal'
 import { deletePartyBill } from '@/lib/actions/receivables'
 
 interface Project { id: string; projectName: string; partyRate: number }
@@ -85,6 +86,7 @@ const card: React.CSSProperties = {
 export default function BillTracker({ bills, summary, projectWise, projects }: Props) {
   const [isPending, startTransition] = useTransition()
   const [expandedBill, setExpandedBill] = useState<string | null>(null)
+  const [editingBill, setEditingBill] = useState<Bill | null>(null)
   const [filterProject, setFilterProject] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -226,7 +228,7 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
                     onClick={() => setExpandedBill(isExpanded ? null : bill.id)}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 120px 100px 100px 90px 80px 50px',
+                      gridTemplateColumns: '1fr 110px 90px 90px 85px 85px',
                       gap: 8,
                       alignItems: 'center',
                       padding: '14px 16px',
@@ -278,8 +280,19 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
                       </div>
                     </div>
 
-                    {/* Delete */}
-                    <div style={{ textAlign: 'center' }}>
+                    {/* Actions: Edit & Delete */}
+                    <div style={{ textAlign: 'center', display: 'flex', gap: 6, justifyContent: 'center' }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingBill(bill) }}
+                        style={{
+                          background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
+                          borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#a78bfa',
+                          fontSize: 11, fontWeight: 600,
+                        }}
+                        title="Edit Bill"
+                      >
+                        ✏️ Edit
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(bill.id) }}
                         disabled={deletingId === bill.id}
@@ -288,6 +301,7 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
                           borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#ef4444',
                           fontSize: 11, fontWeight: 600,
                         }}
+                        title="Delete Bill"
                       >
                         {deletingId === bill.id ? '...' : '🗑'}
                       </button>
@@ -336,6 +350,14 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
           </div>
         )}
       </div>
+
+      {editingBill && (
+        <EditBillModal
+          bill={editingBill}
+          isOpen={!!editingBill}
+          onClose={() => setEditingBill(null)}
+        />
+      )}
     </div>
   )
 }
