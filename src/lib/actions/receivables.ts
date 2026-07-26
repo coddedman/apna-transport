@@ -133,6 +133,91 @@ export async function addBillPayment(data: {
   revalidateDashboard()
 }
 
+/**
+ * Record an Overall / Lump-Sum Party Payment received from client.
+ * Distributes payment automatically across pending bills in chronological order (FIFO)
+ * and records a Transaction entry for financial tracking.
+ */
+export async function addBulkPartyPayment(data: {
+  projectId?: string
+  date: string
+  amount: number
+  referenceNo?: string
+  remarks?: string
+}) {
+  const tid = await getTransporterId()
+
+  if (data.amount <= 0) throw new Error('Amount must be positive')
+
+  const where: any = {
+    transporterId: tid,
+    status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] }
+  }
+  if (data.projectId) {
+    where.projectId = data.projectId
+  }
+
+  const bills = await prisma.partyBill.findMany({
+    where,
+    include: { payments: true },
+    orderBy: { periodStart: 'asc' },
+  })
+
+  let remainingToDistribute = data.amount
+  const payDate = new Date(data.date)
+
+  for (const bill of bills) {
+    if (remainingToDistribute <= 0) break
+
+    const alreadyReceived = bill.payments.reduce((s, p) => s + p.amount, 0)
+    const billPending = bill.billAmount - alreadyReceived
+
+    if (billPending <= 0) continue
+
+    const payForThisBill = Math.min(remainingToDistribute, billPending)
+
+    await prisma.billPayment.create({
+      data: {
+        billId: bill.id,
+        date: payDate,
+        amount: payForThisBill,
+        referenceNo: data.referenceNo || null,
+        remarks: data.remarks ? `${data.remarks} (Overall Payment)` : 'Overall Payment',
+      }
+    })
+
+    const newTotalReceived = alreadyReceived + payForThisBill
+    let newStatus: BillStatus = 'PENDING'
+    if (newTotalReceived >= bill.billAmount) {
+      newStatus = 'PAID'
+    } else if (newTotalReceived > 0) {
+      newStatus = 'PARTIAL'
+    }
+
+    await prisma.partyBill.update({
+      where: { id: bill.id },
+      data: { receivedAmount: newTotalReceived, status: newStatus },
+    })
+
+    remainingToDistribute -= payForThisBill
+  }
+
+  // Create Transaction record for CashFlow tracking
+  await prisma.transaction.create({
+    data: {
+      transporterId: tid,
+      projectId: data.projectId || null,
+      type: 'PARTY_PAYMENT',
+      amount: data.amount,
+      status: 'COMPLETED',
+      referenceNo: data.referenceNo || null,
+      description: `Overall Party Payment Received${data.remarks ? ': ' + data.remarks : ''}`,
+    }
+  })
+
+  revalidateDashboard()
+}
+
 export async function deleteBillPayment(paymentId: string) {
   const tid = await getTransporterId()
 

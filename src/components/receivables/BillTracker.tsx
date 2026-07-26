@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import BillForm from './BillForm'
 import PaymentForm from './PaymentForm'
+import OverallPaymentForm from './OverallPaymentForm'
 import { deletePartyBill } from '@/lib/actions/receivables'
 
 interface Project { id: string; projectName: string; partyRate: number }
@@ -114,9 +115,9 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Total Billed', value: fmt(summary.totalBilled), color: '#f59e0b', sub: `${summary.totalBills} bills`, icon: '📄' },
-          { label: 'Received', value: fmt(summary.totalReceived), color: '#10b981', sub: `${summary.paidBills} fully paid`, icon: '✅' },
-          { label: 'Outstanding', value: fmt(summary.totalPending), color: '#22d3ee', sub: `${summary.pendingBills + summary.partialBills} unpaid`, icon: '⏳' },
-          { label: 'Overdue', value: summary.overdueBills > 0 ? String(summary.overdueBills) : '0', color: summary.overdueBills > 0 ? '#ef4444' : '#64748b', sub: summary.overdueBills > 0 ? 'needs attention' : 'all clear', icon: summary.overdueBills > 0 ? '🔴' : '🟢' },
+          { label: 'Total Received', value: fmt(summary.totalReceived), color: '#10b981', sub: `${summary.paidBills} fully paid`, icon: '✅' },
+          { label: 'Remaining to Ask (Receivable)', value: fmt(summary.totalPending), color: '#22d3ee', sub: summary.totalPending > 0 ? 'Amount to collect from party' : 'Fully collected', icon: '⏳' },
+          { label: 'Overdue Bills', value: summary.overdueBills > 0 ? String(summary.overdueBills) : '0', color: summary.overdueBills > 0 ? '#ef4444' : '#64748b', sub: summary.overdueBills > 0 ? 'needs attention' : 'all clear', icon: summary.overdueBills > 0 ? '🔴' : '🟢' },
         ].map(c => (
           <div key={c.label} style={{
             background: '#111827',
@@ -136,72 +137,13 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
         ))}
       </div>
 
-      {/* ═══ COLLECTION PROGRESS ═══ */}
-      {summary.totalBilled > 0 && (
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ background: 'rgba(16,185,129,0.1)', padding: '5px 8px', borderRadius: 8 }}>📊</span>
-              Collection Progress
-            </div>
-            <div style={{ fontSize: 13, color: '#10b981', fontWeight: 700 }}>
-              {Math.round((summary.totalReceived / summary.totalBilled) * 100)}% collected
-            </div>
-          </div>
-
-          {/* Overall bar */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ height: 10, background: 'rgba(255,255,255,0.06)', borderRadius: 5, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${Math.min((summary.totalReceived / summary.totalBilled) * 100, 100)}%`,
-                background: 'linear-gradient(90deg, #10b981, #22d3ee)',
-                borderRadius: 5,
-                transition: 'width 0.8s ease',
-              }} />
-            </div>
-          </div>
-
-          {/* Project-wise bars */}
-          {projectWise.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {projectWise.map(pw => {
-                const pct = pw.billed > 0 ? Math.round((pw.received / pw.billed) * 100) : 0
-                return (
-                  <div key={pw.projectId}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700 }}>{pw.projectName}</span>
-                        <span style={{ fontSize: 10, color: '#64748b' }}>{pw.count} bill(s)</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 11, color: '#64748b' }}>{fmt(pw.received)} / {fmt(pw.billed)}</span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
-                          background: pct >= 100 ? 'rgba(16,185,129,0.1)' : pct > 0 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.08)',
-                          color: pct >= 100 ? '#10b981' : pct > 0 ? '#f59e0b' : '#ef4444',
-                        }}>{pct}%</span>
-                      </div>
-                    </div>
-                    <div style={{ height: 5, background: 'rgba(255,255,255,0.04)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${Math.min(pct, 100)}%`,
-                        background: pct >= 100 ? '#10b981' : '#8b5cf6',
-                        borderRadius: 3,
-                        transition: 'width 0.5s ease',
-                      }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ═══ RECORD BILL ═══ */}
-      <div style={{ marginBottom: 24 }}>
+      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL ═══ */}
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24, alignItems: 'flex-start' }}>
+        <OverallPaymentForm
+          projects={projects}
+          projectWise={projectWise}
+          totalPending={summary.totalPending}
+        />
         <BillForm projects={projects} />
       </div>
 
