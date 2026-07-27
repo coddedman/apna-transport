@@ -150,12 +150,12 @@ export async function generateSettlement(formData: FormData) {
   const totalDeductions = totalFuel + totalDriverAdvances + totalMaint + totalTolls + totalOther
   const netSettlement = totalOwnerPayout - totalDeductions
 
-  // Check for prior carryForward balance from previous settlements for this owner
-  const priorCarryForwardAgg = await prisma.settlement.aggregate({
-    _sum: { carryForward: true },
-    where: { ownerId }
+  // Check for prior carryForward balance from the most recent settlement for this owner
+  const lastPriorSettlement = await prisma.settlement.findFirst({
+    where: { ownerId },
+    orderBy: { periodEnd: 'desc' }
   })
-  const priorCarryForward = priorCarryForwardAgg._sum.carryForward || 0
+  const priorCarryForward = lastPriorSettlement?.carryForward || 0
 
   // Full cumulative unrecovered advances deducted in this settlement + prior carryForward balance
   const advanceToDeduct = availableAdvance

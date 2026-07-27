@@ -239,7 +239,7 @@ export async function generateBill(
 
       const prevSettlements = lastSettlements.filter(s => s.ownerId === vb.ownerId)
       const alreadyDeductedAdv = prevSettlements.reduce((s, st) => s + (st.totalAdvances || 0), 0)
-      const priorCarryForward = prevSettlements.reduce((s, st) => s + (st.carryForward || 0), 0)
+      const priorCarryForward = prevSettlements[0]?.carryForward || 0
 
       const availableAdv = Math.max(0, totalAdvGiven - alreadyDeductedAdv)
 
@@ -453,6 +453,8 @@ export async function generateBillFromSettlement(settlementId: string): Promise<
   // Build owner summary using the SETTLEMENT's exact numbers
   const totalGross = settlement.totalRevenue
   const totalDeductions = settlement.totalFuel + settlement.totalMaint + settlement.totalTolls + settlement.totalOther
+  const totalNet = totalGross - totalDeductions
+  const priorCarryForward = settlement.finalPayout - (totalNet - settlement.totalAdvances)
 
   const ownerSummary: OwnerBillSummary = {
     ownerId: settlement.ownerId,
@@ -460,7 +462,7 @@ export async function generateBillFromSettlement(settlementId: string): Promise<
     vehicles: vehicleBills,
     totalGross,
     totalDeductions,
-    totalNet: totalGross - totalDeductions,
+    totalNet,
     ownerAdvanceTotal: settlement.totalAdvances,
     ownerAdvanceItems: ownerAdvanceItems.map(a => ({
       type: 'OWNER_ADVANCE',
@@ -469,7 +471,7 @@ export async function generateBillFromSettlement(settlementId: string): Promise<
       amount: a.amount,
       note: a.remarks ?? undefined,
     })),
-    carryForwardBalance: settlement.carryForward,
+    carryForwardBalance: priorCarryForward,
     totalBalanceDue: settlement.finalPayout,
   }
 
