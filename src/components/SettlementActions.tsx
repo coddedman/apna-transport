@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { deleteSettlement, updateSettlement } from '@/lib/actions/settlements'
-import { generateBill, BillSummary } from '@/lib/actions/billing'
+import { generateBillFromSettlement, BillSummary } from '@/lib/actions/billing'
 import Modal from './Modal'
 import BillOutput from './billing/BillOutput'
 import toast from 'react-hot-toast'
@@ -80,25 +80,9 @@ export default function SettlementActions({ settlement: s }: Props) {
   }
 
   function handleGenerateBill() {
-    const vehicleIds = s.owner.vehicles.map(v => v.id)
-    const periodStart = new Date(s.periodStart).toISOString().split('T')[0]
-    const periodEnd = new Date(s.periodEnd).toISOString().split('T')[0]
-    const periodType = isTillDate ? 'till_date' as const : 'custom' as const
-
-    // Infer which expense types were included as deductions in the settlement
-    const deductibles: string[] = []
-    if (s.totalFuel > 0) deductibles.push('FUEL')
-    if (s.totalTolls > 0) deductibles.push('TOLL')
-    if (s.totalMaint > 0) deductibles.push('MAINTENANCE')
-    if (s.totalOther > 0) { deductibles.push('DRIVER_ADVANCE'); deductibles.push('CASH_PAYMENT') }
-
     startTransition(async () => {
       try {
-        const result = await generateBill(
-          { type: periodType, startDate: periodStart, endDate: periodEnd },
-          vehicleIds.length > 0 ? vehicleIds : undefined,
-          deductibles
-        )
+        const result = await generateBillFromSettlement(s.id)
         setGeneratedBill(result)
         setBillOpen(true)
         toast.success(`Bill generated — ${result.vehicles.length} vehicles, ${result.grandTotal.trips} trips`)
