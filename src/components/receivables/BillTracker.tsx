@@ -289,6 +289,16 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
                         {bill.project.projectName} · {fmtShort(bill.periodStart)}–{fmtShort(bill.periodEnd)}
                         {bill.totalTrips > 0 && <span> · {bill.totalTrips} trips</span>}
                       </div>
+                      {bill.payments && bill.payments.length > 0 && (
+                        <div style={{ fontSize: 11, color: '#10b981', marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: 10 }}>💳 Paid:</span>
+                          {bill.payments.map((p, idx) => (
+                            <span key={p.id || idx} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', padding: '2px 6px', borderRadius: 6, fontSize: 10, color: '#10b981' }}>
+                              {fmtShort(p.date)}: <strong>{fmt(p.amount)}</strong>{p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Bill Amount */}
@@ -300,7 +310,15 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
                     {/* Received */}
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>{fmt(bill.receivedAmount)}</div>
-                      <div style={{ fontSize: 10, color: '#64748b' }}>Received</div>
+                      <div style={{ fontSize: 10, color: '#64748b' }}>
+                        {bill.payments && bill.payments.length === 1 ? (
+                          <span style={{ color: '#10b981' }}>on {fmtShort(bill.payments[0].date)}</span>
+                        ) : bill.payments && bill.payments.length > 1 ? (
+                          <span style={{ color: '#10b981' }}>{bill.payments.length} payments</span>
+                        ) : (
+                          'Received'
+                        )}
+                      </div>
                     </div>
 
                     {/* Pending */}
