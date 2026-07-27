@@ -23,7 +23,7 @@ export default async function SettlementsPage() {
 
   const settlements = await prisma.settlement.findMany({
     where: { owner: { transporterId } },
-    include: { owner: { select: { ownerName: true, vehicles: { select: { id: true } } } } },
+    include: { owner: { select: { ownerName: true, vehicles: { select: { id: true, plateNo: true } } } } },
     orderBy: { createdAt: 'desc' }
   })
 

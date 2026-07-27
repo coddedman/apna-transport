@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { deleteSettlement, updateSettlement } from '@/lib/actions/settlements'
+import { generateBill, BillSummary } from '@/lib/actions/billing'
 import Modal from './Modal'
+import BillOutput from './billing/BillOutput'
 import toast from 'react-hot-toast'
 
 const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
@@ -32,7 +34,9 @@ interface Props { settlement: Settlement }
 export default function SettlementActions({ settlement: s }: Props) {
   const [reviewOpen, setReviewOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [billOpen, setBillOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   // Edit form state
   const [rev, setRev] = useState(s.totalRevenue)
@@ -42,6 +46,9 @@ export default function SettlementActions({ settlement: s }: Props) {
   const [tolls, setTolls] = useState(s.totalTolls)
   const [other, setOther] = useState(s.totalOther)
   const [saving, setSaving] = useState(false)
+
+  // Generated bill state
+  const [generatedBill, setGeneratedBill] = useState<BillSummary | null>(null)
 
   const operationalDed = fuel + maint + tolls + other
   const net = rev - operationalDed
@@ -72,11 +79,36 @@ export default function SettlementActions({ settlement: s }: Props) {
     setSaving(false)
   }
 
+  function handleGenerateBill() {
+    const vehicleIds = s.owner.vehicles.map(v => v.id)
+    const periodStart = new Date(s.periodStart).toISOString().split('T')[0]
+    const periodEnd = new Date(s.periodEnd).toISOString().split('T')[0]
+    const periodType = isTillDate ? 'till_date' as const : 'custom' as const
+
+    startTransition(async () => {
+      try {
+        const result = await generateBill(
+          { type: periodType, startDate: periodStart, endDate: periodEnd },
+          vehicleIds.length > 0 ? vehicleIds : undefined,
+          ['TOLL']
+        )
+        setGeneratedBill(result)
+        setBillOpen(true)
+        toast.success(`Bill generated — ${result.vehicles.length} vehicles, ${result.grandTotal.trips} trips`)
+      } catch (e: any) {
+        toast.error(e.message || 'Failed to generate bill')
+      }
+    })
+  }
+
   const btnBase: React.CSSProperties = { padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 11, border: '1px solid', whiteSpace: 'nowrap' }
 
   return (
     <>
       <div style={{ display: 'flex', gap: 6 }}>
+        <button onClick={handleGenerateBill} disabled={isPending} style={{ ...btnBase, background: 'rgba(245,158,11,0.08)', color: '#f59e0b', borderColor: 'rgba(245,158,11,0.2)' }}>
+          {isPending ? '⏳ Generating...' : '📄 Bill'}
+        </button>
         <button onClick={() => setReviewOpen(true)} style={{ ...btnBase, background: 'rgba(139,92,246,0.08)', color: '#8b5cf6', borderColor: 'rgba(139,92,246,0.2)' }}>
           📋 Review
         </button>
@@ -87,6 +119,15 @@ export default function SettlementActions({ settlement: s }: Props) {
           {deleting ? '⏳' : '🗑️'} Delete
         </button>
       </div>
+
+      {/* ── Bill Output Modal ── */}
+      <Modal isOpen={billOpen} onClose={() => setBillOpen(false)} title={`Full Bill — ${s.owner.ownerName}`} maxWidth="1100px">
+        {generatedBill ? (
+          <BillOutput bill={generatedBill} />
+        ) : (
+          <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>Generating...</div>
+        )}
+      </Modal>
 
       {/* ── Review Modal ── */}
       <Modal isOpen={reviewOpen} onClose={() => setReviewOpen(false)} title={`Settlement Review — ${s.owner.ownerName}`}>
