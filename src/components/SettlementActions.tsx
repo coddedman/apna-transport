@@ -85,12 +85,19 @@ export default function SettlementActions({ settlement: s }: Props) {
     const periodEnd = new Date(s.periodEnd).toISOString().split('T')[0]
     const periodType = isTillDate ? 'till_date' as const : 'custom' as const
 
+    // Infer which expense types were included as deductions in the settlement
+    const deductibles: string[] = []
+    if (s.totalFuel > 0) deductibles.push('FUEL')
+    if (s.totalTolls > 0) deductibles.push('TOLL')
+    if (s.totalMaint > 0) deductibles.push('MAINTENANCE')
+    if (s.totalOther > 0) { deductibles.push('DRIVER_ADVANCE'); deductibles.push('CASH_PAYMENT') }
+
     startTransition(async () => {
       try {
         const result = await generateBill(
           { type: periodType, startDate: periodStart, endDate: periodEnd },
           vehicleIds.length > 0 ? vehicleIds : undefined,
-          ['TOLL']
+          deductibles
         )
         setGeneratedBill(result)
         setBillOpen(true)
