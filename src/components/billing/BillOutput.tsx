@@ -60,7 +60,10 @@ export default function BillOutput({ bill }: Props) {
       </div>
 
       {/* ── Per Owner ── */}
-      {bill.ownerSummaries.map(owner => (
+      {bill.ownerSummaries.map(owner => {
+        const allAdvTotal = owner.ownerAdvanceItems.reduce((s, a) => s + a.amount, 0)
+
+        return (
         <div key={owner.ownerId} style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, marginBottom: 20, overflow: 'hidden' }}>
 
           {/* Owner Header */}
@@ -81,41 +84,89 @@ export default function BillOutput({ bill }: Props) {
               </div>
             </div>
 
-            {/* Owner Financial Summary — single row */}
-            <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div><span style={{ fontSize: 10, color: '#64748b' }}>Gross </span><span style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b' }}>{fmt(owner.totalGross)}</span></div>
-              <span style={{ color: '#334155' }}>−</span>
-              <div><span style={{ fontSize: 10, color: '#64748b' }}>Deductions </span><span style={{ fontSize: 15, fontWeight: 700, color: '#ef4444' }}>{fmt(owner.totalDeductions)}</span></div>
-              <span style={{ color: '#334155' }}>=</span>
-              <div><span style={{ fontSize: 10, color: '#64748b' }}>Net </span><span style={{ fontSize: 15, fontWeight: 700, color: '#10b981' }}>{fmt(owner.totalNet)}</span></div>
-              <span style={{ color: '#334155' }}>−</span>
-              <div><span style={{ fontSize: 10, color: '#64748b' }}>Advances Paid </span><span style={{ fontSize: 15, fontWeight: 700, color: '#f97316' }}>{fmt(owner.ownerAdvanceTotal)}</span></div>
-              {owner.carryForwardBalance !== 0 && (
-                <>
-                  <span style={{ color: '#334155' }}>{owner.carryForwardBalance > 0 ? '+' : '−'}</span>
-                  <div>
-                    <span style={{ fontSize: 10, color: '#64748b' }}>
-                      {owner.carryForwardBalance < 0 ? 'Prior Debt (Carried Fwd)' : 'Prior Underpaid (Carried Fwd)'}{' '}
-                    </span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: owner.carryForwardBalance < 0 ? '#ef4444' : '#22d3ee' }}>
-                      {fmt(Math.abs(owner.carryForwardBalance))}
-                    </span>
-                  </div>
-                </>
-              )}
-              <span style={{ color: '#334155' }}>=</span>
-              <div style={{ background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)', borderRadius: 10, padding: '6px 14px' }}>
-                <span style={{ fontSize: 10, color: '#22d3ee', fontWeight: 700 }}>BALANCE DUE </span>
-                <span style={{ fontSize: 18, fontWeight: 900, color: owner.totalBalanceDue < 0 ? '#ef4444' : '#22d3ee' }}>{fmt(owner.totalBalanceDue)}</span>
+            {/* ── Step-by-step Balance Due Calculation ── */}
+            <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.04)' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+                How Balance Due is Calculated
               </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <tbody>
+                  {/* Step 1 */}
+                  <tr>
+                    <td style={{ padding: '6px 0', color: '#94a3b8', width: '50%' }}>
+                      <span style={{ display: 'inline-block', width: 22, height: 22, borderRadius: 6, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', textAlign: 'center', lineHeight: '22px', fontSize: 11, fontWeight: 800, marginRight: 8 }}>A</span>
+                      Gross Payout (Weight × Rate)
+                    </td>
+                    <td style={{ padding: '6px 0', textAlign: 'right', color: '#f59e0b', fontWeight: 800, fontSize: 15 }}>{fmt(owner.totalGross)}</td>
+                  </tr>
+                  {/* Step 2 */}
+                  <tr>
+                    <td style={{ padding: '6px 0', color: '#94a3b8' }}>
+                      <span style={{ display: 'inline-block', width: 22, height: 22, borderRadius: 6, background: 'rgba(239,68,68,0.12)', color: '#ef4444', textAlign: 'center', lineHeight: '22px', fontSize: 11, fontWeight: 800, marginRight: 8 }}>B</span>
+                      Deductions (Fuel, Toll, Maint, etc.)
+                    </td>
+                    <td style={{ padding: '6px 0', textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>−{fmt(owner.totalDeductions)}</td>
+                  </tr>
+                  {/* Step 3 — Net */}
+                  <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <td style={{ padding: '8px 0', color: '#e2e8f0', fontWeight: 700 }}>
+                      <span style={{ display: 'inline-block', width: 22, height: 22, borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#10b981', textAlign: 'center', lineHeight: '22px', fontSize: 11, fontWeight: 800, marginRight: 8 }}>C</span>
+                      Net Settlement (A − B)
+                    </td>
+                    <td style={{ padding: '8px 0', textAlign: 'right', color: '#10b981', fontWeight: 800, fontSize: 15 }}>{fmt(owner.totalNet)}</td>
+                  </tr>
+                  {/* Step 4 — Advances */}
+                  <tr>
+                    <td style={{ padding: '6px 0', color: '#94a3b8' }}>
+                      <span style={{ display: 'inline-block', width: 22, height: 22, borderRadius: 6, background: 'rgba(249,115,22,0.12)', color: '#f97316', textAlign: 'center', lineHeight: '22px', fontSize: 11, fontWeight: 800, marginRight: 8 }}>D</span>
+                      Advances Already Paid (Unrecovered)
+                      {allAdvTotal !== owner.ownerAdvanceTotal && (
+                        <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>
+                          (of {fmt(allAdvTotal)} total given, {fmt(allAdvTotal - owner.ownerAdvanceTotal)} was recovered in prior bills)
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '6px 0', textAlign: 'right', color: '#f97316', fontWeight: 700 }}>−{fmt(owner.ownerAdvanceTotal)}</td>
+                  </tr>
+                  {/* Step 5 — Carry Forward */}
+                  {owner.carryForwardBalance !== 0 && (
+                    <tr>
+                      <td style={{ padding: '6px 0', color: '#94a3b8' }}>
+                        <span style={{ display: 'inline-block', width: 22, height: 22, borderRadius: 6, background: owner.carryForwardBalance < 0 ? 'rgba(239,68,68,0.12)' : 'rgba(34,211,238,0.12)', color: owner.carryForwardBalance < 0 ? '#ef4444' : '#22d3ee', textAlign: 'center', lineHeight: '22px', fontSize: 11, fontWeight: 800, marginRight: 8 }}>E</span>
+                        {owner.carryForwardBalance < 0 ? 'Prior Debt Carried Forward (Owner Owes)' : 'Prior Credit Carried Forward (We Owe)'}
+                      </td>
+                      <td style={{ padding: '6px 0', textAlign: 'right', color: owner.carryForwardBalance < 0 ? '#ef4444' : '#22d3ee', fontWeight: 700 }}>
+                        {owner.carryForwardBalance < 0 ? `−${fmt(Math.abs(owner.carryForwardBalance))}` : `+${fmt(owner.carryForwardBalance)}`}
+                      </td>
+                    </tr>
+                  )}
+                  {/* Final — Balance Due */}
+                  <tr style={{ borderTop: '2px solid rgba(34,211,238,0.3)' }}>
+                    <td style={{ padding: '10px 0', fontWeight: 800, fontSize: 14, color: owner.totalBalanceDue < 0 ? '#ef4444' : '#22d3ee' }}>
+                      {owner.carryForwardBalance !== 0
+                        ? `Balance Due (C − D + E)`
+                        : `Balance Due (C − D)`
+                      }
+                    </td>
+                    <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 900, fontSize: 20, color: owner.totalBalanceDue < 0 ? '#ef4444' : '#22d3ee' }}>
+                      {fmt(owner.totalBalanceDue)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
           {/* Owner Advances Section (cumulative, all vehicles) */}
           {owner.ownerAdvanceItems.length > 0 && (
             <div style={{ padding: '12px 20px', background: 'rgba(249,115,22,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-                🏦 Owner Advances — Total: {fmt(owner.ownerAdvanceTotal)}
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                🏦 Owner Advances — All Time Total: {fmt(allAdvTotal)}
+                {allAdvTotal !== owner.ownerAdvanceTotal && (
+                  <span style={{ color: '#64748b', fontWeight: 600, marginLeft: 8 }}>
+                    · Unrecovered (applicable this bill): {fmt(owner.ownerAdvanceTotal)}
+                  </span>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {owner.ownerAdvanceItems.map((a, i) => (
@@ -214,7 +265,8 @@ export default function BillOutput({ bill }: Props) {
             </div>
           ))}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
