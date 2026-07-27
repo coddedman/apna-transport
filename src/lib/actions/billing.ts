@@ -313,3 +313,190 @@ export async function getOwnersWithRates() {
   if (!transporterId) return []
   return prisma.owner.findMany({ where: { transporterId }, include: { vehicles: { include: { project: true } } }, orderBy: { ownerName: 'asc' } })
 }
+
+/**
+ * Generate a bill from an existing settlement record.
+ * Uses the settlement's EXACT financial numbers (advances, carry-forward, finalPayout)
+ * but adds trip-level detail for the bill display and PDF export.
+ */
+export async function generateBillFromSettlement(settlementId: string): Promise<BillSummary> {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const settlement = await prisma.settlement.findUnique({
+    where: { id: settlementId },
+    include: {
+      owner: {
+        include: {
+          vehicles: {
+            include: { project: true },
+          }
+        }
+      }
+    }
+  })
+
+  if (!settlement || settlement.owner.transporterId !== transporterId) {
+    throw new Error('Settlement not found')
+  }
+
+  const periodStart = settlement.periodStart
+  const periodEnd = settlement.periodEnd
+  const isTillDate = periodStart.getFullYear() <= 2000
+
+  // Fetch trips and expenses for this owner's vehicles in the settlement period
+  const vehicles = await prisma.vehicle.findMany({
+    where: { ownerId: settlement.ownerId },
+    include: {
+      owner: true,
+      project: true,
+      trips: {
+        where: { date: { gte: periodStart, lte: periodEnd } },
+        orderBy: { date: 'asc' },
+      },
+      expenses: {
+        where: { date: { gte: periodStart, lte: periodEnd } },
+      },
+    },
+  })
+
+  // Fetch all owner advance items for display
+  const ownerAdvanceItems = await prisma.ownerAdvance.findMany({
+    where: { ownerId: settlement.ownerId },
+    orderBy: { date: 'asc' },
+  })
+
+  const project = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
+  const projectOwnerRate = project?.ownerRate || 125
+
+  // Build vehicle bill lines (trip details + per-vehicle deductions)
+  const vehicleBills: VehicleBillLine[] = vehicles
+    .filter(v => v.trips.length > 0 || v.expenses.length > 0)
+    .map(v => {
+      const effectiveOwnerRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
+      const effectiveRateSource = v.ownerRateOverride != null ? 'vehicle' as const : (v.owner as any).ownerRateOverride != null ? 'owner' as const : v.project?.ownerRate != null ? 'project' as const : 'default' as const
+
+      const tripLines = v.trips.map(t => ({
+        id: t.id,
+        date: t.date.toISOString().split('T')[0],
+        invoiceNo: t.invoiceNo,
+        lrNo: t.lrNo,
+        weight: t.weight,
+        appliedOwnerRate: effectiveOwnerRate,
+        ownerFreightAmount: t.ownerFreightAmount,
+        ownerPayout: t.weight * effectiveOwnerRate,
+      }))
+      const grossPayout = tripLines.reduce((a, t) => a + t.ownerPayout, 0)
+
+      const expByType = (type: string) => v.expenses.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
+
+      const deductionMap = {
+        fuel: expByType('FUEL'),
+        toll: expByType('TOLL'),
+        maintenance: expByType('MAINTENANCE'),
+        driverAdvance: expByType('DRIVER_ADVANCE'),
+        ownerAdvance: 0,
+        other: expByType('CASH_PAYMENT'),
+      }
+
+      // Build deduction items list matching settlement's included types
+      const deductionItems: DeductionItem[] = v.expenses
+        .filter(e => e.type !== 'OWNER_ADVANCE')
+        .map(e => ({
+          type: e.type,
+          label: ({ FUEL: '⛽ Fuel', TOLL: '🛣️ Toll', MAINTENANCE: '🔧 Maintenance', DRIVER_ADVANCE: '👤 Driver Advance', CASH_PAYMENT: '💵 Cash Payment' } as any)[e.type] ?? e.type,
+          date: e.date.toISOString().split('T')[0],
+          amount: e.amount,
+          note: e.remarks ?? undefined,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date))
+
+      // Only count deductions that were actually included in the settlement
+      let deductTotal = 0
+      if (settlement.totalFuel > 0) deductTotal += deductionMap.fuel
+      if (settlement.totalTolls > 0) deductTotal += deductionMap.toll
+      if (settlement.totalMaint > 0) deductTotal += deductionMap.maintenance
+      if (settlement.totalOther > 0) deductTotal += deductionMap.driverAdvance + deductionMap.other
+
+      // Filter deduction items to match
+      const activeItems = deductionItems.filter(d => {
+        if (d.type === 'FUEL' && settlement.totalFuel > 0) return true
+        if (d.type === 'TOLL' && settlement.totalTolls > 0) return true
+        if (d.type === 'MAINTENANCE' && settlement.totalMaint > 0) return true
+        if (d.type === 'DRIVER_ADVANCE' && settlement.totalOther > 0) return true
+        if (d.type === 'CASH_PAYMENT' && settlement.totalOther > 0) return true
+        return false
+      })
+
+      return {
+        plateNo: v.plateNo,
+        vehicleId: v.id,
+        ownerName: v.owner.ownerName,
+        ownerId: v.ownerId,
+        ownerRateOverride: v.ownerRateOverride,
+        ownerOwnerRateOverride: (v.owner as any).ownerRateOverride ?? null,
+        effectiveOwnerRate,
+        effectiveRateSource,
+        trips: tripLines,
+        totalTrips: tripLines.length,
+        totalWeight: tripLines.reduce((a, t) => a + t.weight, 0),
+        grossPayout,
+        deductions: { ...deductionMap, total: deductTotal, items: activeItems },
+        netSettlement: grossPayout - deductTotal,
+        previouslyPaid: 0,
+        paidItems: [],
+        balanceDue: grossPayout - deductTotal,
+      }
+    })
+
+  // Build owner summary using the SETTLEMENT's exact numbers
+  const totalGross = settlement.totalRevenue
+  const totalDeductions = settlement.totalFuel + settlement.totalMaint + settlement.totalTolls + settlement.totalOther
+
+  const ownerSummary: OwnerBillSummary = {
+    ownerId: settlement.ownerId,
+    ownerName: settlement.owner.ownerName,
+    vehicles: vehicleBills,
+    totalGross,
+    totalDeductions,
+    totalNet: totalGross - totalDeductions,
+    ownerAdvanceTotal: settlement.totalAdvances,
+    ownerAdvanceItems: ownerAdvanceItems.map(a => ({
+      type: 'OWNER_ADVANCE',
+      label: '🏦 Owner Advance',
+      date: a.date.toISOString().split('T')[0],
+      amount: a.amount,
+      note: a.remarks ?? undefined,
+    })),
+    carryForwardBalance: settlement.carryForward,
+    totalBalanceDue: settlement.finalPayout,
+  }
+
+  const fmtD = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  const periodLabel = isTillDate
+    ? `Till ${fmtD(periodEnd)}`
+    : `${fmtD(periodStart)} – ${fmtD(periodEnd)}`
+
+  return {
+    period: {
+      start: periodStart.toISOString().split('T')[0],
+      end: periodEnd.toISOString().split('T')[0],
+      label: periodLabel,
+      isTillDate,
+    },
+    vehicles: vehicleBills,
+    ownerSummaries: [ownerSummary],
+    grandTotal: {
+      trips: vehicleBills.reduce((a, v) => a + v.totalTrips, 0),
+      weight: vehicleBills.reduce((a, v) => a + v.totalWeight, 0),
+      grossPayout: totalGross,
+      totalDeductions,
+      netSettlement: totalGross - totalDeductions,
+      totalAdvancesPaid: settlement.totalAdvances,
+      totalCarryForward: settlement.carryForward,
+      totalBalanceDue: settlement.finalPayout,
+    },
+  }
+}
+
