@@ -160,6 +160,9 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
             receivedAmount: Math.round(b.receivedAmount),
             pendingAmount: Math.round(b.billAmount - b.receivedAmount),
             status: b.status,
+            paymentDetails: b.payments && b.payments.length > 0
+              ? b.payments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount)}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}${p.remarks ? ` (${p.remarks})` : ''}`).join(' ; ')
+              : 'None',
             dueDate: b.dueDate ? new Date(b.dueDate).toLocaleDateString('en-IN') : '—',
             submittedAt: b.submittedAt ? new Date(b.submittedAt).toLocaleDateString('en-IN') : '—',
             remarks: b.remarks || '',
@@ -173,9 +176,10 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
             { key: 'trips', label: 'Trips' },
             { key: 'weight', label: 'Weight (MT)' },
             { key: 'billAmount', label: 'Bill Amount (₹)' },
-            { key: 'receivedAmount', label: 'Received (₹)' },
-            { key: 'pendingAmount', label: 'Pending (₹)' },
+            { key: 'receivedAmount', label: 'Received Amount (₹)' },
+            { key: 'pendingAmount', label: 'Pending Amount (₹)' },
             { key: 'status', label: 'Status' },
+            { key: 'paymentDetails', label: 'Received Payment Details / References' },
             { key: 'dueDate', label: 'Due Date' },
             { key: 'submittedAt', label: 'Submitted On' },
             { key: 'remarks', label: 'Remarks' },
