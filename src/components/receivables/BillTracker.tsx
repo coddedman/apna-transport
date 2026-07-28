@@ -40,6 +40,7 @@ interface Bill {
   totalWeight: number
   billAmount: number
   incentive?: number
+  billType?: string
   receivedAmount: number
   status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE'
   submittedAt: Date | string | null
@@ -202,12 +203,13 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             }
 
             const periodStr = `${new Date(b.periodStart).toLocaleDateString('en-IN')} – ${new Date(b.periodEnd).toLocaleDateString('en-IN')}`
+            const weightDisplay = b.billType === 'TOLL' ? '— (Toll Bill)' : b.totalWeight > 0 ? b.totalWeight.toFixed(2) : '—'
 
             return {
               billNo: b.billNo,
               project: b.project.projectName,
               period: periodStr,
-              weight: b.totalWeight.toFixed(2),
+              weight: weightDisplay,
               totalBilledAmount: totalPayable,
               receivedDetails,
               receivedAmount: rcvAmount,
@@ -390,7 +392,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                   >
                     {/* Bill Info */}
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 13, fontWeight: 800 }}>{bill.billNo}</span>
                         <span style={{
                           fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
@@ -398,6 +400,14 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                         }}>
                           {sc.emoji} {sc.label}
                         </span>
+                        {bill.billType === 'TOLL' && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(34,211,238,0.12)', border: '1px solid rgba(34,211,238,0.25)', color: '#22d3ee',
+                          }}>
+                            🛣️ Toll Bill
+                          </span>
+                        )}
                         {inc > 0 && (
                           <span style={{
                             fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
@@ -409,7 +419,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                       </div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
                         {bill.project.projectName} · {fmtShort(bill.periodStart)}–{fmtShort(bill.periodEnd)}
-                        {bill.totalTrips > 0 && <span> · {bill.totalTrips} trips</span>}
+                        {bill.billType === 'TOLL' ? <span> · Fixed Toll Bill</span> : bill.totalTrips > 0 ? <span> · {bill.totalTrips} trips</span> : null}
                       </div>
                       {bill.payments && bill.payments.length > 0 && (
                         <div style={{ fontSize: 11, color: '#10b981', marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>

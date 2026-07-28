@@ -15,6 +15,7 @@ export default function BillForm({ projects }: Props) {
   const [showForm, setShowForm] = useState(false)
 
   const [billNo, setBillNo] = useState('')
+  const [billType, setBillType] = useState<'FREIGHT' | 'TOLL'>('FREIGHT')
   const [projectId, setProjectId] = useState('')
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
@@ -27,7 +28,7 @@ export default function BillForm({ projects }: Props) {
   const [remarks, setRemarks] = useState('')
 
   function resetForm() {
-    setBillNo(''); setProjectId(''); setPeriodStart(''); setPeriodEnd('')
+    setBillNo(''); setBillType('FREIGHT'); setProjectId(''); setPeriodStart(''); setPeriodEnd('')
     setBillAmount(''); setIncentive(''); setTotalTrips(''); setTotalWeight('')
     setSubmittedAt(new Date().toISOString().split('T')[0]); setDueDate(''); setRemarks('')
   }
@@ -60,10 +61,11 @@ export default function BillForm({ projects }: Props) {
           projectId,
           periodStart,
           periodEnd,
+          billType,
           billAmount: parseFloat(billAmount),
-          incentive: parseFloat(incentive) || 0,
-          totalTrips: parseInt(totalTrips) || 0,
-          totalWeight: parseFloat(totalWeight) || 0,
+          incentive: billType === 'FREIGHT' ? (parseFloat(incentive) || 0) : 0,
+          totalTrips: billType === 'FREIGHT' ? (parseInt(totalTrips) || 0) : 0,
+          totalWeight: billType === 'FREIGHT' ? (parseFloat(totalWeight) || 0) : 0,
           submittedAt: submittedAt || undefined,
           dueDate: dueDate || undefined,
           remarks: remarks || undefined,
@@ -86,12 +88,38 @@ export default function BillForm({ projects }: Props) {
         + Record Bill
       </button>
 
-      <Modal isOpen={showForm} onClose={() => { resetForm(); setShowForm(false) }} title="📄 Record a Submitted Bill" maxWidth="720px">
+      <Modal isOpen={showForm} onClose={() => { resetForm(); setShowForm(false) }} title="📄 Record a Submitted Bill" maxWidth="740px">
         <form onSubmit={handleSubmit}>
+          {/* Bill Category Selector */}
+          <div style={{ marginBottom: 16, display: 'flex', gap: 10, background: '#0b1120', padding: 6, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <button
+              type="button"
+              onClick={() => setBillType('FREIGHT')}
+              style={{
+                flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+                background: billType === 'FREIGHT' ? '#8b5cf6' : 'transparent',
+                color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
+              }}
+            >
+              🚚 Freight Bill (Weight × Rate + Incentive)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillType('TOLL')}
+              style={{
+                flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+                background: billType === 'TOLL' ? '#10b981' : 'transparent',
+                color: billType === 'TOLL' ? '#fff' : '#94a3b8',
+              }}
+            >
+              🛣️ Toll Bill (Fixed Reimbursement - No Weight)
+            </button>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div className="form-group">
               <label className="form-label" style={{ fontSize: 11 }}>Bill / Invoice No *</label>
-              <input type="text" className="form-input" placeholder="e.g., INV-2026-042" value={billNo} onChange={e => setBillNo(e.target.value)} required style={{ fontWeight: 700 }} />
+              <input type="text" className="form-input" placeholder={billType === 'TOLL' ? 'e.g., TOLL-2026-001' : 'e.g., INV-2026-042'} value={billNo} onChange={e => setBillNo(e.target.value)} required style={{ fontWeight: 700 }} />
             </div>
 
             <div className="form-group">
@@ -115,42 +143,50 @@ export default function BillForm({ projects }: Props) {
             </div>
           </div>
 
-          {/* Auto-calculate row */}
-          <div style={{ margin: '0 0 16px', padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Auto-fill from trips?</span>
-            <button
-              type="button"
-              onClick={handleAutoCalculate}
-              disabled={isPending || !projectId || !periodStart || !periodEnd}
-              style={{
-                padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff',
-              }}
-            >
-              {isPending ? '⏳...' : '⚡ Calculate from Trips'}
-            </button>
-          </div>
+          {/* Auto-calculate row (for Freight bills only) */}
+          {billType === 'FREIGHT' && (
+            <div style={{ margin: '0 0 16px', padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Auto-fill Weight × Base Rate from trips?</span>
+              <button
+                type="button"
+                onClick={handleAutoCalculate}
+                disabled={isPending || !projectId || !periodStart || !periodEnd}
+                style={{
+                  padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff',
+                }}
+              >
+                {isPending ? '⏳...' : '⚡ Calculate from Trips'}
+              </button>
+            </div>
+          )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: billType === 'FREIGHT' ? '1fr 1fr 1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
             <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Base Bill Amount (₹) *</label>
-              <input type="number" className="form-input" placeholder="0" value={billAmount} onChange={e => setBillAmount(e.target.value)} required min="1" style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }} />
+              <label className="form-label" style={{ fontSize: 11 }}>
+                {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
+              </label>
+              <input type="number" className="form-input" placeholder="0" value={billAmount} onChange={e => setBillAmount(e.target.value)} required min="1" style={{ fontSize: 15, fontWeight: 800, color: billType === 'TOLL' ? '#10b981' : '#f59e0b' }} />
             </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
-              <input type="number" className="form-input" placeholder="0" value={incentive} onChange={e => setIncentive(e.target.value)} min="0" style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }} />
-            </div>
+            {billType === 'FREIGHT' && (
+              <>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
+                  <input type="number" className="form-input" placeholder="0" value={incentive} onChange={e => setIncentive(e.target.value)} min="0" style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }} />
+                </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
-              <input type="number" className="form-input" placeholder="0" value={totalTrips} onChange={e => setTotalTrips(e.target.value)} min="0" />
-            </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
+                  <input type="number" className="form-input" placeholder="0" value={totalTrips} onChange={e => setTotalTrips(e.target.value)} min="0" />
+                </div>
 
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT)</label>
-              <input type="number" className="form-input" placeholder="0" value={totalWeight} onChange={e => setTotalWeight(e.target.value)} min="0" step="0.01" />
-            </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT)</label>
+                  <input type="number" className="form-input" placeholder="0" value={totalWeight} onChange={e => setTotalWeight(e.target.value)} min="0" step="0.01" />
+                </div>
+              </>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>

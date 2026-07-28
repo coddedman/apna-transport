@@ -25,6 +25,7 @@ export async function createPartyBill(data: {
   totalWeight?: number
   billAmount: number
   incentive?: number
+  billType?: string
   submittedAt?: string
   dueDate?: string
   remarks?: string
@@ -51,6 +52,7 @@ export async function createPartyBill(data: {
       totalWeight: data.totalWeight || 0,
       billAmount: data.billAmount,
       incentive: data.incentive || 0,
+      billType: data.billType || 'FREIGHT',
       submittedAt: data.submittedAt ? new Date(data.submittedAt) : null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       remarks: data.remarks || null,
@@ -368,6 +370,7 @@ export async function updatePartyBill(billId: string, data: {
   totalWeight?: number
   billAmount?: number
   incentive?: number
+  billType?: string
   submittedAt?: string | null
   dueDate?: string | null
   remarks?: string | null
@@ -392,6 +395,7 @@ export async function updatePartyBill(billId: string, data: {
   if (data.totalTrips !== undefined) updateData.totalTrips = data.totalTrips
   if (data.totalWeight !== undefined) updateData.totalWeight = data.totalWeight
   if (data.incentive !== undefined) updateData.incentive = data.incentive
+  if (data.billType !== undefined) updateData.billType = data.billType
   if (data.billAmount !== undefined || data.incentive !== undefined) {
     if (data.billAmount !== undefined) updateData.billAmount = data.billAmount
     const finalBillAmount = data.billAmount ?? bill.billAmount

@@ -15,6 +15,7 @@ interface Bill {
   totalWeight: number
   billAmount: number
   incentive?: number
+  billType?: string
   receivedAmount: number
   status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE'
   submittedAt: Date | string | null
@@ -37,6 +38,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   }
 
   const [billNo, setBillNo] = useState(bill.billNo)
+  const [billType, setBillType] = useState<string>(bill.billType || 'FREIGHT')
   const [periodStart, setPeriodStart] = useState(toInputDate(bill.periodStart))
   const [periodEnd, setPeriodEnd] = useState(toInputDate(bill.periodEnd))
   const [billAmount, setBillAmount] = useState(bill.billAmount.toString())
@@ -77,12 +79,13 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
       try {
         await updatePartyBill(bill.id, {
           billNo,
+          billType,
           periodStart: periodStart || undefined,
           periodEnd: periodEnd || undefined,
-          totalTrips: totalTrips ? parseInt(totalTrips) : undefined,
-          totalWeight: totalWeight ? parseFloat(totalWeight) : undefined,
+          totalTrips: billType === 'FREIGHT' ? (totalTrips ? parseInt(totalTrips) : 0) : 0,
+          totalWeight: billType === 'FREIGHT' ? (totalWeight ? parseFloat(totalWeight) : 0) : 0,
           billAmount: parseFloat(billAmount),
-          incentive: parseFloat(incentive) || 0,
+          incentive: billType === 'FREIGHT' ? (parseFloat(incentive) || 0) : 0,
           submittedAt: submittedAt || null,
           dueDate: dueDate || null,
           remarks: remarks || null,
@@ -95,15 +98,43 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`✏️ Edit Bill: ${bill.billNo}`} maxWidth="720px">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit Bill — ${bill.billNo}`} maxWidth="740px">
       <form onSubmit={handleSubmit}>
-        <div style={{ padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, marginBottom: 16, fontSize: 12, color: '#94a3b8' }}>
-          Project: <strong style={{ color: '#fff' }}>{bill.project.projectName}</strong>
+        {error && (
+          <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '10px 14px', borderRadius: 8, fontSize: 12, marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
+        {/* Bill Type Selector */}
+        <div style={{ marginBottom: 16, display: 'flex', gap: 10, background: '#0b1120', padding: 6, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            type="button"
+            onClick={() => setBillType('FREIGHT')}
+            style={{
+              flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+              background: billType === 'FREIGHT' ? '#8b5cf6' : 'transparent',
+              color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
+            }}
+          >
+            🚚 Freight Bill (Weight × Rate + Incentive)
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillType('TOLL')}
+            style={{
+              flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
+              background: billType === 'TOLL' ? '#10b981' : 'transparent',
+              color: billType === 'TOLL' ? '#fff' : '#94a3b8',
+            }}
+          >
+            🛣️ Toll Bill (Fixed Reimbursement - No Weight)
+          </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>Bill / Invoice No *</label>
+            <label className="form-label" style={{ fontSize: 11 }}>Bill Number *</label>
             <input
               type="text"
               className="form-input"
@@ -111,6 +142,17 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               onChange={e => setBillNo(e.target.value)}
               required
               style={{ fontWeight: 700 }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11 }}>Project</label>
+            <input
+              type="text"
+              className="form-input"
+              value={bill.project.projectName}
+              disabled
+              style={{ opacity: 0.6 }}
             />
           </div>
 
@@ -135,25 +177,28 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           </div>
         </div>
 
-        {/* Auto-calculate row */}
-        <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Recalculate from trips?</span>
-          <button
-            type="button"
-            onClick={handleAutoRecalculate}
-            disabled={isPending || !periodStart || !periodEnd}
-            style={{
-              padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-              fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff',
-            }}
-          >
-            {isPending ? '⏳...' : '⚡ Recalculate'}
-          </button>
-        </div>
+        {billType === 'FREIGHT' && (
+          <div style={{ margin: '0 0 16px', padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Recalculate weight & base amount from trips?</span>
+            <button
+              type="button"
+              onClick={handleAutoRecalculate}
+              disabled={isPending || !periodStart || !periodEnd}
+              style={{
+                padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff',
+              }}
+            >
+              {isPending ? '⏳...' : '⚡ Recalculate'}
+            </button>
+          </div>
+        )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: billType === 'FREIGHT' ? '1fr 1fr 1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>Base Bill Amount (₹) *</label>
+            <label className="form-label" style={{ fontSize: 11 }}>
+              {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
+            </label>
             <input
               type="number"
               className="form-input"
@@ -161,45 +206,51 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               onChange={e => setBillAmount(e.target.value)}
               required
               min="1"
-              style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}
+              style={{ fontSize: 15, fontWeight: 800, color: billType === 'TOLL' ? '#10b981' : '#f59e0b' }}
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
-            <input
-              type="number"
-              className="form-input"
-              value={incentive}
-              onChange={e => setIncentive(e.target.value)}
-              min="0"
-              style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}
-            />
-          </div>
+          {billType === 'FREIGHT' && (
+            <>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={incentive}
+                  onChange={e => setIncentive(e.target.value)}
+                  min="0"
+                  style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}
+                />
+              </div>
 
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
-            <input
-              type="number"
-              className="form-input"
-              value={totalTrips}
-              onChange={e => setTotalTrips(e.target.value)}
-              min="0"
-            />
-          </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={totalTrips}
+                  onChange={e => setTotalTrips(e.target.value)}
+                  min="0"
+                />
+              </div>
 
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT)</label>
-            <input
-              type="number"
-              step="0.01"
-              className="form-input"
-              value={totalWeight}
-              onChange={e => setTotalWeight(e.target.value)}
-              min="0"
-            />
-          </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="form-input"
+                  value={totalWeight}
+                  onChange={e => setTotalWeight(e.target.value)}
+                  min="0"
+                />
+              </div>
+            </>
+          )}
+        </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11 }}>Submitted Date</label>
             <input
@@ -220,26 +271,23 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
             />
           </div>
 
-          <div className="form-group" style={{ gridColumn: 'span 2' }}>
+          <div className="form-group">
             <label className="form-label" style={{ fontSize: 11 }}>Remarks</label>
             <input
               type="text"
               className="form-input"
               value={remarks}
               onChange={e => setRemarks(e.target.value)}
-              placeholder="Optional notes..."
             />
           </div>
         </div>
 
-        {error && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>{error}</p>}
-
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isPending}>
+        <div className="modal-footer" style={{ padding: 0, border: 'none', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={isPending || !billNo || !billAmount}>
-            {isPending ? '⏳ Saving...' : '✓ Save Changes'}
+          <button type="submit" className="btn btn-primary" disabled={isPending || !billNo || !billAmount} style={{ padding: '10px 24px' }}>
+            {isPending ? '⏳ Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
