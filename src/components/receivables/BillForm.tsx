@@ -50,6 +50,12 @@ export default function BillForm({ projects }: Props) {
     })
   }
 
+  const parsedBase = parseFloat(billAmount) || 0
+  const parsedWeight = parseFloat(totalWeight) || 0
+  const parsedIncRate = parseFloat(incentive) || 0
+  const totalIncentiveAmount = parsedWeight > 0 ? (parsedIncRate * parsedWeight) : parsedIncRate
+  const totalPayableBill = billType === 'FREIGHT' ? (parsedBase + totalIncentiveAmount) : parsedBase
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!billNo || !projectId || !periodStart || !periodEnd || !billAmount) return
@@ -62,10 +68,10 @@ export default function BillForm({ projects }: Props) {
           periodStart,
           periodEnd,
           billType,
-          billAmount: parseFloat(billAmount),
-          incentive: billType === 'FREIGHT' ? (parseFloat(incentive) || 0) : 0,
+          billAmount: parsedBase,
+          incentive: parsedIncRate,
           totalTrips: billType === 'FREIGHT' ? (parseInt(totalTrips) || 0) : 0,
-          totalWeight: billType === 'FREIGHT' ? (parseFloat(totalWeight) || 0) : 0,
+          totalWeight: billType === 'FREIGHT' ? parsedWeight : 0,
           submittedAt: submittedAt || undefined,
           dueDate: dueDate || undefined,
           remarks: remarks || undefined,
@@ -101,7 +107,7 @@ export default function BillForm({ projects }: Props) {
                 color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
               }}
             >
-              🚚 Freight Bill (Weight × Rate + Incentive)
+              🚚 Freight Bill (Weight × [Base + Incentive])
             </button>
             <button
               type="button"
@@ -164,7 +170,7 @@ export default function BillForm({ projects }: Props) {
           <div style={{ display: 'grid', gridTemplateColumns: billType === 'FREIGHT' ? '1fr 1fr 1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
             <div className="form-group">
               <label className="form-label" style={{ fontSize: 11 }}>
-                {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
+                {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Base Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
               </label>
               <input type="number" className="form-input" placeholder="0" value={billAmount} onChange={e => setBillAmount(e.target.value)} required min="1" style={{ fontSize: 15, fontWeight: 800, color: billType === 'TOLL' ? '#10b981' : '#f59e0b' }} />
             </div>
@@ -172,8 +178,8 @@ export default function BillForm({ projects }: Props) {
             {billType === 'FREIGHT' && (
               <>
                 <div className="form-group">
-                  <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
-                  <input type="number" className="form-input" placeholder="0" value={incentive} onChange={e => setIncentive(e.target.value)} min="0" style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }} />
+                  <label className="form-label" style={{ fontSize: 11 }}>Incentive Rate (₹/MT)</label>
+                  <input type="number" className="form-input" placeholder="e.g. 3" value={incentive} onChange={e => setIncentive(e.target.value)} min="0" step="0.1" style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }} />
                 </div>
 
                 <div className="form-group">
@@ -188,6 +194,27 @@ export default function BillForm({ projects }: Props) {
               </>
             )}
           </div>
+
+          {/* Formula calculation preview box */}
+          {billType === 'FREIGHT' && parsedBase > 0 && (
+            <div style={{ margin: '0 0 16px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 12 }}>
+              <div style={{ color: '#10b981', fontWeight: 800, marginBottom: 4 }}>
+                💡 Total Bill Calculation:
+              </div>
+              <div style={{ color: '#e2e8f0' }}>
+                Base Bill: <strong>₹{Math.round(parsedBase).toLocaleString('en-IN')}</strong>
+                {parsedIncRate > 0 && parsedWeight > 0 && (
+                  <span> + Incentive: <strong>{parsedWeight} MT × ₹{parsedIncRate}/MT = ₹{Math.round(totalIncentiveAmount).toLocaleString('en-IN')}</strong></span>
+                )}
+                {parsedIncRate > 0 && parsedWeight === 0 && (
+                  <span> + Incentive: <strong>₹{Math.round(parsedIncRate).toLocaleString('en-IN')}</strong></span>
+                )}
+                <span style={{ marginLeft: 8, color: '#10b981', fontWeight: 900 }}>
+                  ➔ Total Payable: ₹{Math.round(totalPayableBill).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div className="form-group">

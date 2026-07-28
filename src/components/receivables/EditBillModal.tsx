@@ -67,6 +67,12 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
     })
   }
 
+  const parsedBase = parseFloat(billAmount) || 0
+  const parsedWeight = parseFloat(totalWeight) || 0
+  const parsedIncRate = parseFloat(incentive) || 0
+  const totalIncentiveAmount = parsedWeight > 0 ? (parsedIncRate * parsedWeight) : parsedIncRate
+  const totalPayableBill = billType === 'FREIGHT' ? (parsedBase + totalIncentiveAmount) : parsedBase
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!billNo || !billAmount) {
@@ -84,8 +90,8 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           periodEnd: periodEnd || undefined,
           totalTrips: billType === 'FREIGHT' ? (totalTrips ? parseInt(totalTrips) : 0) : 0,
           totalWeight: billType === 'FREIGHT' ? (totalWeight ? parseFloat(totalWeight) : 0) : 0,
-          billAmount: parseFloat(billAmount),
-          incentive: billType === 'FREIGHT' ? (parseFloat(incentive) || 0) : 0,
+          billAmount: parsedBase,
+          incentive: billType === 'FREIGHT' ? parsedIncRate : 0,
           submittedAt: submittedAt || null,
           dueDate: dueDate || null,
           remarks: remarks || null,
@@ -117,7 +123,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
             }}
           >
-            🚚 Freight Bill (Weight × Rate + Incentive)
+            🚚 Freight Bill (Weight × [Base + Incentive])
           </button>
           <button
             type="button"
@@ -197,7 +203,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: billType === 'FREIGHT' ? '1fr 1fr 1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11 }}>
-              {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
+              {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Base Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
             </label>
             <input
               type="number"
@@ -213,13 +219,14 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           {billType === 'FREIGHT' && (
             <>
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
+                <label className="form-label" style={{ fontSize: 11 }}>Incentive Rate (₹/MT)</label>
                 <input
                   type="number"
                   className="form-input"
                   value={incentive}
                   onChange={e => setIncentive(e.target.value)}
                   min="0"
+                  step="0.1"
                   style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}
                 />
               </div>
@@ -249,6 +256,27 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
             </>
           )}
         </div>
+
+        {/* Formula calculation preview box */}
+        {billType === 'FREIGHT' && parsedBase > 0 && (
+          <div style={{ margin: '0 0 16px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 12 }}>
+            <div style={{ color: '#10b981', fontWeight: 800, marginBottom: 4 }}>
+              💡 Total Bill Calculation:
+            </div>
+            <div style={{ color: '#e2e8f0' }}>
+              Base Bill: <strong>₹{Math.round(parsedBase).toLocaleString('en-IN')}</strong>
+              {parsedIncRate > 0 && parsedWeight > 0 && (
+                <span> + Incentive: <strong>{parsedWeight} MT × ₹{parsedIncRate}/MT = ₹{Math.round(totalIncentiveAmount).toLocaleString('en-IN')}</strong></span>
+              )}
+              {parsedIncRate > 0 && parsedWeight === 0 && (
+                <span> + Incentive: <strong>₹{Math.round(parsedIncRate).toLocaleString('en-IN')}</strong></span>
+              )}
+              <span style={{ marginLeft: 8, color: '#10b981', fontWeight: 900 }}>
+                ➔ Total Payable: ₹{Math.round(totalPayableBill).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">

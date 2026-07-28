@@ -189,8 +189,9 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         <ExportCSVButton
           data={filteredBills.map(b => {
             const baseAmount = Math.round(b.billAmount)
-            const incAmount = Math.round(b.incentive || 0)
-            const totalPayable = baseAmount + incAmount
+            const incRate = b.incentive || 0
+            const incTotal = b.totalWeight > 0 ? (incRate * b.totalWeight) : incRate
+            const totalPayable = Math.round(baseAmount + incTotal)
             const rcvAmount = Math.round(b.receivedAmount)
             const remAmount = Math.round(totalPayable - rcvAmount)
 
@@ -365,8 +366,9 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             {filteredBills.map(bill => {
               const sc = statusConfig[bill.status] || statusConfig.PENDING
               const isExpanded = expandedBill === bill.id
-              const inc = bill.incentive || 0
-              const totalPayable = bill.billAmount + inc
+              const incRate = bill.incentive || 0
+              const totalIncAmt = bill.totalWeight > 0 ? (incRate * bill.totalWeight) : incRate
+              const totalPayable = Math.round(bill.billAmount + totalIncAmt)
               const pendingAmt = totalPayable - bill.receivedAmount
 
               return (
@@ -408,12 +410,12 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                             🛣️ Toll Bill
                           </span>
                         )}
-                        {inc > 0 && (
+                        {incRate > 0 && (
                           <span style={{
                             fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
                             background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981',
                           }}>
-                            +{fmt(inc)} Incentive
+                            +{bill.totalWeight > 0 ? `₹${incRate}/MT (${fmt(totalIncAmt)})` : fmt(incRate)} Incentive
                           </span>
                         )}
                       </div>
@@ -437,7 +439,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 14, fontWeight: 800, color: '#f59e0b' }}>{fmt(totalPayable)}</div>
                       <div style={{ fontSize: 10, color: '#64748b' }}>
-                        {inc > 0 ? `Base ${fmt(bill.billAmount)}` : 'Billed'}
+                        {incRate > 0 ? `Base ${fmt(bill.billAmount)}` : 'Billed'}
                       </div>
                     </div>
 
@@ -508,9 +510,9 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                     <div style={{ padding: '16px 20px' }}>
                       {/* Bill Details */}
                       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                        {inc > 0 && (
+                        {incRate > 0 && (
                           <div style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>
-                            Base Billed: {fmt(bill.billAmount)} + Incentive: {fmt(inc)} = Total: {fmt(totalPayable)}
+                            Base Billed: {fmt(bill.billAmount)} + Incentive: {bill.totalWeight > 0 ? `${bill.totalWeight} MT × ₹${incRate}/MT = ${fmt(totalIncAmt)}` : fmt(incRate)} ➔ Total: {fmt(totalPayable)}
                           </div>
                         )}
                         {bill.submittedAt && (
