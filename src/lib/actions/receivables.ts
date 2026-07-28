@@ -281,6 +281,15 @@ export async function getPartyBills(filters: ReceivableFilters = {}) {
   })
 }
 
+export async function getOverallPartyPayments() {
+  const tid = await getTransporterId()
+  return prisma.transaction.findMany({
+    where: { transporterId: tid, type: 'PARTY_PAYMENT' },
+    include: { project: { select: { id: true, projectName: true } } },
+    orderBy: { date: 'desc' },
+  })
+}
+
 // ========================
 // Summary / Dashboard Data
 // ========================
