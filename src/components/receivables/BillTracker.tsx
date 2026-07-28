@@ -188,46 +188,52 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         {/* STREAMLINED CSV EXPORT BUTTON */}
         <ExportCSVButton
           data={filteredBills.map(b => {
-            const baseAmount = Math.round(b.billAmount)
             const incRate = b.incentive || 0
-            const incTotal = b.totalWeight > 0 ? (incRate * b.totalWeight) : incRate
-            const totalPayable = Math.round(baseAmount + incTotal)
+            const weight = b.totalWeight || 0
+            const baseRate = weight > 0 ? Math.round((b.billAmount / weight) * 100) / 100 : 0
+            const incTotal = weight > 0 ? (incRate * weight) : incRate
+            const totalPayable = Math.round(b.billAmount + incTotal)
             const rcvAmount = Math.round(b.receivedAmount)
             const remAmount = Math.round(totalPayable - rcvAmount)
 
-            // When and how much received summary (only exact payments logged and dates)
-            let receivedDetails = 'None'
+            // Payment received log — just date and amount
+            let paymentLog = '—'
             if (b.payments && b.payments.length > 0) {
-              receivedDetails = b.payments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}`).join(' ; ')
-            } else if (b.receivedAmount > 0) {
-              receivedDetails = `₹${Math.round(b.receivedAmount).toLocaleString('en-IN')}`
+              paymentLog = b.payments.map(p =>
+                `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}`
+              ).join(' ; ')
             }
-
-            const periodStr = `${new Date(b.periodStart).toLocaleDateString('en-IN')} – ${new Date(b.periodEnd).toLocaleDateString('en-IN')}`
-            const weightDisplay = b.billType === 'TOLL' ? '— (Toll Bill)' : b.totalWeight > 0 ? b.totalWeight.toFixed(2) : '—'
 
             return {
               billNo: b.billNo,
               project: b.project.projectName,
-              period: periodStr,
-              weight: weightDisplay,
-              totalBilledAmount: totalPayable,
-              receivedDetails,
-              receivedAmount: rcvAmount,
-              pendingAmount: remAmount,
+              billType: b.billType === 'TOLL' ? 'Toll' : 'Freight',
+              weight: b.billType === 'TOLL' ? '—' : (weight > 0 ? weight.toFixed(2) : '—'),
+              baseRate: b.billType === 'TOLL' ? '—' : (baseRate > 0 ? `₹${baseRate}` : '—'),
+              incentiveRate: b.billType === 'TOLL' ? '—' : (incRate > 0 ? `₹${incRate}` : '—'),
+              baseAmount: Math.round(b.billAmount),
+              incentiveAmount: Math.round(incTotal),
+              totalBill: totalPayable,
+              paymentLog,
+              totalReceived: rcvAmount,
+              pending: remAmount,
               status: b.status,
             }
           })}
           filename="receivables_report"
           columns={[
-            { key: 'billNo', label: 'Bill / Invoice No' },
+            { key: 'billNo', label: 'Bill No' },
             { key: 'project', label: 'Project' },
-            { key: 'period', label: 'Period' },
+            { key: 'billType', label: 'Type' },
             { key: 'weight', label: 'Weight (MT)' },
-            { key: 'totalBilledAmount', label: 'Total Bill Amount (₹)' },
-            { key: 'receivedDetails', label: 'When & How Much Received (Log & References)' },
-            { key: 'receivedAmount', label: 'Total Received (₹)' },
-            { key: 'pendingAmount', label: 'Pending Amount (₹)' },
+            { key: 'baseRate', label: 'Base Rate (₹/MT)' },
+            { key: 'incentiveRate', label: 'Incentive Rate (₹/MT)' },
+            { key: 'baseAmount', label: 'Base Amount (₹)' },
+            { key: 'incentiveAmount', label: 'Incentive Amount (₹)' },
+            { key: 'totalBill', label: 'Total Bill (₹)' },
+            { key: 'paymentLog', label: 'Payment Received (Date & Amount)' },
+            { key: 'totalReceived', label: 'Total Received (₹)' },
+            { key: 'pending', label: 'Pending (₹)' },
             { key: 'status', label: 'Status' },
           ]}
         />
