@@ -184,7 +184,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         />
         <BillForm projects={projects} />
         
-        {/* SINGLE UNIFIED CSV EXPORT BUTTON */}
+        {/* STREAMLINED CSV EXPORT BUTTON */}
         <ExportCSVButton
           data={filteredBills.map(b => {
             const baseAmount = Math.round(b.billAmount)
@@ -193,49 +193,39 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             const rcvAmount = Math.round(b.receivedAmount)
             const remAmount = Math.round(totalPayable - rcvAmount)
 
-            const billSpecificPayments = b.payments && b.payments.length > 0
-              ? b.payments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount)}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}${p.remarks ? ` (${p.remarks})` : ''}`).join(' ; ')
-              : '—'
+            // When and how much received summary
+            let receivedDetails = 'None'
+            if (b.payments && b.payments.length > 0) {
+              receivedDetails = b.payments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}`).join(' ; ')
+            } else if (overallPaymentsSummaryStr !== 'None') {
+              receivedDetails = `Overall Receipts: ${overallPaymentsSummaryStr}`
+            }
+
+            const periodStr = `${new Date(b.periodStart).toLocaleDateString('en-IN')} – ${new Date(b.periodEnd).toLocaleDateString('en-IN')}`
 
             return {
               billNo: b.billNo,
               project: b.project.projectName,
-              periodStart: new Date(b.periodStart).toLocaleDateString('en-IN'),
-              periodEnd: new Date(b.periodEnd).toLocaleDateString('en-IN'),
-              trips: b.totalTrips,
+              period: periodStr,
               weight: b.totalWeight.toFixed(2),
-              baseBillAmount: baseAmount,
-              incentive: incAmount,
               totalBilledAmount: totalPayable,
+              receivedDetails,
               receivedAmount: rcvAmount,
-              remainingReceivableAmount: remAmount,
+              pendingAmount: remAmount,
               status: b.status,
-              billPaymentsDetails: billSpecificPayments,
-              overallLumpSumReceipts: overallPaymentsSummaryStr,
-              dueDate: b.dueDate ? new Date(b.dueDate).toLocaleDateString('en-IN') : '—',
-              submittedAt: b.submittedAt ? new Date(b.submittedAt).toLocaleDateString('en-IN') : '—',
-              remarks: b.remarks || '',
             }
           })}
-          filename="receivables_statement_report"
+          filename="receivables_report"
           columns={[
             { key: 'billNo', label: 'Bill / Invoice No' },
             { key: 'project', label: 'Project' },
-            { key: 'periodStart', label: 'Period Start' },
-            { key: 'periodEnd', label: 'Period End' },
-            { key: 'trips', label: 'Trips' },
+            { key: 'period', label: 'Period' },
             { key: 'weight', label: 'Weight (MT)' },
-            { key: 'baseBillAmount', label: 'Base Bill Amount (₹)' },
-            { key: 'incentive', label: 'Incentive (₹)' },
-            { key: 'totalBilledAmount', label: 'Total Billed Amount (₹)' },
+            { key: 'totalBilledAmount', label: 'Total Bill Amount (₹)' },
+            { key: 'receivedDetails', label: 'When & How Much Received (Log & References)' },
             { key: 'receivedAmount', label: 'Total Received (₹)' },
-            { key: 'remainingReceivableAmount', label: 'Remaining Receivable to Collect (₹)' },
+            { key: 'pendingAmount', label: 'Pending Amount (₹)' },
             { key: 'status', label: 'Status' },
-            { key: 'billPaymentsDetails', label: 'Bill Specific Payments' },
-            { key: 'overallLumpSumReceipts', label: 'All Overall Lump-Sum Receipts (4L/7L/2L)' },
-            { key: 'dueDate', label: 'Due Date' },
-            { key: 'submittedAt', label: 'Submitted On' },
-            { key: 'remarks', label: 'Remarks' },
           ]}
         />
       </div>

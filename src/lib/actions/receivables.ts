@@ -123,9 +123,10 @@ export async function addBillPayment(data: {
     select: { amount: true },
   })
   const totalReceived = payments.reduce((s, p) => s + p.amount, 0)
+  const totalPayable = bill.billAmount + (bill.incentive || 0)
 
   let status: BillStatus = 'PENDING'
-  if (totalReceived >= bill.billAmount) {
+  if (totalReceived >= totalPayable) {
     status = 'PAID'
   } else if (totalReceived > 0) {
     status = 'PARTIAL'
