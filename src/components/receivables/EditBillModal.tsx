@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import Modal from '@/components/Modal'
 import { updatePartyBill, calculateBillFromTrips } from '@/lib/actions/receivables'
 
@@ -8,7 +8,7 @@ interface Bill {
   id: string
   billNo: string
   projectId: string
-  project: { id: string; projectName: string }
+  project: { id: string; projectName: string; partyRate?: number }
   periodStart: Date | string
   periodEnd: Date | string
   totalTrips: number
@@ -37,18 +37,36 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
     return new Date(d).toISOString().split('T')[0]
   }
 
+  const initialWeight = bill.totalWeight || 0
+  const initialBaseAmount = bill.billAmount || 0
+  const initialBaseRate = initialWeight > 0 ? (initialBaseAmount / initialWeight) : (bill.project.partyRate || 0)
+
   const [billNo, setBillNo] = useState(bill.billNo)
   const [billType, setBillType] = useState<string>(bill.billType || 'FREIGHT')
   const [periodStart, setPeriodStart] = useState(toInputDate(bill.periodStart))
   const [periodEnd, setPeriodEnd] = useState(toInputDate(bill.periodEnd))
-  const [billAmount, setBillAmount] = useState(bill.billAmount.toString())
+  const [baseRate, setBaseRate] = useState(initialBaseRate > 0 ? String(Math.round(initialBaseRate * 100) / 100) : '')
   const [incentive, setIncentive] = useState((bill.incentive || 0).toString())
-  const [totalTrips, setTotalTrips] = useState(bill.totalTrips.toString())
   const [totalWeight, setTotalWeight] = useState(bill.totalWeight.toString())
+  const [totalTrips, setTotalTrips] = useState(bill.totalTrips.toString())
+  const [billAmount, setBillAmount] = useState(bill.billAmount.toString())
+  const [manualBaseOverride, setManualBaseOverride] = useState(false)
+
   const [submittedAt, setSubmittedAt] = useState(toInputDate(bill.submittedAt))
   const [dueDate, setDueDate] = useState(toInputDate(bill.dueDate))
   const [remarks, setRemarks] = useState(bill.remarks || '')
   const [error, setError] = useState<string | null>(null)
+
+  // Auto-calculate Base Bill Amount whenever Weight or Base Rate changes (unless manually overridden)
+  useEffect(() => {
+    if (billType === 'FREIGHT' && !manualBaseOverride) {
+      const w = parseFloat(totalWeight) || 0
+      const r = parseFloat(baseRate) || 0
+      if (w > 0 && r > 0) {
+        setBillAmount(String(Math.round(w * r)))
+      }
+    }
+  }, [totalWeight, baseRate, billType, manualBaseOverride])
 
   function handleAutoRecalculate() {
     if (!bill.projectId || !periodStart || !periodEnd) {
@@ -60,7 +78,13 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
         const data = await calculateBillFromTrips(bill.projectId, periodStart, periodEnd)
         setTotalTrips(String(data.totalTrips))
         setTotalWeight(String(data.totalWeight.toFixed(2)))
-        setBillAmount(String(Math.round(data.billAmount)))
+        const w = data.totalWeight || 0
+        const calcBase = data.billAmount || 0
+        setBillAmount(String(Math.round(calcBase)))
+        setManualBaseOverride(false)
+        if (w > 0) {
+          setBaseRate(String(Math.round(calcBase / w)))
+        }
       } catch (err: any) {
         alert(err.message)
       }
@@ -70,6 +94,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   const parsedBase = parseFloat(billAmount) || 0
   const parsedWeight = parseFloat(totalWeight) || 0
   const parsedIncRate = parseFloat(incentive) || 0
+  const parsedBaseRate = parseFloat(baseRate) || (parsedWeight > 0 ? (parsedBase / parsedWeight) : 0)
   const totalIncentiveAmount = parsedWeight > 0 ? (parsedIncRate * parsedWeight) : parsedIncRate
   const totalPayableBill = billType === 'FREIGHT' ? (parsedBase + totalIncentiveAmount) : parsedBase
 
@@ -89,7 +114,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           periodStart: periodStart || undefined,
           periodEnd: periodEnd || undefined,
           totalTrips: billType === 'FREIGHT' ? (totalTrips ? parseInt(totalTrips) : 0) : 0,
-          totalWeight: billType === 'FREIGHT' ? (totalWeight ? parseFloat(totalWeight) : 0) : 0,
+          totalWeight: billType === 'FREIGHT' ? parsedWeight : 0,
           billAmount: parsedBase,
           incentive: billType === 'FREIGHT' ? parsedIncRate : 0,
           submittedAt: submittedAt || null,
@@ -104,7 +129,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Edit Bill — ${bill.billNo}`} maxWidth="740px">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit Bill — ${bill.billNo}`} maxWidth="760px">
       <form onSubmit={handleSubmit}>
         {error && (
           <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '10px 14px', borderRadius: 8, fontSize: 12, marginBottom: 16 }}>
@@ -123,7 +148,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
             }}
           >
-            🚚 Freight Bill (Weight × [Base + Incentive])
+            🚚 Freight Bill (Weight × [Base Rate + Incentive Rate])
           </button>
           <button
             type="button"
@@ -200,85 +225,115 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: billType === 'FREIGHT' ? '1fr 1fr 1fr 1fr' : '1fr', gap: 16, marginBottom: 16 }}>
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>
-              {billType === 'FREIGHT' ? 'Base Bill Amount (Weight × Base Rate) ₹ *' : 'Toll / Fixed Bill Amount (₹) *'}
-            </label>
-            <input
-              type="number"
-              className="form-input"
-              value={billAmount}
-              onChange={e => setBillAmount(e.target.value)}
-              required
-              min="1"
-              style={{ fontSize: 15, fontWeight: 800, color: billType === 'TOLL' ? '#10b981' : '#f59e0b' }}
-            />
+        {/* Weight, Base Rate, Incentive Rate & Base Amount Inputs */}
+        {billType === 'FREIGHT' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.2fr', gap: 16, marginBottom: 16 }}>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT) *</label>
+              <input
+                type="number"
+                step="0.01"
+                className="form-input"
+                value={totalWeight}
+                onChange={e => { setTotalWeight(e.target.value); setManualBaseOverride(false) }}
+                min="0"
+                style={{ fontSize: 14, fontWeight: 700 }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Base Rate (₹/MT)</label>
+              <input
+                type="number"
+                className="form-input"
+                placeholder="e.g. 20"
+                value={baseRate}
+                onChange={e => { setBaseRate(e.target.value); setManualBaseOverride(false) }}
+                min="0"
+                step="0.1"
+                style={{ fontSize: 14, fontWeight: 700 }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Incentive Rate (₹/MT)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={incentive}
+                onChange={e => setIncentive(e.target.value)}
+                min="0"
+                step="0.1"
+                style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Base Bill Amount (₹) *</label>
+              <input
+                type="number"
+                className="form-input"
+                value={billAmount}
+                onChange={e => { setBillAmount(e.target.value); setManualBaseOverride(true) }}
+                required
+                min="1"
+                style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}
+              />
+            </div>
           </div>
-
-          {billType === 'FREIGHT' && (
-            <>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Incentive Rate (₹/MT)</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={incentive}
-                  onChange={e => setIncentive(e.target.value)}
-                  min="0"
-                  step="0.1"
-                  style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={totalTrips}
-                  onChange={e => setTotalTrips(e.target.value)}
-                  min="0"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="form-input"
-                  value={totalWeight}
-                  onChange={e => setTotalWeight(e.target.value)}
-                  min="0"
-                />
-              </div>
-            </>
-          )}
-        </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Toll / Fixed Bill Amount (₹) *</label>
+              <input
+                type="number"
+                className="form-input"
+                value={billAmount}
+                onChange={e => setBillAmount(e.target.value)}
+                required
+                min="1"
+                style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Formula calculation preview box */}
-        {billType === 'FREIGHT' && parsedBase > 0 && (
+        {billType === 'FREIGHT' && (parsedWeight > 0 || parsedBase > 0) && (
           <div style={{ margin: '0 0 16px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 12 }}>
             <div style={{ color: '#10b981', fontWeight: 800, marginBottom: 4 }}>
-              💡 Total Bill Calculation:
+              ⚡ Auto-Calculated Total Bill Formula:
             </div>
-            <div style={{ color: '#e2e8f0' }}>
-              Base Bill: <strong>₹{Math.round(parsedBase).toLocaleString('en-IN')}</strong>
-              {parsedIncRate > 0 && parsedWeight > 0 && (
-                <span> + Incentive: <strong>{parsedWeight} MT × ₹{parsedIncRate}/MT = ₹{Math.round(totalIncentiveAmount).toLocaleString('en-IN')}</strong></span>
+            <div style={{ color: '#e2e8f0', lineHeight: 1.5 }}>
+              {parsedWeight > 0 && (parsedBaseRate > 0 || parsedIncRate > 0) ? (
+                <span>
+                  <strong>{parsedWeight} MT</strong> × (Base <strong>₹{parsedBaseRate.toFixed(2)}</strong> {parsedIncRate > 0 ? `+ Incentive ₹${parsedIncRate}` : ''})
+                  = <strong>{parsedWeight} MT</strong> × <strong>₹{(parsedBaseRate + parsedIncRate).toFixed(2)}/MT</strong>
+                </span>
+              ) : (
+                <span>Base Bill: <strong>₹{Math.round(parsedBase).toLocaleString('en-IN')}</strong></span>
               )}
-              {parsedIncRate > 0 && parsedWeight === 0 && (
-                <span> + Incentive: <strong>₹{Math.round(parsedIncRate).toLocaleString('en-IN')}</strong></span>
-              )}
-              <span style={{ marginLeft: 8, color: '#10b981', fontWeight: 900 }}>
+              <span style={{ marginLeft: 10, color: '#10b981', fontWeight: 900, fontSize: 13 }}>
                 ➔ Total Payable: ₹{Math.round(totalPayableBill).toLocaleString('en-IN')}
               </span>
             </div>
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+          {billType === 'FREIGHT' && (
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
+              <input
+                type="number"
+                className="form-input"
+                value={totalTrips}
+                onChange={e => setTotalTrips(e.target.value)}
+                min="0"
+              />
+            </div>
+          )}
+
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11 }}>Submitted Date</label>
             <input
