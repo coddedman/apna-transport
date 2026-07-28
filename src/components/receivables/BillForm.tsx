@@ -26,7 +26,6 @@ export default function BillForm({ projects }: Props) {
   const [totalWeight, setTotalWeight] = useState('')
   const [totalTrips, setTotalTrips] = useState('')
   const [billAmount, setBillAmount] = useState('')
-  const [manualBaseOverride, setManualBaseOverride] = useState(false)
 
   const [submittedAt, setSubmittedAt] = useState(new Date().toISOString().split('T')[0])
   const [dueDate, setDueDate] = useState('')
@@ -42,21 +41,20 @@ export default function BillForm({ projects }: Props) {
     }
   }, [projectId, projects])
 
-  // Auto-calculate Base Bill Amount whenever Weight or Base Rate changes (unless manually overridden)
+  // Auto-calculate Base Bill Amount whenever Weight or Base Rate changes
   useEffect(() => {
-    if (billType === 'FREIGHT' && !manualBaseOverride) {
+    if (billType === 'FREIGHT') {
       const w = parseFloat(totalWeight) || 0
       const r = parseFloat(baseRate) || 0
       if (w > 0 && r > 0) {
         setBillAmount(String(Math.round(w * r)))
       }
     }
-  }, [totalWeight, baseRate, billType, manualBaseOverride])
+  }, [totalWeight, baseRate, billType])
 
   function resetForm() {
     setBillNo(''); setBillType('FREIGHT'); setProjectId(''); setPeriodStart(''); setPeriodEnd('')
     setBaseRate(''); setIncentive(''); setTotalTrips(''); setTotalWeight(''); setBillAmount('')
-    setManualBaseOverride(false)
     setSubmittedAt(new Date().toISOString().split('T')[0]); setDueDate(''); setRemarks('')
   }
 
@@ -69,13 +67,15 @@ export default function BillForm({ projects }: Props) {
       try {
         const data = await calculateBillFromTrips(projectId, periodStart, periodEnd)
         setTotalTrips(String(data.totalTrips))
-        setTotalWeight(String(data.totalWeight.toFixed(2)))
         const w = data.totalWeight || 0
+        setTotalWeight(String(w.toFixed(2)))
         const calcBase = data.billAmount || 0
-        setBillAmount(String(Math.round(calcBase)))
-        setManualBaseOverride(false)
         if (w > 0) {
-          setBaseRate(String(Math.round(calcBase / w)))
+          const calculatedRate = Math.round((calcBase / w) * 100) / 100
+          setBaseRate(String(calculatedRate))
+          setBillAmount(String(Math.round(w * calculatedRate)))
+        } else {
+          setBillAmount(String(Math.round(calcBase)))
         }
       } catch (err: any) {
         alert(err.message)
@@ -85,10 +85,10 @@ export default function BillForm({ projects }: Props) {
 
   const parsedBase = parseFloat(billAmount) || 0
   const parsedWeight = parseFloat(totalWeight) || 0
+  const parsedBaseRate = parseFloat(baseRate) || 0
   const parsedIncRate = parseFloat(incentive) || 0
-  const parsedBaseRate = parseFloat(baseRate) || (parsedWeight > 0 ? (parsedBase / parsedWeight) : 0)
   const totalIncentiveAmount = parsedWeight > 0 ? (parsedIncRate * parsedWeight) : parsedIncRate
-  const totalPayableBill = billType === 'FREIGHT' ? (parsedBase + totalIncentiveAmount) : parsedBase
+  const finalPrice = billType === 'FREIGHT' ? (parsedBase + totalIncentiveAmount) : parsedBase
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -141,7 +141,7 @@ export default function BillForm({ projects }: Props) {
                 color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
               }}
             >
-              🚚 Freight Bill (Weight × [Base Rate + Incentive Rate])
+              🚚 Freight Bill (Weight × [Base + Incentive])
             </button>
             <button
               type="button"
@@ -201,9 +201,9 @@ export default function BillForm({ projects }: Props) {
             </div>
           )}
 
-          {/* Weight, Base Rate, Incentive Rate & Base Amount Inputs */}
+          {/* Rate & Weight Inputs */}
           {billType === 'FREIGHT' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1.2fr', gap: 16, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1.3fr', gap: 16, marginBottom: 16 }}>
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT) *</label>
                 <input
@@ -211,7 +211,7 @@ export default function BillForm({ projects }: Props) {
                   className="form-input"
                   placeholder="e.g. 100"
                   value={totalWeight}
-                  onChange={e => { setTotalWeight(e.target.value); setManualBaseOverride(false) }}
+                  onChange={e => setTotalWeight(e.target.value)}
                   min="0"
                   step="0.01"
                   style={{ fontSize: 14, fontWeight: 700 }}
@@ -219,13 +219,13 @@ export default function BillForm({ projects }: Props) {
               </div>
 
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Base Rate (₹/MT)</label>
+                <label className="form-label" style={{ fontSize: 11 }}>Base Rate (₹/MT) *</label>
                 <input
                   type="number"
                   className="form-input"
                   placeholder="e.g. 20"
                   value={baseRate}
-                  onChange={e => { setBaseRate(e.target.value); setManualBaseOverride(false) }}
+                  onChange={e => setBaseRate(e.target.value)}
                   min="0"
                   step="0.1"
                   style={{ fontSize: 14, fontWeight: 700 }}
@@ -247,13 +247,18 @@ export default function BillForm({ projects }: Props) {
               </div>
 
               <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Base Bill Amount (₹) *</label>
+                <label className="form-label" style={{ fontSize: 11 }}>Base Freight Amount (₹)</label>
                 <input
                   type="number"
                   className="form-input"
-                  placeholder="0"
+                  placeholder="Auto-calculated"
                   value={billAmount}
-                  onChange={e => { setBillAmount(e.target.value); setManualBaseOverride(true) }}
+                  onChange={e => {
+                    setBillAmount(e.target.value)
+                    const val = parseFloat(e.target.value) || 0
+                    const w = parseFloat(totalWeight) || 0
+                    if (w > 0) setBaseRate(String(Math.round((val / w) * 100) / 100))
+                  }}
                   required
                   min="1"
                   style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}
@@ -278,27 +283,39 @@ export default function BillForm({ projects }: Props) {
             </div>
           )}
 
-          {/* Formula calculation preview box */}
-          {billType === 'FREIGHT' && (parsedWeight > 0 || parsedBase > 0) && (
-            <div style={{ margin: '0 0 16px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, fontSize: 12 }}>
-              <div style={{ color: '#10b981', fontWeight: 800, marginBottom: 4 }}>
-                ⚡ Auto-Calculated Total Bill Formula:
+          {/* Auto-Calculated Final Price Box */}
+          <div style={{
+            margin: '0 0 16px', padding: '14px 18px',
+            background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(139,92,246,0.08))',
+            border: '1px solid rgba(16,185,129,0.25)',
+            borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12
+          }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                ⚡ Auto-Calculated Final Billed Price
               </div>
-              <div style={{ color: '#e2e8f0', lineHeight: 1.5 }}>
-                {parsedWeight > 0 && (parsedBaseRate > 0 || parsedIncRate > 0) ? (
+              <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>
+                {billType === 'FREIGHT' && parsedWeight > 0 ? (
                   <span>
-                    <strong>{parsedWeight} MT</strong> × (Base <strong>₹{parsedBaseRate.toFixed(2)}</strong> {parsedIncRate > 0 ? `+ Incentive ₹${parsedIncRate}` : ''})
-                    = <strong>{parsedWeight} MT</strong> × <strong>₹{(parsedBaseRate + parsedIncRate).toFixed(2)}/MT</strong>
+                    {parsedWeight} MT × (Base ₹{parsedBaseRate.toFixed(2)} {parsedIncRate > 0 ? `+ Incentive ₹${parsedIncRate}` : ''})
+                    = <strong>{parsedWeight} MT × ₹{(parsedBaseRate + parsedIncRate).toFixed(2)}/MT</strong>
                   </span>
                 ) : (
-                  <span>Base Bill: <strong>₹{Math.round(parsedBase).toLocaleString('en-IN')}</strong></span>
+                  <span>Total Payable Invoice Price</span>
                 )}
-                <span style={{ marginLeft: 10, color: '#10b981', fontWeight: 900, fontSize: 13 }}>
-                  ➔ Total Payable: ₹{Math.round(totalPayableBill).toLocaleString('en-IN')}
-                </span>
               </div>
             </div>
-          )}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981' }}>
+                ₹{Math.round(finalPrice).toLocaleString('en-IN')}
+              </div>
+              {parsedIncRate > 0 && parsedWeight > 0 && (
+                <div style={{ fontSize: 10, color: '#64748b' }}>
+                  Base: ₹{Math.round(parsedBase).toLocaleString('en-IN')} + Inc: ₹{Math.round(totalIncentiveAmount).toLocaleString('en-IN')}
+                </div>
+              )}
+            </div>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
             {billType === 'FREIGHT' && (
@@ -329,7 +346,7 @@ export default function BillForm({ projects }: Props) {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={isPending || !billNo || !billAmount} style={{ padding: '10px 24px' }}>
-              {isPending ? '⏳ Saving...' : '📄 Record Bill'}
+              {isPending ? '⏳ Saving...' : `📄 Record Bill (${fmt(finalPrice)})`}
             </button>
           </div>
         </form>
@@ -337,3 +354,4 @@ export default function BillForm({ projects }: Props) {
     </div>
   )
 }
+const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
