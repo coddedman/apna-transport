@@ -187,39 +187,63 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         
         {/* STREAMLINED CSV EXPORT BUTTON */}
         <ExportCSVButton
-          data={filteredBills.map(b => {
-            const incRate = b.incentive || 0
-            const weight = b.totalWeight || 0
-            const baseRate = weight > 0 ? Math.round((b.billAmount / weight) * 100) / 100 : 0
-            const incTotal = weight > 0 ? (incRate * weight) : incRate
-            const totalPayable = Math.round(b.billAmount + incTotal)
-            const rcvAmount = Math.round(b.receivedAmount)
-            const remAmount = Math.round(totalPayable - rcvAmount)
+          data={(() => {
+            // Build overall payment log string (actual lump-sum receipts)
+            const overallPaymentLog = filteredOverallPayments.length > 0
+              ? filteredOverallPayments.map(p =>
+                  `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}`
+                ).join(' ; ')
+              : '—'
 
-            // Payment received log — just date and amount
-            let paymentLog = '—'
-            if (b.payments && b.payments.length > 0) {
-              paymentLog = b.payments.map(p =>
-                `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}`
-              ).join(' ; ')
-            }
+            // Bill rows
+            const rows = filteredBills.map(b => {
+              const incRate = b.incentive || 0
+              const weight = b.totalWeight || 0
+              const baseRate = weight > 0 ? Math.round((b.billAmount / weight) * 100) / 100 : 0
+              const incTotal = weight > 0 ? (incRate * weight) : incRate
+              const totalPayable = Math.round(b.billAmount + incTotal)
 
-            return {
-              billNo: b.billNo,
-              project: b.project.projectName,
-              billType: b.billType === 'TOLL' ? 'Toll' : 'Freight',
-              weight: b.billType === 'TOLL' ? '—' : (weight > 0 ? weight.toFixed(2) : '—'),
-              baseRate: b.billType === 'TOLL' ? '—' : (baseRate > 0 ? `₹${baseRate}` : '—'),
-              incentiveRate: b.billType === 'TOLL' ? '—' : (incRate > 0 ? `₹${incRate}` : '—'),
-              baseAmount: Math.round(b.billAmount),
-              incentiveAmount: Math.round(incTotal),
-              totalBill: totalPayable,
-              paymentLog,
-              totalReceived: rcvAmount,
-              pending: remAmount,
-              status: b.status,
-            }
-          })}
+              return {
+                billNo: b.billNo,
+                project: b.project.projectName,
+                billType: b.billType === 'TOLL' ? 'Toll' : 'Freight',
+                weight: b.billType === 'TOLL' ? '—' : (weight > 0 ? weight.toFixed(2) : '—'),
+                baseRate: b.billType === 'TOLL' ? '—' : (baseRate > 0 ? `₹${baseRate}` : '—'),
+                incentiveRate: b.billType === 'TOLL' ? '—' : (incRate > 0 ? `₹${incRate}` : '—'),
+                baseAmount: Math.round(b.billAmount),
+                incentiveAmount: Math.round(incTotal),
+                totalBill: totalPayable,
+                paymentReceived: '',
+                totalReceived: '',
+                pending: '',
+                status: b.status,
+              }
+            })
+
+            // Calculate totals
+            const totalBillSum = rows.reduce((s, r) => s + (typeof r.totalBill === 'number' ? r.totalBill : 0), 0)
+            const totalPendingSum = totalBillSum - Math.round(totalOverallPaymentsSum)
+
+            // Add a blank separator row, then overall payment rows
+            rows.push({
+              billNo: '', project: '', billType: '', weight: '', baseRate: '', incentiveRate: '',
+              baseAmount: '' as any, incentiveAmount: '' as any, totalBill: '' as any,
+              paymentReceived: '', totalReceived: '', pending: '', status: '' as any,
+            })
+
+            // Summary row
+            rows.push({
+              billNo: '--- SUMMARY ---', project: '', billType: '', weight: '', baseRate: '', incentiveRate: '',
+              baseAmount: '' as any, incentiveAmount: '' as any,
+              totalBill: totalBillSum as any,
+              paymentReceived: overallPaymentLog,
+              totalReceived: Math.round(totalOverallPaymentsSum) as any,
+              pending: totalPendingSum as any,
+              status: '' as any,
+            })
+
+            return rows
+          })()}
           filename="receivables_report"
           columns={[
             { key: 'billNo', label: 'Bill No' },
@@ -231,7 +255,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             { key: 'baseAmount', label: 'Base Amount (₹)' },
             { key: 'incentiveAmount', label: 'Incentive Amount (₹)' },
             { key: 'totalBill', label: 'Total Bill (₹)' },
-            { key: 'paymentLog', label: 'Payment Received (Date & Amount)' },
+            { key: 'paymentReceived', label: 'Payment Received (Date & Amount)' },
             { key: 'totalReceived', label: 'Total Received (₹)' },
             { key: 'pending', label: 'Pending (₹)' },
             { key: 'status', label: 'Status' },
