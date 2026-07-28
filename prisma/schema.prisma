@@ -349,6 +349,7 @@ model PartyBill {
   totalTrips      Int         @default(0)
   totalWeight     Float       @default(0)
   billAmount      Float       // Total amount billed to company
+  incentive       Float       @default(0) // Extra incentive/bonus on bill
   receivedAmount  Float       @default(0) // Auto-calculated from payments
   status          BillStatus  @default(PENDING)
   submittedAt     DateTime?   // When bill was submitted to company

@@ -19,6 +19,7 @@ export default function BillForm({ projects }: Props) {
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
   const [billAmount, setBillAmount] = useState('')
+  const [incentive, setIncentive] = useState('')
   const [totalTrips, setTotalTrips] = useState('')
   const [totalWeight, setTotalWeight] = useState('')
   const [submittedAt, setSubmittedAt] = useState(new Date().toISOString().split('T')[0])
@@ -27,7 +28,7 @@ export default function BillForm({ projects }: Props) {
 
   function resetForm() {
     setBillNo(''); setProjectId(''); setPeriodStart(''); setPeriodEnd('')
-    setBillAmount(''); setTotalTrips(''); setTotalWeight('')
+    setBillAmount(''); setIncentive(''); setTotalTrips(''); setTotalWeight('')
     setSubmittedAt(new Date().toISOString().split('T')[0]); setDueDate(''); setRemarks('')
   }
 
@@ -59,9 +60,10 @@ export default function BillForm({ projects }: Props) {
           projectId,
           periodStart,
           periodEnd,
-          totalTrips: totalTrips ? parseInt(totalTrips) : undefined,
-          totalWeight: totalWeight ? parseFloat(totalWeight) : undefined,
           billAmount: parseFloat(billAmount),
+          incentive: parseFloat(incentive) || 0,
+          totalTrips: parseInt(totalTrips) || 0,
+          totalWeight: parseFloat(totalWeight) || 0,
           submittedAt: submittedAt || undefined,
           dueDate: dueDate || undefined,
           remarks: remarks || undefined,
@@ -129,10 +131,15 @@ export default function BillForm({ projects }: Props) {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
             <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Bill Amount (₹) *</label>
-              <input type="number" className="form-input" placeholder="0" value={billAmount} onChange={e => setBillAmount(e.target.value)} required min="1" style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b' }} />
+              <label className="form-label" style={{ fontSize: 11 }}>Base Bill Amount (₹) *</label>
+              <input type="number" className="form-input" placeholder="0" value={billAmount} onChange={e => setBillAmount(e.target.value)} required min="1" style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }} />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
+              <input type="number" className="form-input" placeholder="0" value={incentive} onChange={e => setIncentive(e.target.value)} min="0" style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }} />
             </div>
 
             <div className="form-group">

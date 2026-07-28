@@ -14,6 +14,7 @@ interface Bill {
   totalTrips: number
   totalWeight: number
   billAmount: number
+  incentive?: number
   receivedAmount: number
   status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE'
   submittedAt: Date | string | null
@@ -39,6 +40,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   const [periodStart, setPeriodStart] = useState(toInputDate(bill.periodStart))
   const [periodEnd, setPeriodEnd] = useState(toInputDate(bill.periodEnd))
   const [billAmount, setBillAmount] = useState(bill.billAmount.toString())
+  const [incentive, setIncentive] = useState((bill.incentive || 0).toString())
   const [totalTrips, setTotalTrips] = useState(bill.totalTrips.toString())
   const [totalWeight, setTotalWeight] = useState(bill.totalWeight.toString())
   const [submittedAt, setSubmittedAt] = useState(toInputDate(bill.submittedAt))
@@ -80,6 +82,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           totalTrips: totalTrips ? parseInt(totalTrips) : undefined,
           totalWeight: totalWeight ? parseFloat(totalWeight) : undefined,
           billAmount: parseFloat(billAmount),
+          incentive: parseFloat(incentive) || 0,
           submittedAt: submittedAt || null,
           dueDate: dueDate || null,
           remarks: remarks || null,
@@ -148,9 +151,9 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
           <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11 }}>Bill Amount (₹) *</label>
+            <label className="form-label" style={{ fontSize: 11 }}>Base Bill Amount (₹) *</label>
             <input
               type="number"
               className="form-input"
@@ -158,7 +161,19 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               onChange={e => setBillAmount(e.target.value)}
               required
               min="1"
-              style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b' }}
+              style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11 }}>Incentive (₹)</label>
+            <input
+              type="number"
+              className="form-input"
+              value={incentive}
+              onChange={e => setIncentive(e.target.value)}
+              min="0"
+              style={{ fontSize: 15, fontWeight: 800, color: '#10b981' }}
             />
           </div>
 

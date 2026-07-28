@@ -24,6 +24,7 @@ export async function createPartyBill(data: {
   totalTrips?: number
   totalWeight?: number
   billAmount: number
+  incentive?: number
   submittedAt?: string
   dueDate?: string
   remarks?: string
@@ -49,6 +50,7 @@ export async function createPartyBill(data: {
       totalTrips: data.totalTrips || 0,
       totalWeight: data.totalWeight || 0,
       billAmount: data.billAmount,
+      incentive: data.incentive || 0,
       submittedAt: data.submittedAt ? new Date(data.submittedAt) : null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       remarks: data.remarks || null,
@@ -299,15 +301,19 @@ export async function getReceivableSummary() {
 
   const bills = await prisma.partyBill.findMany({
     where: { transporterId: tid },
-    select: { billAmount: true, receivedAmount: true, status: true },
+    select: { billAmount: true, incentive: true, receivedAmount: true, status: true },
   })
 
-  const totalBilled = bills.reduce((s, b) => s + b.billAmount, 0)
+  const totalBaseBilled = bills.reduce((s, b) => s + b.billAmount, 0)
+  const totalIncentives = bills.reduce((s, b) => s + (b.incentive || 0), 0)
+  const totalBilled = totalBaseBilled + totalIncentives
   const totalReceived = bills.reduce((s, b) => s + b.receivedAmount, 0)
   const totalPending = totalBilled - totalReceived
 
   return {
     totalBilled,
+    totalBaseBilled,
+    totalIncentives,
     totalReceived,
     totalPending,
     totalBills: bills.length,
@@ -330,10 +336,11 @@ export async function getProjectWisePending() {
 
   for (const b of bills) {
     const pid = b.projectId
+    const totalBillPayable = b.billAmount + (b.incentive || 0)
     const existing = projectMap.get(pid) || { projectName: b.project.projectName, billed: 0, received: 0, pending: 0, count: 0 }
-    existing.billed += b.billAmount
+    existing.billed += totalBillPayable
     existing.received += b.receivedAmount
-    existing.pending += (b.billAmount - b.receivedAmount)
+    existing.pending += (totalBillPayable - b.receivedAmount)
     existing.count += 1
     projectMap.set(pid, existing)
   }
@@ -359,6 +366,7 @@ export async function updatePartyBill(billId: string, data: {
   totalTrips?: number
   totalWeight?: number
   billAmount?: number
+  incentive?: number
   submittedAt?: string | null
   dueDate?: string | null
   remarks?: string | null
@@ -382,16 +390,21 @@ export async function updatePartyBill(billId: string, data: {
   if (data.periodEnd !== undefined) updateData.periodEnd = new Date(data.periodEnd)
   if (data.totalTrips !== undefined) updateData.totalTrips = data.totalTrips
   if (data.totalWeight !== undefined) updateData.totalWeight = data.totalWeight
-  if (data.billAmount !== undefined) {
-    updateData.billAmount = data.billAmount
-    // Recalculate status based on new amount
+  if (data.incentive !== undefined) updateData.incentive = data.incentive
+  if (data.billAmount !== undefined || data.incentive !== undefined) {
+    if (data.billAmount !== undefined) updateData.billAmount = data.billAmount
+    const finalBillAmount = data.billAmount ?? bill.billAmount
+    const finalIncentive = data.incentive ?? bill.incentive
+    const totalPayable = finalBillAmount + finalIncentive
+
+    // Recalculate status based on new total amount
     const payments = await prisma.billPayment.findMany({
       where: { billId },
       select: { amount: true },
     })
     const totalReceived = payments.reduce((s, p) => s + p.amount, 0)
     let status: BillStatus = 'PENDING'
-    if (totalReceived >= data.billAmount) status = 'PAID'
+    if (totalReceived >= totalPayable) status = 'PAID'
     else if (totalReceived > 0) status = 'PARTIAL'
     else if (data.dueDate !== undefined ? (data.dueDate && new Date() > new Date(data.dueDate)) : (bill.dueDate && new Date() > bill.dueDate)) status = 'OVERDUE'
     updateData.status = status

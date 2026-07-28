@@ -39,6 +39,7 @@ interface Bill {
   totalTrips: number
   totalWeight: number
   billAmount: number
+  incentive?: number
   receivedAmount: number
   status: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE'
   submittedAt: Date | string | null
@@ -50,6 +51,8 @@ interface Bill {
 
 interface Summary {
   totalBilled: number
+  totalBaseBilled?: number
+  totalIncentives?: number
   totalReceived: number
   totalPending: number
   totalBills: number
@@ -117,6 +120,11 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
 
   const totalOverallPaymentsSum = filteredOverallPayments.reduce((s, p) => s + p.amount, 0)
 
+  // Overall lump-sum payments reference summary string
+  const overallPaymentsSummaryStr = overallPayments.length > 0
+    ? overallPayments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}${p.description ? ` (${p.description})` : ''}`).join(' ; ')
+    : 'None'
+
   function handleDelete(billId: string) {
     if (!confirm('Delete this bill and all its payments? This cannot be undone.')) return
     setDeletingId(billId)
@@ -136,9 +144,17 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
       {/* ═══ SUMMARY CARDS ═══ */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total Billed', value: fmt(summary.totalBilled), color: '#f59e0b', sub: `${summary.totalBills} bills`, icon: '📄' },
-          { label: 'Total Received', value: fmt(summary.totalReceived), color: '#10b981', sub: `${summary.paidBills} fully paid`, icon: '✅' },
-          { label: 'Remaining to Ask (Receivable)', value: fmt(summary.totalPending), color: '#22d3ee', sub: summary.totalPending > 0 ? 'Amount to collect from party' : 'Fully collected', icon: '⏳' },
+          {
+            label: 'Total Billed (Base + Incentive)',
+            value: fmt(summary.totalBilled),
+            color: '#f59e0b',
+            sub: summary.totalIncentives && summary.totalIncentives > 0
+              ? `Base: ${fmt(summary.totalBaseBilled || 0)} + Incentive: ${fmt(summary.totalIncentives)}`
+              : `${summary.totalBills} bills`,
+            icon: '📄'
+          },
+          { label: 'Total Received (Lump-Sum Receipts)', value: fmt(summary.totalReceived), color: '#10b981', sub: `${summary.paidBills} fully settled`, icon: '✅' },
+          { label: 'Remaining Receivable (To Collect)', value: fmt(summary.totalPending), color: '#22d3ee', sub: summary.totalPending > 0 ? 'Net remaining amount to collect' : 'Fully collected', icon: '⏳' },
           { label: 'Overdue Bills', value: summary.overdueBills > 0 ? String(summary.overdueBills) : '0', color: summary.overdueBills > 0 ? '#ef4444' : '#64748b', sub: summary.overdueBills > 0 ? 'needs attention' : 'all clear', icon: summary.overdueBills > 0 ? '🔴' : '🟢' },
         ].map(c => (
           <div key={c.label} style={{
@@ -159,7 +175,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         ))}
       </div>
 
-      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & EXPORTS ═══ */}
+      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & UNIFIED SINGLE EXPORT ═══ */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24, alignItems: 'center' }}>
         <OverallPaymentForm
           projects={projects}
@@ -168,27 +184,40 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         />
         <BillForm projects={projects} />
         
-        {/* Export Bills CSV */}
+        {/* SINGLE UNIFIED CSV EXPORT BUTTON */}
         <ExportCSVButton
-          data={filteredBills.map(b => ({
-            billNo: b.billNo,
-            project: b.project.projectName,
-            periodStart: new Date(b.periodStart).toLocaleDateString('en-IN'),
-            periodEnd: new Date(b.periodEnd).toLocaleDateString('en-IN'),
-            trips: b.totalTrips,
-            weight: b.totalWeight.toFixed(2),
-            billAmount: Math.round(b.billAmount),
-            receivedAmount: Math.round(b.receivedAmount),
-            pendingAmount: Math.round(b.billAmount - b.receivedAmount),
-            status: b.status,
-            paymentDetails: b.payments && b.payments.length > 0
+          data={filteredBills.map(b => {
+            const baseAmount = Math.round(b.billAmount)
+            const incAmount = Math.round(b.incentive || 0)
+            const totalPayable = baseAmount + incAmount
+            const rcvAmount = Math.round(b.receivedAmount)
+            const remAmount = Math.round(totalPayable - rcvAmount)
+
+            const billSpecificPayments = b.payments && b.payments.length > 0
               ? b.payments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount)}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}${p.remarks ? ` (${p.remarks})` : ''}`).join(' ; ')
-              : 'None',
-            dueDate: b.dueDate ? new Date(b.dueDate).toLocaleDateString('en-IN') : '—',
-            submittedAt: b.submittedAt ? new Date(b.submittedAt).toLocaleDateString('en-IN') : '—',
-            remarks: b.remarks || '',
-          }))}
-          filename="bills_report"
+              : '—'
+
+            return {
+              billNo: b.billNo,
+              project: b.project.projectName,
+              periodStart: new Date(b.periodStart).toLocaleDateString('en-IN'),
+              periodEnd: new Date(b.periodEnd).toLocaleDateString('en-IN'),
+              trips: b.totalTrips,
+              weight: b.totalWeight.toFixed(2),
+              baseBillAmount: baseAmount,
+              incentive: incAmount,
+              totalBilledAmount: totalPayable,
+              receivedAmount: rcvAmount,
+              remainingReceivableAmount: remAmount,
+              status: b.status,
+              billPaymentsDetails: billSpecificPayments,
+              overallLumpSumReceipts: overallPaymentsSummaryStr,
+              dueDate: b.dueDate ? new Date(b.dueDate).toLocaleDateString('en-IN') : '—',
+              submittedAt: b.submittedAt ? new Date(b.submittedAt).toLocaleDateString('en-IN') : '—',
+              remarks: b.remarks || '',
+            }
+          })}
+          filename="receivables_statement_report"
           columns={[
             { key: 'billNo', label: 'Bill / Invoice No' },
             { key: 'project', label: 'Project' },
@@ -196,35 +225,17 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             { key: 'periodEnd', label: 'Period End' },
             { key: 'trips', label: 'Trips' },
             { key: 'weight', label: 'Weight (MT)' },
-            { key: 'billAmount', label: 'Bill Amount (₹)' },
-            { key: 'receivedAmount', label: 'Received Amount (₹)' },
-            { key: 'pendingAmount', label: 'Pending Amount (₹)' },
+            { key: 'baseBillAmount', label: 'Base Bill Amount (₹)' },
+            { key: 'incentive', label: 'Incentive (₹)' },
+            { key: 'totalBilledAmount', label: 'Total Billed Amount (₹)' },
+            { key: 'receivedAmount', label: 'Total Received (₹)' },
+            { key: 'remainingReceivableAmount', label: 'Remaining Receivable to Collect (₹)' },
             { key: 'status', label: 'Status' },
-            { key: 'paymentDetails', label: 'Received Payment Details / References' },
+            { key: 'billPaymentsDetails', label: 'Bill Specific Payments' },
+            { key: 'overallLumpSumReceipts', label: 'All Overall Lump-Sum Receipts (4L/7L/2L)' },
             { key: 'dueDate', label: 'Due Date' },
             { key: 'submittedAt', label: 'Submitted On' },
             { key: 'remarks', label: 'Remarks' },
-          ]}
-        />
-
-        {/* Export Lump-Sum Received Payments CSV */}
-        <ExportCSVButton
-          data={filteredOverallPayments.map(p => ({
-            date: new Date(p.date).toLocaleDateString('en-IN'),
-            amountFormatted: `₹${Math.round(p.amount).toLocaleString('en-IN')}`,
-            amount: Math.round(p.amount),
-            project: p.project?.projectName || 'All Projects / Party',
-            referenceNo: p.referenceNo || '—',
-            description: p.description || 'Overall Party Payment Received',
-          }))}
-          filename="overall_received_payments_report"
-          columns={[
-            { key: 'date', label: 'Payment Date' },
-            { key: 'amountFormatted', label: 'Lump-Sum Received Amount' },
-            { key: 'amount', label: 'Amount (₹)' },
-            { key: 'project', label: 'Project' },
-            { key: 'referenceNo', label: 'Reference / UTR No' },
-            { key: 'description', label: 'Description / Remarks' },
           ]}
         />
       </div>
@@ -285,7 +296,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             cursor: 'pointer',
           }}
         >
-          💳 {showOverallPayments ? 'Hide Overall Payments Log' : `View Lump-Sum Receipts (${overallPayments.length})`}
+          💳 {showOverallPayments ? 'Hide Overall Receipts' : `View Lump-Sum Receipts (${overallPayments.length})`}
         </button>
 
         <span style={{ fontSize: 11, color: '#64748b' }}>
@@ -293,7 +304,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         </span>
       </div>
 
-      {/* ═══ OVERALL LUMP-SUM PAYMENTS LOG CARD (WHEN TOGGLED OR ALWAYS VISIBLE) ═══ */}
+      {/* ═══ OVERALL LUMP-SUM PAYMENTS LOG CARD (TOGGLEABLE) ═══ */}
       {showOverallPayments && (
         <div style={card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -362,7 +373,9 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             {filteredBills.map(bill => {
               const sc = statusConfig[bill.status] || statusConfig.PENDING
               const isExpanded = expandedBill === bill.id
-              const pendingAmt = bill.billAmount - bill.receivedAmount
+              const inc = bill.incentive || 0
+              const totalPayable = bill.billAmount + inc
+              const pendingAmt = totalPayable - bill.receivedAmount
 
               return (
                 <div key={bill.id} style={{
@@ -395,6 +408,14 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                         }}>
                           {sc.emoji} {sc.label}
                         </span>
+                        {inc > 0 && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+                            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#10b981',
+                          }}>
+                            +{fmt(inc)} Incentive
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
                         {bill.project.projectName} · {fmtShort(bill.periodStart)}–{fmtShort(bill.periodEnd)}
@@ -414,8 +435,10 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
 
                     {/* Bill Amount */}
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#f59e0b' }}>{fmt(bill.billAmount)}</div>
-                      <div style={{ fontSize: 10, color: '#64748b' }}>Billed</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#f59e0b' }}>{fmt(totalPayable)}</div>
+                      <div style={{ fontSize: 10, color: '#64748b' }}>
+                        {inc > 0 ? `Base ${fmt(bill.billAmount)}` : 'Billed'}
+                      </div>
                     </div>
 
                     {/* Received */}
@@ -437,7 +460,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                       <div style={{ fontSize: 13, fontWeight: 700, color: pendingAmt > 0 ? '#f97316' : '#10b981' }}>
                         {fmt(pendingAmt)}
                       </div>
-                      <div style={{ fontSize: 10, color: '#64748b' }}>Pending</div>
+                      <div style={{ fontSize: 10, color: '#64748b' }}>Remaining</div>
                     </div>
 
                     {/* Due Date */}
@@ -485,6 +508,11 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                     <div style={{ padding: '16px 20px' }}>
                       {/* Bill Details */}
                       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                        {inc > 0 && (
+                          <div style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>
+                            Base Billed: {fmt(bill.billAmount)} + Incentive: {fmt(inc)} = Total: {fmt(totalPayable)}
+                          </div>
+                        )}
                         {bill.submittedAt && (
                           <div style={{ fontSize: 11, color: '#64748b' }}>
                             Submitted: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{fmtDate(bill.submittedAt)}</span>
@@ -506,7 +534,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                       <PaymentForm
                         billId={bill.id}
                         payments={bill.payments}
-                        billAmount={bill.billAmount}
+                        billAmount={totalPayable}
                         receivedAmount={bill.receivedAmount}
                       />
                     </div>
