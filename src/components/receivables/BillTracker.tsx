@@ -195,12 +195,12 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             const rcvAmount = Math.round(b.receivedAmount)
             const remAmount = Math.round(totalPayable - rcvAmount)
 
-            // When and how much received summary
+            // When and how much received summary (only exact payments logged and dates)
             let receivedDetails = 'None'
             if (b.payments && b.payments.length > 0) {
               receivedDetails = b.payments.map(p => `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}${p.referenceNo ? ` [Ref: ${p.referenceNo}]` : ''}`).join(' ; ')
-            } else if (overallPaymentsSummaryStr !== 'None') {
-              receivedDetails = `Overall Receipts: ${overallPaymentsSummaryStr}`
+            } else if (b.receivedAmount > 0) {
+              receivedDetails = `₹${Math.round(b.receivedAmount).toLocaleString('en-IN')}`
             }
 
             const periodStr = `${new Date(b.periodStart).toLocaleDateString('en-IN')} – ${new Date(b.periodEnd).toLocaleDateString('en-IN')}`
