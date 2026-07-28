@@ -106,7 +106,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
   const [filterProject, setFilterProject] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [showOverallPayments, setShowOverallPayments] = useState(false)
+  const [showOverallPayments, setShowOverallPayments] = useState(true)
 
   const filteredBills = bills.filter(b => {
     if (filterProject && b.projectId !== filterProject) return false

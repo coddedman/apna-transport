@@ -12,9 +12,6 @@ async function getTransporterId() {
   return tid
 }
 
-// ========================
-// Party Bill CRUD
-// ========================
 
 export async function createPartyBill(data: {
   billNo: string
@@ -181,7 +178,10 @@ export async function addBulkPartyPayment(data: {
     if (remainingToDistribute <= 0) break
 
     const alreadyReceived = bill.payments.reduce((s, p) => s + p.amount, 0)
-    const billPending = bill.billAmount - alreadyReceived
+    const incRate = bill.incentive || 0
+    const incTotal = bill.totalWeight > 0 ? (incRate * bill.totalWeight) : incRate
+    const totalPayable = bill.billAmount + incTotal
+    const billPending = totalPayable - alreadyReceived
 
     if (billPending <= 0) continue
 
@@ -199,7 +199,7 @@ export async function addBulkPartyPayment(data: {
 
     const newTotalReceived = alreadyReceived + payForThisBill
     let newStatus: BillStatus = 'PENDING'
-    if (newTotalReceived >= bill.billAmount) {
+    if (newTotalReceived >= totalPayable) {
       newStatus = 'PAID'
     } else if (newTotalReceived > 0) {
       newStatus = 'PARTIAL'
