@@ -19,6 +19,16 @@ interface Payment {
   createdAt: Date | string
 }
 
+interface OverallPartyPayment {
+  id: string
+  date: Date | string
+  amount: number
+  description: string | null
+  referenceNo: string | null
+  project: { id: string; projectName: string } | null
+  createdAt: Date | string
+}
+
 interface Bill {
   id: string
   billNo: string
@@ -63,6 +73,7 @@ interface Props {
   summary: Summary
   projectWise: ProjectPending[]
   projects: Project[]
+  overallPayments?: OverallPartyPayment[]
 }
 
 const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
@@ -84,19 +95,27 @@ const card: React.CSSProperties = {
   marginBottom: 24,
 }
 
-export default function BillTracker({ bills, summary, projectWise, projects }: Props) {
+export default function BillTracker({ bills, summary, projectWise, projects, overallPayments = [] }: Props) {
   const [isPending, startTransition] = useTransition()
   const [expandedBill, setExpandedBill] = useState<string | null>(null)
   const [editingBill, setEditingBill] = useState<Bill | null>(null)
   const [filterProject, setFilterProject] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showOverallPayments, setShowOverallPayments] = useState(false)
 
   const filteredBills = bills.filter(b => {
     if (filterProject && b.projectId !== filterProject) return false
     if (filterStatus && b.status !== filterStatus) return false
     return true
   })
+
+  const filteredOverallPayments = overallPayments.filter(p => {
+    if (filterProject && p.project?.id !== filterProject) return false
+    return true
+  })
+
+  const totalOverallPaymentsSum = filteredOverallPayments.reduce((s, p) => s + p.amount, 0)
 
   function handleDelete(billId: string) {
     if (!confirm('Delete this bill and all its payments? This cannot be undone.')) return
@@ -140,14 +159,16 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
         ))}
       </div>
 
-      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & EXPORT ═══ */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24, alignItems: 'flex-start' }}>
+      {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & EXPORTS ═══ */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24, alignItems: 'center' }}>
         <OverallPaymentForm
           projects={projects}
           projectWise={projectWise}
           totalPending={summary.totalPending}
         />
         <BillForm projects={projects} />
+        
+        {/* Export Bills CSV */}
         <ExportCSVButton
           data={filteredBills.map(b => ({
             billNo: b.billNo,
@@ -183,6 +204,27 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
             { key: 'dueDate', label: 'Due Date' },
             { key: 'submittedAt', label: 'Submitted On' },
             { key: 'remarks', label: 'Remarks' },
+          ]}
+        />
+
+        {/* Export Lump-Sum Received Payments CSV */}
+        <ExportCSVButton
+          data={filteredOverallPayments.map(p => ({
+            date: new Date(p.date).toLocaleDateString('en-IN'),
+            amountFormatted: `₹${Math.round(p.amount).toLocaleString('en-IN')}`,
+            amount: Math.round(p.amount),
+            project: p.project?.projectName || 'All Projects / Party',
+            referenceNo: p.referenceNo || '—',
+            description: p.description || 'Overall Party Payment Received',
+          }))}
+          filename="overall_received_payments_report"
+          columns={[
+            { key: 'date', label: 'Payment Date' },
+            { key: 'amountFormatted', label: 'Lump-Sum Received Amount' },
+            { key: 'amount', label: 'Amount (₹)' },
+            { key: 'project', label: 'Project' },
+            { key: 'referenceNo', label: 'Reference / UTR No' },
+            { key: 'description', label: 'Description / Remarks' },
           ]}
         />
       </div>
@@ -228,16 +270,85 @@ export default function BillTracker({ bills, summary, projectWise, projects }: P
             </button>
           ))}
         </div>
-        <span style={{ fontSize: 11, color: '#64748b', marginLeft: 'auto' }}>
-          Showing {filteredBills.length} of {bills.length}
+
+        <button
+          onClick={() => setShowOverallPayments(!showOverallPayments)}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 14px',
+            borderRadius: 8,
+            border: '1px solid rgba(16,185,129,0.3)',
+            background: showOverallPayments ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.06)',
+            color: '#10b981',
+            fontSize: 11,
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          💳 {showOverallPayments ? 'Hide Overall Payments Log' : `View Lump-Sum Receipts (${overallPayments.length})`}
+        </button>
+
+        <span style={{ fontSize: 11, color: '#64748b' }}>
+          Showing {filteredBills.length} of {bills.length} bills
         </span>
       </div>
+
+      {/* ═══ OVERALL LUMP-SUM PAYMENTS LOG CARD (WHEN TOGGLED OR ALWAYS VISIBLE) ═══ */}
+      {showOverallPayments && (
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ background: 'rgba(16,185,129,0.1)', padding: '5px 8px', borderRadius: 8 }}>🏦</span>
+              Overall Lump-Sum Received Payments Log ({filteredOverallPayments.length})
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#10b981' }}>
+              Total Received: {fmt(totalOverallPaymentsSum)}
+            </div>
+          </div>
+
+          {filteredOverallPayments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 24, color: '#64748b', fontSize: 12 }}>
+              No overall payments recorded yet.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Date</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Project</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Amount Received</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Reference / UTR</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Description / Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOverallPayments.map(p => (
+                  <tr key={p.id}>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{fmtDate(p.date)}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#e2e8f0', fontWeight: 600 }}>{p.project?.projectName || 'All Projects'}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#10b981', fontWeight: 800, fontSize: 14, textAlign: 'right' }}>{fmt(p.amount)}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#8b5cf6', fontSize: 11 }}>{p.referenceNo || '—'}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8', fontSize: 11 }}>{p.description || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={2} style={{ padding: '10px 12px', fontWeight: 700, color: '#94a3b8' }}>Total Lump-Sum Received</td>
+                  <td style={{ padding: '10px 12px', textAlign: 'right', color: '#10b981', fontWeight: 900, fontSize: 15 }}>{fmt(totalOverallPaymentsSum)}</td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* ═══ BILL LIST ═══ */}
       <div style={card}>
         <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ background: 'rgba(139,92,246,0.1)', padding: '5px 8px', borderRadius: 8 }}>📋</span>
-          Bills ({filteredBills.length})
+          Submitted Bills ({filteredBills.length})
         </div>
 
         {filteredBills.length === 0 ? (
