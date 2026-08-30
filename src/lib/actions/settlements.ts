@@ -115,10 +115,6 @@ export async function generateSettlement(formData: FormData) {
   // Available all-time cumulative unrecovered advance balance
   const availableAdvance = Math.max(0, totalAdvancesGiven - alreadyDeductedAdvances)
 
-  // Get default project rate as a last-resort fallback
-  const defaultProject = await prisma.project.findFirst({ where: { transporterId }, orderBy: { id: 'desc' } })
-  const defaultOwnerRate = defaultProject?.ownerRate || 125
-
   let totalOwnerPayout = 0
   let totalFuel = 0
   let totalDriverAdvances = 0
@@ -128,10 +124,12 @@ export async function generateSettlement(formData: FormData) {
   let tripsCount = 0
 
   owner.vehicles.forEach((v: any) => {
-    // Use custom rate if provided; otherwise use proper rate override chain: vehicle override → owner override → vehicle's assigned project rate → default
-    const effectiveRate = customRate ?? v.ownerRateOverride ?? owner.ownerRateOverride ?? v.project?.ownerRate ?? defaultOwnerRate
+    // Use custom rate if provided; otherwise vehicle override → owner override → the rate frozen on
+    // each trip at creation time (already correct for whatever RatePeriod covered that trip's date).
+    // Falling back to the project's *current* rate here would re-rate old trips whenever the rate changes.
+    const overrideRate = customRate ?? v.ownerRateOverride ?? owner.ownerRateOverride ?? null
     tripsCount += v.trips.length
-    totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * effectiveRate), 0)
+    totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * (overrideRate ?? t.ownerRate)), 0)
 
     v.expenses.forEach((e: any) => {
       if (!deductibleTypes.includes(e.type)) return
@@ -246,6 +244,16 @@ export async function deleteSettlement(settlementId: string) {
     throw new Error('Settlement not found')
   }
 
+  // Settlements chain via "last settlement for this owner" lookups (see generateSettlement),
+  // not an explicit link — deleting one out of order silently drops its carryForward from the chain.
+  const latest = await prisma.settlement.findFirst({
+    where: { ownerId: settlement.ownerId },
+    orderBy: { periodEnd: 'desc' },
+  })
+  if (latest && latest.id !== settlementId) {
+    throw new Error('Only the most recent settlement for this owner can be deleted (older ones carry forward into later ones)')
+  }
+
   await prisma.settlement.delete({ where: { id: settlementId } })
   revalidateDashboard()
 }
@@ -274,7 +282,13 @@ export async function updateSettlement(
   const tolls = data.totalTolls ?? settlement.totalTolls
   const other = data.totalOther ?? settlement.totalOther
   const deductions = fuel + maint + tolls + other
-  const finalPayout = rev - deductions - adv
+
+  // Back out whatever carryForward is already baked into this row's finalPayout so editing
+  // line items doesn't silently erase it (finalPayout = net - advances + priorCarryForward).
+  const currentDeductions = settlement.totalFuel + settlement.totalMaint + settlement.totalTolls + settlement.totalOther
+  const priorCarryForward = settlement.finalPayout - (settlement.totalRevenue - currentDeductions - settlement.totalAdvances)
+
+  const finalPayout = rev - deductions - adv + priorCarryForward
 
   await prisma.settlement.update({
     where: { id: settlementId },

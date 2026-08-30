@@ -166,18 +166,24 @@ export async function generateBill(
     .map(v => {
       const vStartDate = getOwnerStartDate(v.ownerId)
 
-      const effectiveOwnerRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
+      // overrideRate wins when set; otherwise each trip uses its own frozen rate (already correct for
+      // whatever RatePeriod covered that trip's date) instead of the project's current rate.
+      const overrideRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? null
+      const effectiveOwnerRate = overrideRate ?? v.project?.ownerRate ?? projectOwnerRate
       const effectiveRateSource = v.ownerRateOverride != null ? 'vehicle' : (v.owner as any).ownerRateOverride != null ? 'owner' : v.project?.ownerRate != null ? 'project' : 'default'
 
       const activeTrips = v.trips.filter(t => t.date >= vStartDate)
       const activeExp = v.expenses.filter(e => e.date >= vStartDate)
 
-      const tripLines = activeTrips.map(t => ({
-        id: t.id, date: t.date.toISOString().split('T')[0],
-        invoiceNo: t.invoiceNo, lrNo: t.lrNo, weight: t.weight,
-        appliedOwnerRate: effectiveOwnerRate, ownerFreightAmount: t.ownerFreightAmount,
-        ownerPayout: t.weight * effectiveOwnerRate,
-      }))
+      const tripLines = activeTrips.map(t => {
+        const appliedOwnerRate = overrideRate ?? t.ownerRate
+        return {
+          id: t.id, date: t.date.toISOString().split('T')[0],
+          invoiceNo: t.invoiceNo, lrNo: t.lrNo, weight: t.weight,
+          appliedOwnerRate, ownerFreightAmount: t.ownerFreightAmount,
+          ownerPayout: t.weight * appliedOwnerRate,
+        }
+      })
       const grossPayout = tripLines.reduce((a, t) => a + t.ownerPayout, 0)
 
       const expByType = (type: string) => activeExp.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
@@ -374,19 +380,23 @@ export async function generateBillFromSettlement(settlementId: string): Promise<
   const vehicleBills: VehicleBillLine[] = vehicles
     .filter(v => v.trips.length > 0 || v.expenses.length > 0)
     .map(v => {
-      const effectiveOwnerRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? v.project?.ownerRate ?? projectOwnerRate
+      const overrideRate = v.ownerRateOverride ?? (v.owner as any).ownerRateOverride ?? null
+      const effectiveOwnerRate = overrideRate ?? v.project?.ownerRate ?? projectOwnerRate
       const effectiveRateSource = v.ownerRateOverride != null ? 'vehicle' as const : (v.owner as any).ownerRateOverride != null ? 'owner' as const : v.project?.ownerRate != null ? 'project' as const : 'default' as const
 
-      const tripLines = v.trips.map(t => ({
-        id: t.id,
-        date: t.date.toISOString().split('T')[0],
-        invoiceNo: t.invoiceNo,
-        lrNo: t.lrNo,
-        weight: t.weight,
-        appliedOwnerRate: effectiveOwnerRate,
-        ownerFreightAmount: t.ownerFreightAmount,
-        ownerPayout: t.weight * effectiveOwnerRate,
-      }))
+      const tripLines = v.trips.map(t => {
+        const appliedOwnerRate = overrideRate ?? t.ownerRate
+        return {
+          id: t.id,
+          date: t.date.toISOString().split('T')[0],
+          invoiceNo: t.invoiceNo,
+          lrNo: t.lrNo,
+          weight: t.weight,
+          appliedOwnerRate,
+          ownerFreightAmount: t.ownerFreightAmount,
+          ownerPayout: t.weight * appliedOwnerRate,
+        }
+      })
       const grossPayout = tripLines.reduce((a, t) => a + t.ownerPayout, 0)
 
       const expByType = (type: string) => v.expenses.filter(e => e.type === type).reduce((a, e) => a + e.amount, 0)
