@@ -11,8 +11,8 @@ export interface ProjectRateData {
   ownerRate: number
   totalTrips: number
   totalWeight: number
-  totalRevenue: number      // ownerFreightAmount (what client pays)
-  totalPayout: number       // partyFreightAmount (what we pay owner)
+  totalRevenue: number      // partyFreightAmount (what client pays)
+  totalPayout: number       // ownerFreightAmount (what we pay owner)
   actualSpread: number      // totalRevenue - totalPayout
   // Expense breakdown for this project
   expensesByType: { type: string; amount: number }[]
@@ -48,7 +48,7 @@ export async function fetchProjectRateData(projectId: string): Promise<ProjectRa
     }),
     prisma.trip.findMany({
       where: { projectId, project: { transporterId } },
-      select: { date: true, weight: true, ownerFreightAmount: true, partyFreightAmount: true },
+      select: { date: true, weight: true, partyFreightAmount: true, ownerFreightAmount: true },
       orderBy: { date: 'asc' },
       take: 5000,
     }),
@@ -63,8 +63,8 @@ export async function fetchProjectRateData(projectId: string): Promise<ProjectRa
 
   const totalTrips = trips.length
   const totalWeight = trips.reduce((a, t) => a + (t.weight || 0), 0)
-  const totalRevenue = trips.reduce((a, t) => a + (t.ownerFreightAmount || 0), 0)
-  const totalPayout = trips.reduce((a, t) => a + (t.partyFreightAmount || 0), 0)
+  const totalRevenue = trips.reduce((a, t) => a + (t.partyFreightAmount || 0), 0)
+  const totalPayout = trips.reduce((a, t) => a + (t.ownerFreightAmount || 0), 0)
 
   const expensesByType = expenses.map(e => ({
     type: e.type,
@@ -81,8 +81,8 @@ export async function fetchProjectRateData(projectId: string): Promise<ProjectRa
     if (!weekMap[k]) weekMap[k] = { trips: 0, weight: 0, revenue: 0, payout: 0, expenses: 0 }
     weekMap[k].trips += 1
     weekMap[k].weight += t.weight || 0
-    weekMap[k].revenue += t.ownerFreightAmount || 0
-    weekMap[k].payout += t.partyFreightAmount || 0
+    weekMap[k].revenue += t.partyFreightAmount || 0
+    weekMap[k].payout += t.ownerFreightAmount || 0
   })
 
   const weeklyData = Object.entries(weekMap)

@@ -19,8 +19,8 @@ export interface FortnightPnL {
   periodStart: string
   periodEnd: string
   // Revenue
-  grossRevenue: number       // trips × ownerRate (company billing)
-  ownerPayout: number        // trips × partyRate (what owners get)
+  grossRevenue: number       // trips × partyRate (company billing)
+  ownerPayout: number        // trips × ownerRate (what owners get)
   rateSpread: number         // grossRevenue - ownerPayout
   tripsCount: number
   totalWeight: number
@@ -67,14 +67,14 @@ function buildPnL(
   label: string,
   periodStart: string,
   periodEnd: string,
-  trips: { ownerFreightAmount: number; partyFreightAmount: number; weight: number }[],
+  trips: { partyFreightAmount: number; ownerFreightAmount: number; weight: number }[],
   vehicleExpenses: { type: string; amount: number }[],
   companyExpenses: { type: string; amount: number }[],
   ownerAdvances: { amount: number }[],
   transactions: { type: string; amount: number; status: string }[],
 ): FortnightPnL {
-  const grossRevenue = trips.reduce((s, t) => s + t.ownerFreightAmount, 0)
-  const ownerPayout = trips.reduce((s, t) => s + t.partyFreightAmount, 0)
+  const grossRevenue = trips.reduce((s, t) => s + t.partyFreightAmount, 0)
+  const ownerPayout = trips.reduce((s, t) => s + t.ownerFreightAmount, 0)
   const rateSpread = grossRevenue - ownerPayout
   const totalWeight = trips.reduce((s, t) => s + t.weight, 0)
 
@@ -169,7 +169,7 @@ export async function generateFortnightlyPnL(year: number, month: number): Promi
   const [trips, vehicleExpenses, companyExpenses, ownerAdvances, transactions] = await Promise.all([
     prisma.trip.findMany({
       where: { project: { transporterId: tid }, date: { gte: monthStart, lte: monthEnd } },
-      select: { date: true, ownerFreightAmount: true, partyFreightAmount: true, weight: true },
+      select: { date: true, partyFreightAmount: true, ownerFreightAmount: true, weight: true },
     }),
     prisma.expense.findMany({
       where: { vehicle: { owner: { transporterId: tid } }, date: { gte: monthStart, lte: monthEnd } },

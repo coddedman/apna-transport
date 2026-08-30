@@ -15,8 +15,8 @@ export interface AnalyticsFilters {
 export interface AnalyticsData {
   // KPI Cards
   totalTrips: number
-  totalRevenue: number       // ownerFreightAmount — what company pays transporter
-  ownerPayout: number        // partyFreightAmount — what transporter pays vehicle owner
+  totalRevenue: number       // partyFreightAmount — what the client pays the company
+  ownerPayout: number        // ownerFreightAmount — what the company pays the vehicle owner
   totalExpenses: number      // running expenses + advances
   totalAdvances: number
   netProfit: number
@@ -230,7 +230,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   ] = await Promise.all([
     // Aggregates
     prisma.trip.aggregate({
-      _sum: { weight: true, partyFreightAmount: true, ownerFreightAmount: true },
+      _sum: { weight: true, ownerFreightAmount: true, partyFreightAmount: true },
       where: tripWhere,
     }),
     prisma.trip.count({ where: tripWhere }),
@@ -289,7 +289,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     // Revenue by Project
     prisma.trip.groupBy({
       by: ['projectId'],
-      _sum: { ownerFreightAmount: true, weight: true, partyFreightAmount: true },
+      _sum: { partyFreightAmount: true, weight: true, ownerFreightAmount: true },
       _count: { id: true },
       where: tripWhere,
     }),
@@ -297,7 +297,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     // Revenue by Vehicle
     prisma.trip.groupBy({
       by: ['vehicleId'],
-      _sum: { ownerFreightAmount: true, partyFreightAmount: true, weight: true },
+      _sum: { partyFreightAmount: true, ownerFreightAmount: true, weight: true },
       _count: { id: true },
       where: tripWhere,
     }),
@@ -315,8 +315,8 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       where: tripWhere,
       select: {
         date: true,
-        ownerFreightAmount: true,
         partyFreightAmount: true,
+        ownerFreightAmount: true,
         weight: true,
         vehicle: { select: { plateNo: true, ownerId: true, owner: { select: { ownerName: true } } } },
       },
@@ -371,8 +371,8 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   ])
 
   // === Calculate KPIs ===
-  const totalRevenue = tripsAggr._sum.ownerFreightAmount || 0
-  const vehiclePayoutCost = tripsAggr._sum.partyFreightAmount || 0
+  const totalRevenue = tripsAggr._sum.partyFreightAmount || 0
+  const vehiclePayoutCost = tripsAggr._sum.ownerFreightAmount || 0
   const totalWeight = tripsAggr._sum.weight || 0
   const totalExpenses = (expenseAggr._sum.amount || 0)
   const totalAdvances = advanceAggr._sum.amount || 0
@@ -412,10 +412,10 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     if (tTime >= tsStart && tTime <= tsEnd) {
       const key = new Date(t.date).toISOString().split('T')[0]
       if (revenueMap.has(key)) {
-        revenueMap.set(key, (revenueMap.get(key) || 0) + (t.ownerFreightAmount || 0))
+        revenueMap.set(key, (revenueMap.get(key) || 0) + (t.partyFreightAmount || 0))
         tripsMap.set(key, (tripsMap.get(key) || 0) + 1)
         weightMap.set(key, (weightMap.get(key) || 0) + (t.weight || 0))
-        expensesMap.set(key, (expensesMap.get(key) || 0) + (t.partyFreightAmount || 0))
+        expensesMap.set(key, (expensesMap.get(key) || 0) + (t.ownerFreightAmount || 0))
       }
     }
   })
@@ -463,7 +463,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     const project = projectsList.find(proj => proj.id === p.projectId)
     return {
       name: project?.projectName || 'Deleted Project',
-      revenue: p._sum.ownerFreightAmount || 0,
+      revenue: p._sum.partyFreightAmount || 0,
       trips: p._count.id || 0,
       weight: p._sum.weight || 0,
     }
@@ -476,11 +476,11 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
     if (!oid) return
     const existing = ownerMap.get(oid)
     if (existing) {
-      existing.revenue += (t.ownerFreightAmount || 0)
-      existing.expenses += (t.partyFreightAmount || 0)
+      existing.revenue += (t.partyFreightAmount || 0)
+      existing.expenses += (t.ownerFreightAmount || 0)
       existing.trips += 1
     } else {
-      ownerMap.set(oid, { name: t.vehicle?.owner?.ownerName || 'Unknown Owner', revenue: (t.ownerFreightAmount || 0), expenses: (t.partyFreightAmount || 0), trips: 1, profit: 0 })
+      ownerMap.set(oid, { name: t.vehicle?.owner?.ownerName || 'Unknown Owner', revenue: (t.partyFreightAmount || 0), expenses: (t.ownerFreightAmount || 0), trips: 1, profit: 0 })
     }
   })
   const revenueByOwner = Array.from(ownerMap.values())
@@ -501,8 +501,8 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
   // === Revenue by Vehicle ===
   const revenueByVehicle = revenueByVehicleData.map(v => {
     const vehicle = vehiclesList.find(veh => veh.id === v.vehicleId)
-    const rev = v._sum.ownerFreightAmount || 0
-    const exp = v._sum.partyFreightAmount || 0
+    const rev = v._sum.partyFreightAmount || 0
+    const exp = v._sum.ownerFreightAmount || 0
     const vExpenses = vehicleExpenseBreakdown.filter((e: any) => e.vehicleId === v.vehicleId)
     const fuel = vExpenses.find((e: any) => e.type === 'FUEL')?.amount || 0
     const maintenance = vExpenses.find((e: any) => e.type === 'MAINTENANCE')?.amount || 0
@@ -514,7 +514,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
       plateNo: vehicle?.plateNo || 'Unknown',
       ownerName: '—',
       revenue: rev,
-      payout: exp, // partyFreightAmount
+      payout: exp, // ownerFreightAmount — what's paid to the vehicle owner
       expenses: totalRunningExp,
       trips: v._count.id || 0,
       weight: v._sum.weight || 0,
@@ -642,7 +642,7 @@ export async function fetchAnalytics(filters: AnalyticsFilters): Promise<Analyti
         vehicle: t.vehicle?.plateNo || 'Unknown',
         project: t.project?.projectName || 'Unknown',
         weight: t.weight || 0,
-        amount: t.ownerFreightAmount || 0,
+        amount: t.partyFreightAmount || 0,
       }
     }),
     recentExpenses: recentExpensesData.map(e => {
@@ -686,7 +686,7 @@ function getMonday(date: Date): string {
 }
 
 function buildWeeklyBreakdown(
-  trips: { date: Date | null; ownerFreightAmount: number | null; partyFreightAmount: number | null; weight: number | null }[],
+  trips: { date: Date | null; partyFreightAmount: number | null; ownerFreightAmount: number | null; weight: number | null }[],
   expenses: { date: Date | null; amount: number | null; type?: string }[],
   advances: { date: Date | null; amount: number | null }[]
 ) {
@@ -702,8 +702,8 @@ function buildWeeklyBreakdown(
     ensureWeek(k)
     weekMap[k].trips += 1
     weekMap[k].weight += t.weight || 0
-    weekMap[k].revenue += t.ownerFreightAmount || 0
-    weekMap[k].payout += t.partyFreightAmount || 0
+    weekMap[k].revenue += t.partyFreightAmount || 0
+    weekMap[k].payout += t.ownerFreightAmount || 0
   })
 
   expenses.forEach(e => {
@@ -727,7 +727,7 @@ function buildWeeklyBreakdown(
 }
 
 function buildOwnerPayoutByWeek(
-  trips: { date: Date | null; partyFreightAmount: number | null; vehicle: { ownerId: string; owner: { ownerName: string } | null } | null }[]
+  trips: { date: Date | null; ownerFreightAmount: number | null; vehicle: { ownerId: string; owner: { ownerName: string } | null } | null }[]
 ) {
   const weekMap: Record<string, Map<string, { ownerName: string; amount: number; trips: number }>> = {}
 
@@ -739,10 +739,10 @@ function buildOwnerPayoutByWeek(
     if (!weekMap[k]) weekMap[k] = new Map()
     const existing = weekMap[k].get(ownerId)
     if (existing) {
-      existing.amount += t.partyFreightAmount || 0
+      existing.amount += t.ownerFreightAmount || 0
       existing.trips += 1
     } else {
-      weekMap[k].set(ownerId, { ownerName, amount: t.partyFreightAmount || 0, trips: 1 })
+      weekMap[k].set(ownerId, { ownerName, amount: t.ownerFreightAmount || 0, trips: 1 })
     }
   })
 
@@ -769,15 +769,15 @@ function buildProjectRates(
       ownerRate: p.ownerRate,
       trips: tripData?._count?.id || 0,
       totalWeight: tripData?._sum?.weight || 0,
-      totalRevenue: tripData?._sum?.ownerFreightAmount || 0,
-      totalPayout: tripData?._sum?.partyFreightAmount || 0,
+      totalRevenue: tripData?._sum?.partyFreightAmount || 0,
+      totalPayout: tripData?._sum?.ownerFreightAmount || 0,
     }
   }).filter(p => p.trips > 0 || p.partyRate > 0 || p.ownerRate > 0)
     .sort((a, b) => b.trips - a.trips)
 }
 
 function buildDailyTripsByVehicle(
-  trips: { date: Date | null; weight: number | null; ownerFreightAmount: number | null; vehicle: { plateNo: string } | null }[]
+  trips: { date: Date | null; weight: number | null; partyFreightAmount: number | null; vehicle: { plateNo: string } | null }[]
 ) {
   const map: Record<string, { date: string; plateNo: string; trips: number; weight: number; revenue: number }> = {}
   trips.forEach(t => {
@@ -787,7 +787,7 @@ function buildDailyTripsByVehicle(
     if (!map[key]) map[key] = { date, plateNo: t.vehicle.plateNo, trips: 0, weight: 0, revenue: 0 }
     map[key].trips += 1
     map[key].weight += t.weight || 0
-    map[key].revenue += t.ownerFreightAmount || 0
+    map[key].revenue += t.partyFreightAmount || 0
   })
   return Object.values(map).sort((a, b) => a.date.localeCompare(b.date))
 }
