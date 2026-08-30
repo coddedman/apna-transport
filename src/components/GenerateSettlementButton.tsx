@@ -1,10 +1,12 @@
 'use client'
 
-import { generateSettlement } from '@/lib/actions/settlements'
+import { generateSettlement, previewSettlement, SettlementCalc } from '@/lib/actions/settlements'
 import { useState, useMemo } from 'react'
 import Modal from './Modal'
 import { useLoading } from '@/lib/context/LoadingContext'
 import toast from 'react-hot-toast'
+
+const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 
 interface Props {
   owners: { id: string; ownerName: string }[]
@@ -28,6 +30,8 @@ export default function GenerateSettlementButton({ owners, lastSettlementByOwner
   const [deductibleTypes, setDeductibleTypes] = useState<string[]>([
     'FUEL', 'TOLL', 'MAINTENANCE', 'DRIVER_ADVANCE', 'CASH_PAYMENT'
   ])
+  const [preview, setPreview] = useState<SettlementCalc | null>(null)
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -41,16 +45,37 @@ export default function GenerateSettlementButton({ owners, lastSettlementByOwner
 
   const hasLastSettlement = !!selectedOwnerId && !!lastSettlementByOwner[selectedOwnerId]
 
+  function closeAndReset() {
+    setIsOpen(false)
+    setPreview(null)
+    setPendingFormData(null)
+  }
+
   async function handleSubmit(formData: FormData) {
+    setLoading(true)
+    setError(null)
+    try {
+      const calc = await previewSettlement(formData)
+      setPreview(calc)
+      setPendingFormData(formData)
+    } catch (err: any) {
+      setError(err.message || 'Failed to compute preview')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleConfirm() {
+    if (!pendingFormData) return
     setLoading(true)
     setGlobalLoading(true)
     setError(null)
 
     toast.promise(
-      generateSettlement(formData),
+      generateSettlement(pendingFormData),
       {
         loading: 'Generating settlement...',
-        success: () => { setIsOpen(false); return 'Settlement generated!' },
+        success: () => { closeAndReset(); return 'Settlement generated!' },
         error: (err) => { setError(err.message || 'Failed'); return err.message || 'Failed' }
       }
     ).finally(() => { setLoading(false); setGlobalLoading(false) })
@@ -60,8 +85,8 @@ export default function GenerateSettlementButton({ owners, lastSettlementByOwner
     <>
       <button className="btn btn-primary" onClick={() => setIsOpen(true)}>+ Generate Settlement</button>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Generate Settlement">
-        <form action={handleSubmit}>
+      <Modal isOpen={isOpen} onClose={closeAndReset} title={preview ? 'Review Settlement' : 'Generate Settlement'}>
+        {!preview && <form action={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Vehicle Owner</label>
             <select
@@ -182,15 +207,70 @@ export default function GenerateSettlementButton({ owners, lastSettlementByOwner
                     <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
                     <path d="M12 2a10 10 0 0 1 10 10" />
                   </svg>
-                  Generating Settlement...
+                  Calculating...
                 </span>
               ) : (
-                'Generate Settlement'
+                'Preview Settlement'
               )}
             </button>
           </div>
-        </form>
+        </form>}
+
+        {preview && (
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>
+              {preview.ownerName} · {new Date(preview.periodStart).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} – {new Date(preview.periodEnd).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {preview.tripsCount} trips
+            </div>
+
+            {/* Per-rate breakdown — shows exactly which rate period each trip fell in */}
+            {preview.rateBreakdown.length > 0 && (
+              <div style={{ marginBottom: 14, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                {preview.rateBreakdown.map(g => (
+                  <div key={g.rate} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: 12, borderBottom: '1px solid var(--color-border)' }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>{g.trips} trips × ₹{g.rate}/MT ({g.weight.toFixed(2)} MT)</span>
+                    <span>{fmt(g.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, marginBottom: 16 }}>
+              <Row label="Gross Payout" value={fmt(preview.totalOwnerPayout)} />
+              <Row label="Fuel" value={`- ${fmt(preview.totalFuel)}`} />
+              <Row label="Toll" value={`- ${fmt(preview.totalTolls)}`} />
+              <Row label="Maintenance" value={`- ${fmt(preview.totalMaint)}`} />
+              <Row label="Driver Advance + Cash" value={`- ${fmt(preview.totalDriverAdvances + preview.totalOther)}`} />
+              <Row label="Owner Advances Recovered" value={`- ${fmt(preview.availableAdvance)}`} />
+              {preview.priorCarryForward !== 0 && (
+                <Row label="Prior Carry-Forward" value={`${preview.priorCarryForward > 0 ? '+' : ''}${fmt(preview.priorCarryForward)}`} />
+              )}
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 6, marginTop: 4 }}>
+                <Row label="Final Payout" value={fmt(preview.finalPayout)} bold />
+              </div>
+            </div>
+
+            {error && <p style={{ color: 'var(--color-danger)', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
+
+            <div className="modal-footer" style={{ padding: '0', border: 'none', display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary" disabled={loading} onClick={() => { setPreview(null); setPendingFormData(null) }}>
+                ← Edit
+              </button>
+              <button type="button" className="btn btn-primary" disabled={loading} onClick={handleConfirm}>
+                {loading ? 'Generating...' : 'Confirm & Create Settlement'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </>
+  )
+}
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: bold ? 700 : 400, fontSize: bold ? 14 : 13 }}>
+      <span style={{ color: 'var(--color-text-muted)' }}>{label}</span>
+      <span>{value}</span>
+    </div>
   )
 }

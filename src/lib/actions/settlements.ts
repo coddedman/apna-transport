@@ -4,11 +4,29 @@ import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidateDashboard } from '@/lib/actions/revalidate'
 
-export async function generateSettlement(formData: FormData) {
-  const session = await auth()
-  const transporterId = (session?.user as any)?.transporterId
-  if (!transporterId) throw new Error('Unauthorized')
+export interface SettlementRateGroup { rate: number; trips: number; weight: number; amount: number }
 
+export interface SettlementCalc {
+  ownerId: string
+  ownerName: string
+  periodStart: Date
+  periodEnd: Date
+  totalOwnerPayout: number
+  totalFuel: number
+  totalDriverAdvances: number
+  totalMaint: number
+  totalTolls: number
+  totalOther: number
+  tripsCount: number
+  availableAdvance: number
+  priorCarryForward: number
+  finalPayout: number
+  rateBreakdown: SettlementRateGroup[]
+}
+
+// Shared by previewSettlement and generateSettlement so the numbers a user previews
+// are guaranteed identical to what gets written on confirm — one calculation, not two.
+async function computeSettlement(formData: FormData, transporterId: string): Promise<SettlementCalc> {
   const ownerId = formData.get('ownerId') as string
   const periodEndStr = formData.get('periodEnd') as string
   // periodStart is optional — if not provided, we use "till date" (all time)
@@ -69,21 +87,6 @@ export async function generateSettlement(formData: FormData) {
 
   const periodEnd = new Date(periodEndStr + 'T23:59:59')
 
-  // Prevent overlapping settlements for the same owner
-  const overlapping = await prisma.settlement.findFirst({
-    where: {
-      ownerId,
-      AND: [
-        { periodStart: { lte: periodEnd } },
-        { periodEnd: { gte: periodStart } },
-      ]
-    }
-  })
-  if (overlapping) {
-    const fmtD = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    throw new Error(`Overlapping settlement exists (${fmtD(overlapping.periodStart)} – ${fmtD(overlapping.periodEnd)}). Delete it first or adjust dates.`)
-  }
-
   const owner = await prisma.owner.findUnique({
     where: { id: ownerId },
     include: {
@@ -122,6 +125,7 @@ export async function generateSettlement(formData: FormData) {
   let totalTolls = 0
   let totalOther = 0
   let tripsCount = 0
+  const rateGroups = new Map<number, SettlementRateGroup>()
 
   owner.vehicles.forEach((v: any) => {
     // Use custom rate if provided; otherwise vehicle override → owner override → the rate frozen on
@@ -129,7 +133,14 @@ export async function generateSettlement(formData: FormData) {
     // Falling back to the project's *current* rate here would re-rate old trips whenever the rate changes.
     const overrideRate = customRate ?? v.ownerRateOverride ?? owner.ownerRateOverride ?? null
     tripsCount += v.trips.length
-    totalOwnerPayout += v.trips.reduce((acc: number, t: any) => acc + (t.weight * (overrideRate ?? t.ownerRate)), 0)
+    v.trips.forEach((t: any) => {
+      const rate = overrideRate ?? t.ownerRate
+      const amount = t.weight * rate
+      totalOwnerPayout += amount
+      const g = rateGroups.get(rate) ?? { rate, trips: 0, weight: 0, amount: 0 }
+      g.trips += 1; g.weight += t.weight; g.amount += amount
+      rateGroups.set(rate, g)
+    })
 
     v.expenses.forEach((e: any) => {
       if (!deductibleTypes.includes(e.type)) return
@@ -148,35 +159,67 @@ export async function generateSettlement(formData: FormData) {
   const totalDeductions = totalFuel + totalDriverAdvances + totalMaint + totalTolls + totalOther
   const netSettlement = totalOwnerPayout - totalDeductions
 
-  // Check for prior carryForward balance from the most recent settlement for this owner
-  const lastPriorSettlement = await prisma.settlement.findFirst({
-    where: { ownerId },
-    orderBy: { periodEnd: 'desc' }
-  })
-  const priorCarryForward = lastPriorSettlement?.carryForward || 0
+  // lastSettlement (fetched above for the periodStart lookup) is also the source of the prior carryForward.
+  const priorCarryForward = lastSettlement?.carryForward || 0
 
   // Full cumulative unrecovered advances deducted in this settlement + prior carryForward balance
-  const advanceToDeduct = availableAdvance
-  const finalPayout = netSettlement - advanceToDeduct + priorCarryForward // balance due to owner
+  const finalPayout = netSettlement - availableAdvance + priorCarryForward // balance due to owner
 
   if (tripsCount === 0 && totalDeductions === 0 && availableAdvance === 0 && priorCarryForward === 0) {
     throw new Error('No trip or expense activity found in this period')
   }
 
+  return {
+    ownerId, ownerName: owner.ownerName, periodStart, periodEnd,
+    totalOwnerPayout, totalFuel, totalDriverAdvances, totalMaint, totalTolls, totalOther, tripsCount,
+    availableAdvance, priorCarryForward, finalPayout,
+    rateBreakdown: [...rateGroups.values()].sort((a, b) => a.rate - b.rate),
+  }
+}
+
+export async function previewSettlement(formData: FormData): Promise<SettlementCalc> {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+  return computeSettlement(formData, transporterId)
+}
+
+export async function generateSettlement(formData: FormData) {
+  const session = await auth()
+  const transporterId = (session?.user as any)?.transporterId
+  if (!transporterId) throw new Error('Unauthorized')
+
+  const calc = await computeSettlement(formData, transporterId)
+
+  // Prevent overlapping settlements for the same owner
+  const overlapping = await prisma.settlement.findFirst({
+    where: {
+      ownerId: calc.ownerId,
+      AND: [
+        { periodStart: { lte: calc.periodEnd } },
+        { periodEnd: { gte: calc.periodStart } },
+      ]
+    }
+  })
+  if (overlapping) {
+    const fmtD = (d: Date) => d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    throw new Error(`Overlapping settlement exists (${fmtD(overlapping.periodStart)} – ${fmtD(overlapping.periodEnd)}). Delete it first or adjust dates.`)
+  }
+
   const settlement = await prisma.settlement.create({
     data: {
-      ownerId,
-      periodStart,
-      periodEnd,
-      totalRevenue: totalOwnerPayout, // using owner payout (weight × rate) not party revenue
-      totalFuel,
-      totalAdvances: advanceToDeduct, // advances deducted in this settlement
-      totalMaint,
-      totalTolls,
-      totalOther: totalOther + totalDriverAdvances,
-      finalPayout,
+      ownerId: calc.ownerId,
+      periodStart: calc.periodStart,
+      periodEnd: calc.periodEnd,
+      totalRevenue: calc.totalOwnerPayout, // using owner payout (weight × rate) not party revenue
+      totalFuel: calc.totalFuel,
+      totalAdvances: calc.availableAdvance, // advances deducted in this settlement
+      totalMaint: calc.totalMaint,
+      totalTolls: calc.totalTolls,
+      totalOther: calc.totalOther + calc.totalDriverAdvances,
+      finalPayout: calc.finalPayout,
       carryForward: 0, // initial carryForward before settlement is finalized
-      tripsCount,
+      tripsCount: calc.tripsCount,
     }
   })
 
