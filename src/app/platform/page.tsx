@@ -1,17 +1,31 @@
-import { getPlatformStats, getTransporters } from '@/lib/actions/platform'
+import { getPlatformStats, getTransporters, getTenantMetrics } from '@/lib/actions/platform'
 import Link from 'next/link'
 
+const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+
+function sinceLabel(date: Date | null) {
+  if (!date) return { text: 'No activity', stale: true }
+  const days = Math.floor((Date.now() - new Date(date).getTime()) / 86400000)
+  if (days <= 0) return { text: 'Today', stale: false }
+  if (days === 1) return { text: 'Yesterday', stale: false }
+  return { text: `${days}d ago`, stale: days > 14 }
+}
+
 export default async function PlatformDashboard() {
-  const [stats, transporters] = await Promise.all([
+  const [stats, transporters, metrics] = await Promise.all([
     getPlatformStats(),
     getTransporters(),
+    getTenantMetrics(),
   ])
+
+  const platformRevenue = Object.values(metrics).reduce((s, m) => s + m.revenue, 0)
+  const platformTrips = Object.values(metrics).reduce((s, m) => s + m.trips, 0)
 
   const statCards = [
     { label: 'Transporters', value: stats.transporterCount, icon: '🏢', color: 'purple' },
-    { label: 'Total Users', value: stats.userCount, icon: '👥', color: 'accent' },
-    { label: 'Active Projects', value: stats.projectCount, icon: '📁', color: 'info' },
-    { label: 'Fleet Size', value: stats.vehicleCount, icon: '🚛', color: 'success' },
+    { label: 'Total Billed', value: fmt(platformRevenue), icon: '💰', color: 'success' },
+    { label: 'Total Trips', value: platformTrips.toLocaleString('en-IN'), icon: '📦', color: 'info' },
+    { label: 'Fleet Size', value: stats.vehicleCount, icon: '🚛', color: 'accent' },
   ]
 
   return (
@@ -57,11 +71,11 @@ export default async function PlatformDashboard() {
               <thead>
                 <tr>
                   <th>Company Name</th>
-                  <th>Registration</th>
-                  <th>Users</th>
-                  <th>Projects</th>
-                  <th>Owners</th>
-                  <th>Joined</th>
+                  <th>Fleet</th>
+                  <th>Trips</th>
+                  <th>Billed</th>
+                  <th>Outstanding</th>
+                  <th>Last Activity</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -73,44 +87,50 @@ export default async function PlatformDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  transporters.map((t) => (
-                    <tr key={t.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{
-                            width: '32px', height: '32px', borderRadius: '8px',
-                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0,
-                          }}>
-                            {t.name.substring(0, 2).toUpperCase()}
+                  transporters.map((t) => {
+                    const m = metrics[t.id]
+                    const outstanding = m ? m.billed - m.received : 0
+                    const activity = sinceLabel(m?.lastActivity ?? null)
+                    return (
+                      <tr key={t.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '32px', height: '32px', borderRadius: '8px',
+                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '12px', fontWeight: 700, color: '#fff', flexShrink: 0,
+                            }}>
+                              {t.name.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <strong>{t.name}</strong>
+                              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                                {t.registration || 'No registration'} · {t._count.users} users · {t._count.projects} projects
+                              </div>
+                            </div>
                           </div>
-                          <strong>{t.name}</strong>
-                        </div>
-                      </td>
-                      <td style={{ color: 'var(--color-text-muted)' }}>
-                        {t.registration || '—'}
-                      </td>
-                      <td>
-                        <span className="badge info">{t._count.users} users</span>
-                      </td>
-                      <td>{t._count.projects}</td>
-                      <td>{t._count.owners}</td>
-                      <td style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>
-                        {new Date(t.createdAt).toLocaleDateString('en-IN', {
-                          day: 'numeric', month: 'short', year: 'numeric',
-                        })}
-                      </td>
-                      <td>
-                        <Link
-                          href={`/platform/transporters/${t.id}`}
-                          className="btn btn-secondary btn-sm"
-                        >
-                          View Details
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td>{m?.vehicles ?? 0}</td>
+                        <td>{(m?.trips ?? 0).toLocaleString('en-IN')}</td>
+                        <td style={{ fontWeight: 600 }}>{fmt(m?.revenue ?? 0)}</td>
+                        <td style={{ color: outstanding > 0 ? 'var(--color-accent)' : 'var(--color-text-muted)', fontWeight: outstanding > 0 ? 600 : 400 }}>
+                          {fmt(outstanding)}
+                        </td>
+                        <td style={{ fontSize: '13px' }}>
+                          <span className={`badge ${activity.stale ? 'inactive' : 'active'}`}>{activity.text}</span>
+                        </td>
+                        <td>
+                          <Link
+                            href={`/platform/transporters/${t.id}`}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            View Details
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>

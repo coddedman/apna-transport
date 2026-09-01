@@ -1,6 +1,8 @@
-import { getTransporterDetails } from '@/lib/actions/platform'
+import { getTransporterDetails, getTenantMetrics } from '@/lib/actions/platform'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+
+const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 
 export default async function TransporterDetailPage({
   params,
@@ -8,11 +10,18 @@ export default async function TransporterDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const transporter = await getTransporterDetails(id)
+  const [transporter, allMetrics] = await Promise.all([
+    getTransporterDetails(id),
+    getTenantMetrics(),
+  ])
 
   if (!transporter) {
     notFound()
   }
+
+  const m = allMetrics[id]
+  const outstanding = m ? m.billed - m.received : 0
+  const spread = m ? m.revenue - m.ownerPayout : 0
 
   return (
     <>
@@ -43,25 +52,64 @@ export default async function TransporterDetailPage({
       </header>
 
       <div className="page-body">
-        {/* Quick Stats */}
+        {/* Business Metrics */}
         <div className="stats-grid">
+          <div className="stat-card success">
+            <div className="stat-card-header">
+              <div className="stat-card-icon success">💰</div>
+            </div>
+            <div className="stat-card-value">{fmt(m?.revenue ?? 0)}</div>
+            <div className="stat-card-label">Billed to Clients</div>
+          </div>
+          <div className="stat-card accent">
+            <div className="stat-card-header">
+              <div className="stat-card-icon accent">🤝</div>
+            </div>
+            <div className="stat-card-value">{fmt(m?.ownerPayout ?? 0)}</div>
+            <div className="stat-card-label">Owner Payout</div>
+          </div>
+          <div className="stat-card purple">
+            <div className="stat-card-header">
+              <div className="stat-card-icon purple">📈</div>
+            </div>
+            <div className="stat-card-value">{fmt(spread)}</div>
+            <div className="stat-card-label">Rate Spread</div>
+          </div>
+          <div className="stat-card info">
+            <div className="stat-card-header">
+              <div className="stat-card-icon info">⏳</div>
+            </div>
+            <div className="stat-card-value">{fmt(outstanding)}</div>
+            <div className="stat-card-label">Outstanding Receivables</div>
+          </div>
+        </div>
+
+        {/* Scale */}
+        <div className="stats-grid">
+          <div className="stat-card info">
+            <div className="stat-card-header">
+              <div className="stat-card-icon info">📦</div>
+            </div>
+            <div className="stat-card-value">{(m?.trips ?? 0).toLocaleString('en-IN')}</div>
+            <div className="stat-card-label">Trips · {(m?.weight ?? 0).toFixed(1)} MT</div>
+          </div>
+          <div className="stat-card success">
+            <div className="stat-card-header">
+              <div className="stat-card-icon success">🚛</div>
+            </div>
+            <div className="stat-card-value">{m?.vehicles ?? 0}</div>
+            <div className="stat-card-label">Vehicles</div>
+          </div>
           <div className="stat-card purple">
             <div className="stat-card-header">
               <div className="stat-card-icon purple">👥</div>
             </div>
             <div className="stat-card-value">{transporter._count.users}</div>
-            <div className="stat-card-label">Users</div>
+            <div className="stat-card-label">Users · {transporter._count.projects} projects</div>
           </div>
-          <div className="stat-card info">
+          <div className="stat-card accent">
             <div className="stat-card-header">
-              <div className="stat-card-icon info">📁</div>
-            </div>
-            <div className="stat-card-value">{transporter._count.projects}</div>
-            <div className="stat-card-label">Projects</div>
-          </div>
-          <div className="stat-card success">
-            <div className="stat-card-header">
-              <div className="stat-card-icon success">👤</div>
+              <div className="stat-card-icon accent">👤</div>
             </div>
             <div className="stat-card-value">{transporter._count.owners}</div>
             <div className="stat-card-label">Vehicle Owners</div>
