@@ -218,7 +218,7 @@ body {
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg-secondary);
   color: var(--color-text-primary);
 }
 
@@ -260,7 +260,7 @@ body {
   gap: 10px;
   padding: 8px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
 }
 
 .sidebar-user-avatar {
@@ -534,7 +534,7 @@ body {
 }
 
 .data-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
 }
 
 .data-table tr:last-child td {
@@ -592,24 +592,24 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-accent), #d97706);
-  color: #0b1120;
+  background: var(--color-accent);
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-accent-hover), #e8a317);
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+  background: var(--color-accent-hover);
+  box-shadow: 0 0 20px var(--color-accent-subtle);
   transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-secondary);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border);
   color: var(--color-text-primary);
   border-color: var(--color-border-hover);
 }
@@ -636,7 +636,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -645,7 +645,7 @@ body {
 }
 
 .btn-icon:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border);
   color: var(--color-text-primary);
 }
 
@@ -1433,7 +1433,7 @@ body {
 /* ===== PERIOD BAR ===== */
 .analytics-period-bar {
   display: flex;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 3px;
@@ -1456,13 +1456,13 @@ body {
 
 .analytics-period-btn:hover {
   color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg-secondary);
 }
 
 .analytics-period-btn.active {
-  background: linear-gradient(135deg, var(--color-accent), #d97706);
-  color: #0b1120;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+  background: var(--color-accent);
+  color: #fff;
+  box-shadow: 0 2px 8px var(--color-accent-subtle);
 }
 
 .analytics-period-btn:disabled {
@@ -1474,7 +1474,7 @@ body {
 .analytics-filter-panel {
   margin: 12px 28px 0;
   padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   animation: slideUp 0.2s ease;
@@ -1548,7 +1548,7 @@ body {
 
 .analytics-tab:hover {
   color: var(--color-text-primary);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-secondary);
 }
 
 .analytics-tab.active {
@@ -1637,7 +1637,7 @@ body {
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--color-bg-secondary);
 }
 
 .analytics-kpi.accent .analytics-kpi-icon { background: var(--color-accent-subtle); }
@@ -1685,7 +1685,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 12.5px;
@@ -1693,7 +1693,7 @@ body {
 }
 
 .analytics-mini-kpi:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-secondary);
   border-color: var(--color-border-hover);
 }
 
@@ -1857,7 +1857,7 @@ body {
 .analytics-chart-toggle {
   display: flex;
   gap: 2px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-card);
   border-radius: 8px;
   padding: 2px;
   border: 1px solid var(--color-border);
@@ -1878,7 +1878,7 @@ body {
 }
 
 .analytics-chart-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-secondary);
 }
 
 .analytics-chart-toggle-btn.active {
