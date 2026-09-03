@@ -1,8 +1,6 @@
 'use client'
 
 import { useSidebar } from '@/lib/context/SidebarContext'
-import { format } from 'date-fns'
-
 interface PageHeaderProps {
   title: string
   subtitle?: string
@@ -11,7 +9,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, children }: PageHeaderProps) {
   const { toggle } = useSidebar()
-  const currentDate = format(new Date(), 'dd MMM yyyy')
+  const currentDate = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date())
 
   return (
     <header className="min-h-[66px] px-[16px] md:px-[28px] flex items-center justify-between gap-[12px] flex-wrap border-b border-[var(--color-border)] bg-[rgba(245,246,248,0.85)] dark:bg-[rgba(11,17,32,0.85)] backdrop-blur-[10px] sticky top-0 z-40">
