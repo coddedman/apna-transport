@@ -11,6 +11,10 @@ import ActivityTab from '@/components/analytics/ActivityTab'
 import PnLTab from '@/components/analytics/PnLTab'
 import TabErrorBoundary from '@/components/analytics/TabErrorBoundary'
 
+import { Card, CardHeader, CardBody } from '@/components/ui/Card'
+import { KpiStat } from '@/components/ui/KpiStat'
+import { Tabs } from '@/components/ui/Tabs'
+
 // ============================================
 // Mini Chart Components (Pure CSS, no library)
 // ============================================
@@ -451,18 +455,11 @@ export default function DashboardAnalytics({ initialData }: Props) {
       {isPending && <div className="analytics-loading-bar" />}
 
       {/* ===== TAB NAVIGATION ===== */}
-      <div className="analytics-tabs">
-        {TABS.map(tab => (
-          <button
-            key={tab.key}
-            className={`analytics-tab ${activeTab === tab.key ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            <span className="analytics-tab-icon">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        tabs={TABS.map(t => ({ id: t.key, label: t.label, icon: t.icon }))}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as TabKey)}
+      />
 
       {/* ===== TAB CONTENT ===== */}
       <div className={`analytics-content ${isPending ? 'loading' : ''}`}>
