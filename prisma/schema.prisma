@@ -119,7 +119,45 @@ model Transporter {
   transactions     Transaction[]
   dailyLumpsums    DailyLumpsum[]
   partyBills       PartyBill[]
+  employees        Employee[]
   createdAt        DateTime  @default(now())
+}
+
+enum Designation {
+  DRIVER
+  MECHANIC
+  FIELD_MANAGER
+  ACCOUNTANT
+  DISPATCHER
+  HR_ADMIN
+  WEIGHBRIDGE_OPERATOR
+  OTHER
+}
+
+// Which P&L bucket this employee's salary lands in.
+enum CostBucket {
+  VEHICLE   // charged against a vehicle (drivers, mechanics)
+  PROJECT   // charged against a project/site (field managers, weighbridge)
+  OVERHEAD  // company overhead (office staff)
+}
+
+model Employee {
+  id            String      @id @default(cuid())
+  name          String
+  phone         String?
+  designation   Designation @default(DRIVER)
+  // ponytail: free-text assignment (plate no / site / "Head office") rather than
+  // relations to Vehicle+Project+office — swap for real FKs if reporting needs to join on it.
+  assignedTo    String?
+  costBucket    CostBucket  @default(OVERHEAD)
+  salary        Float       @default(0) // monthly, matches Float money convention used elsewhere
+  onLeave       Boolean     @default(false)
+  transporterId String
+  transporter   Transporter @relation(fields: [transporterId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([transporterId])
+  @@index([designation])
 }
 
 model User {

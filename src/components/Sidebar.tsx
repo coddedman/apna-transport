@@ -40,6 +40,14 @@ const navItems = [
     ],
   },
   {
+    section: 'Team',
+    items: [
+      { href: '/dashboard/employees', icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18v14H3z" /><path d="M8.5 11a2 2 0 100-4 2 2 0 000 4z" /><path d="M5.5 16a3 3 0 016 0" /><path d="M13.5 9h5" /><path d="M13.5 13h4" /></svg>
+      ), label: 'Employees', hi: 'कर्मचारी' },
+    ],
+  },
+  {
     section: 'Billing',
     items: [
       { href: '/dashboard/settlements', icon: (

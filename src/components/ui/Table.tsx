@@ -34,9 +34,9 @@ export function TableHeader({ children, align = 'left', className = '' }: { chil
   )
 }
 
-export function TableCell({ children, align = 'left', tabularNums = false, className = '' }: { children: React.ReactNode, align?: 'left' | 'right' | 'center', tabularNums?: boolean, className?: string }) {
+export function TableCell({ children, align = 'left', tabularNums = false, colSpan, className = '' }: { children: React.ReactNode, align?: 'left' | 'right' | 'center', tabularNums?: boolean, colSpan?: number, className?: string }) {
   return (
-    <td className={`p-[13px_20px] text-[13px] text-[var(--color-text-secondary)] whitespace-nowrap border-b border-[var(--color-border)] text-${align} ${tabularNums ? 'tabular-nums' : ''} ${className}`}>
+    <td colSpan={colSpan} className={`p-[13px_20px] text-[13px] text-[var(--color-text-secondary)] whitespace-nowrap border-b border-[var(--color-border)] text-${align} ${tabularNums ? 'tabular-nums' : ''} ${className}`}>
       {children}
     </td>
   )
@@ -50,9 +50,9 @@ export function TableFoot({ children, className = '' }: { children: React.ReactN
   )
 }
 
-export function TableFootCell({ children, align = 'left', tabularNums = false, className = '' }: { children: React.ReactNode, align?: 'left' | 'right' | 'center', tabularNums?: boolean, className?: string }) {
+export function TableFootCell({ children, align = 'left', tabularNums = false, colSpan, className = '' }: { children: React.ReactNode, align?: 'left' | 'right' | 'center', tabularNums?: boolean, colSpan?: number, className?: string }) {
   return (
-    <td className={`p-[13px_20px] text-[12.5px] font-bold text-[var(--color-text-secondary)] whitespace-nowrap text-${align} ${tabularNums ? 'tabular-nums' : ''} ${className}`}>
+    <td colSpan={colSpan} className={`p-[13px_20px] text-[12.5px] font-bold text-[var(--color-text-secondary)] whitespace-nowrap text-${align} ${tabularNums ? 'tabular-nums' : ''} ${className}`}>
       {children}
     </td>
   )
