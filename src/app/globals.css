@@ -2395,7 +2395,7 @@ body {
   padding: 10px 6px;
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
 }
 
 .owner-kpi-value {
@@ -2422,7 +2422,7 @@ body {
   padding: 12px;
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
   margin-bottom: 12px;
 }
 
@@ -2487,7 +2487,7 @@ body {
   padding: 10px 12px;
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
 }
 
 .owner-section-title {
@@ -2504,7 +2504,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--color-border);
   font-size: 12px;
 }
 
@@ -2628,7 +2628,7 @@ body {
   padding: 8px 4px;
   background: var(--color-bg-secondary);
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
 }
 
 .vehicle-perf-kpi-value {
@@ -2912,9 +2912,9 @@ body {
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 100%
+    var(--color-track) 0%,
+    var(--color-border) 50%,
+    var(--color-track) 100%
   );
   background-size: 800px 100%;
   animation: shimmer 1.5s ease-in-out infinite;

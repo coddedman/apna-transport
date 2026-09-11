@@ -53,17 +53,17 @@ function PageLoaderInner() {
           right: 0;
           height: 3px;
           z-index: 10000;
-          background: rgba(245, 158, 11, 0.05);
+          background: var(--color-accent-subtle);
           overflow: hidden;
         }
         .global-page-loader-bar {
           height: 100%;
-          background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+          background: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover), var(--color-accent));
           background-size: 200% 100%;
           width: 100%;
           animation: loading-bar-progress 2s cubic-bezier(0.4, 0, 0.2, 1) infinite,
                      loading-bar-shimmer 1.5s linear infinite;
-          box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+          box-shadow: 0 0 10px var(--color-accent-subtle);
         }
         @keyframes loading-bar-progress {
           0% { transform: translateX(-100%); }
