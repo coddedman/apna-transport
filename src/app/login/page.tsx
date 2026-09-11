@@ -38,19 +38,28 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-page">
+    <div className="login-page v2-login">
       {/* Background effects */}
       <div className="login-bg-glow login-bg-glow-1" />
       <div className="login-bg-glow login-bg-glow-2" />
 
+      <div className="v2-login-card">
+      <section className="v2-login-showcase">
+        <div className="v2-login-brand">Apna Transport <span>अपना ट्रांसपोर्ट · Operations OS</span></div>
+        <div><div className="v2-eyebrow">Built for transport operators</div>
+        <h2>Run every trip, vehicle and payment from one place.</h2>
+        <p>A focused command center for fleet activity, owner settlements, client billing and project profitability.</p></div>
+        <div className="v2-login-features"><span>Fleet & contracts</span><span>Trips & expenses</span><span>Billing & collections</span><span>Owner settlements</span></div>
+        <p className="v2-login-note">One workspace. Your entire operation.</p>
+      </section>
       <div className="login-container">
         {/* Logo */}
         <div className="login-logo">
-          <div className="login-logo-icon">HT</div>
+          <div className="login-logo-icon">AT</div>
         </div>
 
         <h1 className="login-title">Welcome Back</h1>
-        <p className="login-subtitle">Sign in to Hyva Transport Management</p>
+        <p className="login-subtitle">Sign in to your Apna Transport workspace</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && (
@@ -96,6 +105,7 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In →'}
           </button>
         </form>
+      </div>
       </div>
     </div>
   )

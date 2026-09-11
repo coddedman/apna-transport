@@ -3062,3 +3062,59 @@ body {
   }
 }
 
+
+/* Finance & Analytics V2 workspace */
+:root {
+  --sidebar-width: 264px;
+  --header-height: 76px;
+  --radius-lg: 16px;
+  --color-bg-primary: #f3f6fb;
+  --color-border: #e5ebf3;
+}
+.workspace-sidebar {
+  --color-bg-sidebar: #0b1220;
+  --color-bg-secondary: #142033;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #dbe5f2;
+  --color-text-muted: #7f8da3;
+  --color-border: rgba(255,255,255,.08);
+  --color-accent-subtle: rgba(37,99,235,.18);
+  box-shadow: 14px 0 36px rgba(2,8,23,.08);
+}
+.workspace-sidebar .workspace-nav-link { padding: 10px 11px; border-radius: 10px; }
+.workspace-sidebar .workspace-nav-link[aria-current="page"] {
+  color: white;
+  background: linear-gradient(90deg,rgba(37,99,235,.26),rgba(37,99,235,.10));
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+.page-body { padding: 26px 30px 34px; width: 100%; max-width: 1600px; margin-inline: auto; }
+.card { box-shadow: 0 2px 8px rgba(15,23,42,.035); }
+.card-header { padding: 17px 20px; }
+.finance-navigation { display: flex; align-items: center; gap: 5px; margin: 20px 30px 0; padding: 7px; border: 1px solid var(--color-border); border-radius: 13px; background: var(--color-bg-card); overflow-x: auto; }
+.finance-label { padding: 0 10px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--color-text-muted); }
+.finance-navigation a { padding: 9px 12px; border-radius: 9px; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.finance-navigation a[aria-current="page"] { background: var(--color-accent-subtle); color: var(--color-accent); border-color: color-mix(in srgb,var(--color-accent) 20%,transparent); }
+.finance-navigation a:hover { background: var(--color-bg-secondary); text-decoration: none; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media(max-width:767px) {
+  .page-body { padding: 16px; }
+  .finance-navigation { margin: 16px 16px 0; }
+}
+.v2-login { background: #f3f6fb; padding: 28px; }
+.v2-login .login-bg-glow { display: none; }
+.v2-login-card { width: 100%; max-width: 1020px; display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid #e5ebf3; border-radius: 24px; overflow: hidden; background: white; box-shadow: 0 24px 80px rgba(15,23,42,.10); }
+.v2-login-showcase { display: flex; flex-direction: column; justify-content: space-between; gap: 48px; padding: 42px; background: linear-gradient(145deg,#0b1220,#122b50); color: white; }
+.v2-login-brand { font-size: 18px; font-weight: 750; letter-spacing: -.02em; }
+.v2-login-brand span { display: block; margin-top: 5px; font-size: 11px; color: #93a5bf; font-weight: 400; }
+.v2-eyebrow { color: #79a7ff; font-size: 10px; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; margin-bottom: 14px; }
+.v2-login-showcase h2 { font-size: 34px; line-height: 1.12; letter-spacing: -.045em; margin-bottom: 18px; }
+.v2-login-showcase p { font-size: 13px; line-height: 1.75; color: #a6b5ca; }
+.v2-login-features { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.v2-login-features span { padding: 14px; border: 1px solid #ffffff18; border-radius: 12px; background: #ffffff08; font-size: 12px; }
+.v2-login .login-container { width: 100%; max-width: none; align-self: center; border: 0; box-shadow: none; border-radius: 0; padding: 48px 40px; background: white; color: #0f172a; }
+.v2-login .login-title { color: #0f172a; font-size: 25px; }
+.v2-login .login-subtitle { color: #64748b; }
+@media(max-width:800px) { .v2-login-card { max-width: 460px; grid-template-columns: 1fr; } .v2-login-showcase { display: none; } .v2-login .login-container { padding: 32px 24px; } .v2-login { padding: 16px; } }
+.analytics-header { min-height: 76px; padding: 18px 30px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-card); align-items: center; }
+.analytics-title { font-size: 20px; font-weight: 750; }
+@media(max-width:767px) { .analytics-header { padding: 16px; } }

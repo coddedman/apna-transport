@@ -7,6 +7,7 @@ import { useSidebar } from '@/lib/context/SidebarContext'
 import toast from 'react-hot-toast'
 import DashboardLoading from '@/app/dashboard/loading'
 
+import SimulatorTab from '@/components/analytics/SimulatorTab'
 import ActivityTab from '@/components/analytics/ActivityTab'
 import PnLTab from '@/components/analytics/PnLTab'
 import TabErrorBoundary from '@/components/analytics/TabErrorBoundary'
@@ -170,7 +171,7 @@ const fmt = (n: number) => `${n < 0 ? '-' : ''}₹${Math.round(Math.abs(n)).toLo
 // Tab Definitions
 // ===========================
 
-type TabKey = 'overview' | 'revenue' | 'expenses' | 'pnl' | 'vehicles' | 'projects' | 'owners' | 'activity'
+type TabKey = 'overview' | 'revenue' | 'expenses' | 'pnl' | 'vehicles' | 'projects' | 'owners' | 'activity' | 'rate'
 
 // Line icons matching the design system (no emoji — they render inconsistently
 // across platforms and crowd the tab labels).
@@ -181,6 +182,7 @@ const tabIcon = (paths: string[]) => (
 )
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: 'rate', label: 'Rate Simulator', icon: tabIcon(['M12 3v18', 'M3 12h18']) },
   { key: 'overview', label: 'Overview', icon: tabIcon(['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z']) },
   { key: 'pnl', label: 'P&L', icon: tabIcon(['M3 3v18h18', 'M7 14l4-4 3 3 5-6']) },
   { key: 'revenue', label: 'Revenue', icon: tabIcon(['M4 6h16v12H4z', 'M12 9a3 3 0 100 6 3 3 0 000-6z', 'M7 12h.01', 'M17 12h.01']) },
@@ -375,8 +377,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
             ☰
           </button>
           <h1 className="analytics-title">
-            <span className="analytics-title-icon">📊</span>
-            Analytics Hub
+            Overview
           </h1>
           <div className="analytics-subtitle-row">
             <span className="analytics-period-badge">
@@ -473,6 +474,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
       <div className={`analytics-content ${isPending ? 'loading' : ''}`}>
         
         {/* ============ OVERVIEW TAB ============ */}
+        {activeTab === 'rate' && <SimulatorTab data={data} deductibleTypes={deductibleTypes} setDeductibleTypes={setDeductibleTypes} />}
         {activeTab === 'overview' && (
           <>
             {/* KPI Grid */}

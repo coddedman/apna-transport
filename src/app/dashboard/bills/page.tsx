@@ -24,7 +24,7 @@ export default async function BillsPage() {
   return (
     <div className="page-container">
       <PageHeader
-        title="📄 Bill Tracker"
+        title="Client Billing"
         subtitle="Track submitted bills, record payments, and monitor receivables"
       />
       <div className="page-body">

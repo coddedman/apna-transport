@@ -69,6 +69,19 @@ const navItems = [
   },
 ]
 
+const allItems = navItems.flatMap(section => section.items)
+const workspaceSections = [
+  { section: 'Workspace', paths: ['/dashboard', '/dashboard/reports'] },
+  { section: 'Operations', paths: ['/dashboard/trips', '/dashboard/expenses'] },
+  { section: 'Fleet & Contracts', paths: ['/dashboard/vehicles', '/dashboard/owners', '/dashboard/projects'] },
+  { section: 'Finance', paths: ['/dashboard/bills', '/dashboard/settlements', '/dashboard/billing'] },
+  { section: 'Organization', paths: ['/dashboard/employees', '/dashboard/partners'] },
+].map(section => ({ section: section.section, items: section.paths.map(path => allItems.find(item => item.href === path)!) }))
+const labels: Record<string, string> = {
+  '/dashboard': 'Overview', '/dashboard/reports': 'Analytics', '/dashboard/vehicles': 'Fleet',
+  '/dashboard/bills': 'Client Billing', '/dashboard/settlements': 'Owner Settlements', '/dashboard/billing': 'Owner Statements',
+}
+
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
@@ -91,7 +104,7 @@ export default function Sidebar() {
   const transporterName = user?.transporterName || 'Hyva Transport'
 
   return (
-    <aside className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-sidebar)] transition-transform duration-300 w-[var(--sidebar-width)] ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+    <aside className={`workspace-sidebar fixed top-0 left-0 bottom-0 z-50 flex flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-sidebar)] transition-transform duration-300 w-[var(--sidebar-width)] ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
       
       {/* Mobile Close Button */}
       {isOpen && (
@@ -108,11 +121,11 @@ export default function Sidebar() {
           </div>
           <div className="flex flex-col leading-[1.2]">
             <span className="text-[14px] font-bold tracking-[-0.02em] text-[var(--color-text-primary)]">Apna Transport</span>
-            <span className="text-[10.5px] text-[var(--color-text-muted)]">Multi-tenant TMS</span>
+            <span className="text-[10.5px] text-[var(--color-text-muted)]">Operations OS</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-[9px] mt-[10px] p-[8px_10px] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-[9px] cursor-pointer">
+        <div className="flex items-center gap-[9px] mt-[10px] p-[8px_10px] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-[9px]">
           <div className="w-[26px] h-[26px] rounded-[7px] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] flex items-center justify-center font-bold text-[10px] shrink-0">
             {getInitials(transporterName)}
           </div>
@@ -128,7 +141,7 @@ export default function Sidebar() {
 
       {/* Navigation Links */}
       <nav className="flex-1 p-[8px_12px] overflow-y-auto flex flex-col gap-[1px]">
-        {navItems.map((section) => (
+        {workspaceSections.map((section) => (
           <div key={section.section}>
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-[var(--color-text-muted)] p-[14px_11px_6px]">
               {section.section}
@@ -139,11 +152,13 @@ export default function Sidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-[11px] p-[8px_11px] rounded-[8px] text-[13.5px] transition-all ${active ? 'font-semibold text-[var(--color-accent)] bg-[var(--color-accent-subtle)]' : 'font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'}`}
+                  aria-current={active ? 'page' : undefined}
+                  onClick={close}
+                  className={`workspace-nav-link flex items-center gap-[11px] p-[8px_11px] rounded-[8px] text-[13.5px] transition-all ${active ? 'font-semibold text-[var(--color-accent)] bg-[var(--color-accent-subtle)]' : 'font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'}`}
                 >
                   <span className="flex shrink-0">{item.icon}</span>
                   <span className="flex flex-col leading-[1.15]">
-                    <span>{item.label}</span>
+                    <span>{labels[item.href] || item.label}</span>
                     <span className="text-[10px] text-[var(--color-text-muted)] font-normal">{item.hi}</span>
                   </span>
                 </Link>

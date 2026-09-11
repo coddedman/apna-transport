@@ -1,5 +1,6 @@
 'use client'
 
+import FinanceNavigation from './FinanceNavigation'
 import { useSidebar } from '@/lib/context/SidebarContext'
 interface PageHeaderProps {
   title: string
@@ -12,7 +13,8 @@ export default function PageHeader({ title, subtitle, children }: PageHeaderProp
   const currentDate = new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date())
 
   return (
-    <header className="min-h-[66px] px-[16px] md:px-[28px] flex items-center justify-between gap-[12px] flex-wrap border-b border-[var(--color-border)] bg-[rgba(255,255,255,0.92)] dark:bg-[rgba(11,17,32,0.85)] backdrop-blur-[12px] shadow-[0_1px_3px_rgba(16,24,40,0.06)] dark:shadow-none sticky top-0 z-40">
+    <>
+    <header className="min-h-[76px] px-[16px] md:px-[28px] flex items-center justify-between gap-[12px] flex-wrap border-b border-[var(--color-border)] bg-[rgba(255,255,255,0.92)] dark:bg-[rgba(11,17,32,0.85)] backdrop-blur-[12px] shadow-[0_1px_3px_rgba(16,24,40,0.06)] dark:shadow-none sticky top-0 z-40">
       <div className="flex items-center gap-[12px]">
         {/* Mobile Sidebar Toggle */}
         <button className="md:hidden w-[38px] h-[38px] flex items-center justify-center rounded-[9px] border border-[var(--color-border)] bg-[var(--color-bg-card)] text-[var(--color-text-secondary)]" onClick={toggle}>
@@ -45,5 +47,7 @@ export default function PageHeader({ title, subtitle, children }: PageHeaderProp
         {children}
       </div>
     </header>
+    <FinanceNavigation />
+    </>
   )
 }
