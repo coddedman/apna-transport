@@ -97,11 +97,9 @@
   --font-mono: var(--font-mono);
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* NOTE: no universal `* { margin:0; padding:0 }` reset here. Tailwind's preflight
+   already provides it inside @layer base. An unlayered copy would sit ABOVE every
+   layered Tailwind utility in the cascade and silently zero all m-* / p-* classes. */
 
 html {
   scroll-behavior: smooth;
