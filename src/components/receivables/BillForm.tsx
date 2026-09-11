@@ -1,347 +1,101 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { money } from '@/lib/finance/receivables'
 import Modal from '@/components/Modal'
 import { createPartyBill, calculateBillFromTrips } from '@/lib/actions/receivables'
+import { summarizeTrips } from '@/lib/finance/tripBilling'
+import { money } from '@/lib/finance/receivables'
+import toast from 'react-hot-toast'
 
 interface Project { id: string; projectName: string; partyRate: number }
-
+type Trip = Awaited<ReturnType<typeof calculateBillFromTrips>>['trips'][number]
 interface Props {
   projects: Project[]
+  initial?: { projectId: string; periodStart: string; periodEnd: string }
+  label?: string
 }
+const fmt = (amount: number) => `₹${amount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 
-export default function BillForm({ projects }: Props) {
-  const [isPending, startTransition] = useTransition()
-  const [showForm, setShowForm] = useState(false)
-
+export default function BillForm({ projects, initial, label = '+ Record Bill' }: Props) {
+  const [pending, startTransition] = useTransition()
+  const [open, setOpen] = useState(false)
   const [billNo, setBillNo] = useState('')
   const [billType, setBillType] = useState<'FREIGHT' | 'TOLL'>('FREIGHT')
-  const [projectId, setProjectId] = useState('')
-  const [periodStart, setPeriodStart] = useState('')
-  const [periodEnd, setPeriodEnd] = useState('')
-  
-  // Rate & weight inputs for auto-calculation
-  const [baseRate, setBaseRate] = useState('')
+  const [projectId, setProjectId] = useState(initial?.projectId || '')
+  const [start, setStart] = useState(initial?.periodStart || '')
+  const [end, setEnd] = useState(initial?.periodEnd || '')
+  const [trips, setTrips] = useState<Trip[]>([])
+  const [selected, setSelected] = useState<string[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [incentive, setIncentive] = useState('')
-  const [totalWeight, setTotalWeight] = useState('')
-  const [totalTrips, setTotalTrips] = useState('')
-  const [billAmount, setBillAmount] = useState('')
-
-  const [submittedAt, setSubmittedAt] = useState(new Date().toISOString().split('T')[0])
-  const [dueDate, setDueDate] = useState('')
+  const [amount, setAmount] = useState('')
+  const [due, setDue] = useState('')
+  const [submitted, setSubmitted] = useState(new Date().toISOString().slice(0, 10))
   const [remarks, setRemarks] = useState('')
-
-  function changeWeight(value: string) {
-    setTotalWeight(value)
-    setBillAmount(String(money((parseFloat(value) || 0) * (parseFloat(baseRate) || 0))))
+  const [error, setError] = useState('')
+  const totals = summarizeTrips(trips.filter(trip => selected.includes(trip.id)))
+  const total = billType === 'FREIGHT' ? money(totals.billAmount + totals.totalWeight * (Number(incentive) || 0)) : Number(amount) || 0
+  function invalidate() { setTrips([]); setSelected([]); setLoaded(false); setError('') }
+  function reset() {
+    setBillNo(''); setBillType('FREIGHT'); setProjectId(initial?.projectId || ''); setStart(initial?.periodStart || ''); setEnd(initial?.periodEnd || '')
+    invalidate(); setIncentive(''); setAmount(''); setDue(''); setRemarks(''); setSubmitted(new Date().toISOString().slice(0, 10))
   }
-
-  function changeRate(value: string) {
-    setBaseRate(value)
-    setBillAmount(String(money((parseFloat(totalWeight) || 0) * (parseFloat(value) || 0))))
-  }
-
-  function resetForm() {
-    setBillNo(''); setBillType('FREIGHT'); setProjectId(''); setPeriodStart(''); setPeriodEnd('')
-    setBaseRate(''); setIncentive(''); setTotalTrips(''); setTotalWeight(''); setBillAmount('')
-    setSubmittedAt(new Date().toISOString().split('T')[0]); setDueDate(''); setRemarks('')
-  }
-
-  function handleAutoCalculate() {
-    if (!projectId || !periodStart || !periodEnd) {
-      alert('Select project and period first')
-      return
-    }
+  function load() {
+    setError('')
     startTransition(async () => {
       try {
-        const data = await calculateBillFromTrips(projectId, periodStart, periodEnd)
-        setTotalTrips(String(data.totalTrips))
-        const w = data.totalWeight || 0
-        setTotalWeight(String(w))
-        const calcBase = data.billAmount || 0
-        if (w > 0) {
-          const calculatedRate = Math.round((calcBase / w) * 100) / 100
-          setBaseRate(String(calculatedRate))
-          setBillAmount(String(money(calcBase)))
-        } else {
-          setBillAmount(String(money(calcBase)))
-        }
-      } catch (err: any) {
-        alert(err.message)
-      }
+        const result = await calculateBillFromTrips(projectId, start, end)
+        setTrips(result.trips); setSelected(result.trips.map(trip => trip.id)); setLoaded(true)
+      } catch (e) { setError(e instanceof Error ? e.message : 'Could not load trips') }
     })
   }
-
-  const parsedBase = parseFloat(billAmount) || 0
-  const parsedWeight = parseFloat(totalWeight) || 0
-  const parsedBaseRate = parseFloat(baseRate) || 0
-  const parsedIncRate = parseFloat(incentive) || 0
-  const totalIncentiveAmount = parsedWeight > 0 ? (parsedIncRate * parsedWeight) : parsedIncRate
-  const finalPrice = billType === 'FREIGHT' ? (parsedBase + totalIncentiveAmount) : parsedBase
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!billNo || !projectId || !periodStart || !periodEnd || !billAmount) return
-
+  function submit(event: React.FormEvent) {
+    event.preventDefault(); setError('')
     startTransition(async () => {
       try {
-        await createPartyBill({
-          billNo,
-          projectId,
-          periodStart,
-          periodEnd,
-          billType,
-          billAmount: parsedBase,
-          incentive: billType === 'FREIGHT' ? parsedIncRate : 0,
-          totalTrips: billType === 'FREIGHT' ? (parseInt(totalTrips) || 0) : 0,
-          totalWeight: billType === 'FREIGHT' ? parsedWeight : 0,
-          submittedAt: submittedAt || undefined,
-          dueDate: dueDate || undefined,
-          remarks: remarks || undefined,
-        })
-        resetForm()
-        setShowForm(false)
-      } catch (err: any) {
-        alert(err.message)
-      }
+        await createPartyBill({ billNo: billNo.trim(), billType, projectId, periodStart: start, periodEnd: end,
+          tripIds: billType === 'FREIGHT' ? selected : [],
+          ...(billType === 'FREIGHT' ? totals : { billAmount: Number(amount), totalTrips: 0, totalWeight: 0 }),
+          incentive: billType === 'FREIGHT' ? Number(incentive) || 0 : 0,
+          submittedAt: submitted || undefined, dueDate: due || undefined, remarks: remarks || undefined })
+        toast.success('Invoice saved'); reset(); setOpen(false)
+      } catch (e) { setError(e instanceof Error ? e.message : 'Could not save invoice') }
     })
   }
-
-  return (
-    <div>
-      <button
-        className="btn btn-primary"
-        onClick={() => setShowForm(true)}
-        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-      >
-        + Record Bill
-      </button>
-
-      <Modal isOpen={showForm} onClose={() => { resetForm(); setShowForm(false) }} title="📄 Record a Submitted Bill" maxWidth="760px">
-        <form onSubmit={handleSubmit}>
-          {/* Bill Category Selector */}
-          <div style={{ marginBottom: 16, display: 'flex', gap: 10, background: 'var(--color-bg-secondary)', padding: 6, borderRadius: 12, border: '1px solid var(--color-border)' }}>
-            <button
-              type="button"
-              onClick={() => setBillType('FREIGHT')}
-              style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-                background: billType === 'FREIGHT' ? '#8b5cf6' : 'transparent',
-                color: billType === 'FREIGHT' ? '#fff' : '#94a3b8',
-              }}
-            >
-              🚚 Freight Bill (Weight × [Base + Incentive])
-            </button>
-            <button
-              type="button"
-              onClick={() => setBillType('TOLL')}
-              style={{
-                flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
-                background: billType === 'TOLL' ? '#10b981' : 'transparent',
-                color: billType === 'TOLL' ? '#fff' : '#94a3b8',
-              }}
-            >
-              🛣️ Toll Bill (Fixed Reimbursement - No Weight)
-            </button>
+  return <>
+    <button className="btn btn-primary" onClick={() => { reset(); setOpen(true) }}>{label}</button>
+    <Modal isOpen={open} onClose={() => { if (!pending) setOpen(false) }} title="Create Client Invoice" maxWidth="860px">
+      <form onSubmit={submit}>
+        {error && <p role="alert" style={{ padding: 12, marginBottom: 16, background: 'var(--color-danger-subtle)', color: 'var(--color-danger)', borderRadius: 8 }}>{error}</p>}
+        <fieldset disabled={pending} style={{ border: 0, padding: 0, minWidth: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 16 }}>
+            <label className="form-group"><span className="form-label">Invoice number *</span><input className="form-input" value={billNo} onChange={e => setBillNo(e.target.value)} required /></label>
+            <label className="form-group"><span className="form-label">Type</span><select className="form-select" value={billType} onChange={e => { setBillType(e.target.value as 'FREIGHT' | 'TOLL'); invalidate() }}><option value="FREIGHT">Freight · linked trips</option><option value="TOLL">Toll</option></select></label>
+            <label className="form-group"><span className="form-label">Project *</span><select className="form-select" value={projectId} onChange={e => { setProjectId(e.target.value); invalidate() }} required><option value="">Select project</option>{projects.map(project => <option key={project.id} value={project.id}>{project.projectName}</option>)}</select></label>
+            <label className="form-group"><span className="form-label">Period start *</span><input type="date" className="form-input" value={start} onChange={e => { setStart(e.target.value); invalidate() }} required /></label>
+            <label className="form-group"><span className="form-label">Period end *</span><input type="date" className="form-input" value={end} min={start} onChange={e => { setEnd(e.target.value); invalidate() }} required /></label>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Bill / Invoice No *</label>
-              <input type="text" className="form-input" placeholder={billType === 'TOLL' ? 'e.g., TOLL-2026-001' : 'e.g., INV-2026-042'} value={billNo} onChange={e => setBillNo(e.target.value)} required style={{ fontWeight: 700 }} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Project *</label>
-              <select className="form-select" value={projectId} onChange={e => { setProjectId(e.target.value); setBaseRate(String(projects.find(p => p.id === e.target.value)?.partyRate ?? '')); setTotalWeight(''); setTotalTrips(''); setBillAmount('') }} required>
-                <option value="">— Select Project —</option>
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.projectName} (₹{p.partyRate}/MT)</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Period Start *</label>
-              <input type="date" className="form-input" value={periodStart} onChange={e => setPeriodStart(e.target.value)} required />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Period End *</label>
-              <input type="date" className="form-input" value={periodEnd} min={periodStart} onChange={e => setPeriodEnd(e.target.value)} required />
-            </div>
+          {billType === 'FREIGHT' ? <section style={{ margin: '16px 0' }}>
+            <button type="button" className="btn btn-secondary" onClick={load} disabled={!projectId || !start || !end || start > end}>{pending ? 'Loading…' : 'Load unbilled trips'}</button>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 12, margin: '10px 0' }}>Choose trips to include. Rates and freight totals come from the trip records. Trips covered by historical unlinked invoices are held for review.</p>
+            {loaded && !trips.length && <p role="status">No eligible unbilled trips in this period.</p>}
+            {trips.length > 0 && <div style={{ maxHeight: 300, overflow: 'auto', border: '1px solid var(--color-border)', borderRadius: 10 }}>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                <thead><tr><th style={{ padding: 10 }}><input type="checkbox" aria-label="Select all trips" checked={selected.length === trips.length} onChange={e => setSelected(e.target.checked ? trips.map(trip => trip.id) : [])} /></th><th>Date</th><th>Vehicle / LR</th><th>Weight (MT)</th><th>Freight</th></tr></thead>
+                <tbody>{trips.map(trip => <tr key={trip.id} style={{ borderTop: '1px solid var(--color-border)' }}><td style={{ padding: 10 }}><input type="checkbox" aria-label={`Select ${trip.vehicle.plateNo} ${trip.lrNo || trip.id}`} checked={selected.includes(trip.id)} onChange={e => setSelected(e.target.checked ? [...selected, trip.id] : selected.filter(id => id !== trip.id))} /></td><td>{new Date(trip.date).toLocaleDateString('en-IN')}</td><td>{trip.vehicle.plateNo}<br />{trip.lrNo || trip.invoiceNo || '—'}</td><td>{trip.weight}</td><td>{fmt(trip.partyFreightAmount)}</td></tr>)}</tbody>
+              </table>
+            </div>}
+            <p style={{ marginTop: 12, fontWeight: 600 }}>{totals.totalTrips} trips · {totals.totalWeight} MT · Freight {fmt(totals.billAmount)}</p>
+            <label className="form-group" style={{ marginTop: 14 }}><span className="form-label">Incentive (₹/MT)</span><input type="number" min="0" step="0.01" className="form-input" value={incentive} onChange={e => setIncentive(e.target.value)} /></label>
+          </section> : <label className="form-group"><span className="form-label">Toll amount *</span><input type="number" className="form-input" min="0.01" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></label>}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 16 }}>
+            <label className="form-group"><span className="form-label">Submitted on</span><input type="date" className="form-input" value={submitted} onChange={e => setSubmitted(e.target.value)} /></label>
+            <label className="form-group"><span className="form-label">Due date</span><input type="date" className="form-input" value={due} onChange={e => setDue(e.target.value)} /></label>
           </div>
-
-          {/* Auto-calculate row (for Freight bills only) */}
-          {billType === 'FREIGHT' && (
-            <div style={{ margin: '0 0 16px', padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Auto-fill trips, weight & rates from logged trips?</span>
-              <button
-                type="button"
-                onClick={handleAutoCalculate}
-                disabled={isPending || !projectId || !periodStart || !periodEnd}
-                style={{
-                  padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff',
-                }}
-              >
-                {isPending ? '⏳...' : '⚡ Calculate from Trips'}
-              </button>
-            </div>
-          )}
-
-          {/* Rate & Weight Inputs */}
-          {billType === 'FREIGHT' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1.3fr', gap: 16, marginBottom: 16 }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Total Weight (MT) *</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="e.g. 100"
-                  value={totalWeight}
-                  onChange={e => changeWeight(e.target.value)}
-                  min="0"
-                  step="0.01"
-                  style={{ fontSize: 14, fontWeight: 700 }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Base Rate (₹/MT) *</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="e.g. 20"
-                  value={baseRate}
-                  onChange={e => changeRate(e.target.value)}
-                  min="0"
-                  step="any"
-                  style={{ fontSize: 14, fontWeight: 700 }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Incentive Rate (₹/MT)</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="e.g. 3"
-                  value={incentive}
-                  onChange={e => setIncentive(e.target.value)}
-                  min="0"
-                  step="any"
-                  style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Base Freight Amount (₹)</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="Auto-calculated"
-                  value={billAmount}
-                  onChange={e => {
-                    setBillAmount(e.target.value)
-                    const val = parseFloat(e.target.value) || 0
-                    const w = parseFloat(totalWeight) || 0
-                    if (w > 0) setBaseRate(String(Math.round((val / w) * 100) / 100))
-                  }}
-                  required
-                  min="0.01" step="0.01"
-                  style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Toll / Fixed Bill Amount (₹) *</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="0"
-                  value={billAmount}
-                  onChange={e => setBillAmount(e.target.value)}
-                  required
-                  min="0.01" step="0.01"
-                  style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Auto-Calculated Final Price Box */}
-          <div style={{
-            margin: '0 0 16px', padding: '14px 18px',
-            background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(139,92,246,0.08))',
-            border: '1px solid rgba(16,185,129,0.25)',
-            borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12
-          }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                ⚡ Auto-Calculated Final Billed Price
-              </div>
-              <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 2 }}>
-                {billType === 'FREIGHT' && parsedWeight > 0 ? (
-                  <span>
-                    {parsedWeight} MT × (Base ₹{parsedBaseRate.toFixed(2)} {parsedIncRate > 0 ? `+ Incentive ₹${parsedIncRate}` : ''})
-                    = <strong>{parsedWeight} MT × ₹{(parsedBaseRate + parsedIncRate).toFixed(2)}/MT</strong>
-                  </span>
-                ) : (
-                  <span>Total Payable Invoice Price</span>
-                )}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981' }}>
-                ₹{Math.round(finalPrice).toLocaleString('en-IN')}
-              </div>
-              {parsedIncRate > 0 && parsedWeight > 0 && (
-                <div style={{ fontSize: 10, color: '#64748b' }}>
-                  Base: ₹{Math.round(parsedBase).toLocaleString('en-IN')} + Inc: ₹{Math.round(totalIncentiveAmount).toLocaleString('en-IN')}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
-            {billType === 'FREIGHT' && (
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: 11 }}>Total Trips</label>
-                <input type="number" className="form-input" placeholder="0" value={totalTrips} onChange={e => setTotalTrips(e.target.value)} min="0" />
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Submitted On</label>
-              <input type="date" className="form-input" value={submittedAt} onChange={e => setSubmittedAt(e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Due Date</label>
-              <input type="date" className="form-input" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11 }}>Remarks</label>
-              <input type="text" className="form-input" placeholder="Optional notes..." value={remarks} onChange={e => setRemarks(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="modal-footer" style={{ padding: 0, border: 'none', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button type="button" className="btn btn-secondary" onClick={() => { resetForm(); setShowForm(false) }}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary" disabled={isPending || !billNo || !billAmount} style={{ padding: '10px 24px' }}>
-              {isPending ? '⏳ Saving...' : `📄 Record Bill (${fmt(finalPrice)})`}
-            </button>
-          </div>
-        </form>
-      </Modal>
-    </div>
-  )
+          <label className="form-group"><span className="form-label">Remarks</span><input className="form-input" value={remarks} onChange={e => setRemarks(e.target.value)} /></label>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}><strong>Total: {fmt(total)}</strong><button className="btn btn-primary" type="submit" disabled={pending || (billType === 'FREIGHT' && !selected.length)}>{pending ? 'Please wait…' : 'Save invoice'}</button></div>
+        </fieldset>
+      </form>
+    </Modal>
+  </>
 }
-const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`

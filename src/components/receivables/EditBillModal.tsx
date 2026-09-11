@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition } from 'react'
 import Modal from '@/components/Modal'
-import { updatePartyBill, calculateBillFromTrips } from '@/lib/actions/receivables'
+import { updatePartyBill } from '@/lib/actions/receivables'
 
 interface Bill {
+  tripLinked?: boolean
   id: string
   billNo: string
   projectId: string
@@ -58,42 +59,6 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
   const [remarks, setRemarks] = useState(bill.remarks || '')
   const [error, setError] = useState<string | null>(null)
 
-  // Auto-calculate Base Bill Amount whenever Weight or Base Rate changes
-  useEffect(() => {
-    if (billType === 'FREIGHT') {
-      const w = parseFloat(totalWeight) || 0
-      const r = parseFloat(baseRate) || 0
-      if (w > 0 && r > 0) {
-        setBillAmount(String(Math.round(w * r)))
-      }
-    }
-  }, [totalWeight, baseRate, billType])
-
-  function handleAutoRecalculate() {
-    if (!bill.projectId || !periodStart || !periodEnd) {
-      alert('Select period first')
-      return
-    }
-    startTransition(async () => {
-      try {
-        const data = await calculateBillFromTrips(bill.projectId, periodStart, periodEnd)
-        setTotalTrips(String(data.totalTrips))
-        const w = data.totalWeight || 0
-        setTotalWeight(String(w.toFixed(2)))
-        const calcBase = data.billAmount || 0
-        if (w > 0) {
-          const calculatedRate = Math.round((calcBase / w) * 100) / 100
-          setBaseRate(String(calculatedRate))
-          setBillAmount(String(Math.round(w * calculatedRate)))
-        } else {
-          setBillAmount(String(Math.round(calcBase)))
-        }
-      } catch (err: any) {
-        alert(err.message)
-      }
-    })
-  }
-
   const parsedBase = parseFloat(billAmount) || 0
   const parsedWeight = parseFloat(totalWeight) || 0
   const parsedBaseRate = parseFloat(baseRate) || 0
@@ -144,6 +109,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
         <div style={{ marginBottom: 16, display: 'flex', gap: 10, background: 'var(--color-bg-secondary)', padding: 6, borderRadius: 12, border: '1px solid var(--color-border)' }}>
           <button
             type="button"
+            disabled={bill.tripLinked}
             onClick={() => setBillType('FREIGHT')}
             style={{
               flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
@@ -155,6 +121,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
           </button>
           <button
             type="button"
+            disabled={bill.tripLinked}
             onClick={() => setBillType('TOLL')}
             style={{
               flex: 1, padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none',
@@ -195,6 +162,7 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
             <input
               type="date"
               className="form-input"
+              disabled={bill.tripLinked}
               value={periodStart}
               onChange={e => setPeriodStart(e.target.value)}
             />
@@ -205,28 +173,14 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
             <input
               type="date"
               className="form-input"
+              disabled={bill.tripLinked}
               value={periodEnd}
               onChange={e => setPeriodEnd(e.target.value)}
             />
           </div>
         </div>
 
-        {billType === 'FREIGHT' && (
-          <div style={{ margin: '0 0 16px', padding: '10px 14px', background: 'rgba(139,92,246,0.06)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Recalculate weight & base amount from trips?</span>
-            <button
-              type="button"
-              onClick={handleAutoRecalculate}
-              disabled={isPending || !periodStart || !periodEnd}
-              style={{
-                padding: '5px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700, background: '#8b5cf6', color: '#fff',
-              }}
-            >
-              {isPending ? '⏳...' : '⚡ Recalculate'}
-            </button>
-          </div>
-        )}
+        {bill.tripLinked && <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 16 }}>Trip-linked totals and the billing period are locked. You can update the invoice number, incentive, dates and remarks.</p>}
 
         {/* Rate & Weight Inputs */}
         {billType === 'FREIGHT' ? (
@@ -237,8 +191,9 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
                 type="number"
                 step="0.01"
                 className="form-input"
-                value={totalWeight}
-                onChange={e => setTotalWeight(e.target.value)}
+                disabled={bill.tripLinked}
+              value={totalWeight}
+                onChange={e => { setTotalWeight(e.target.value); setBillAmount(String(Math.round((Number(e.target.value) || 0) * (Number(baseRate) || 0) * 100) / 100)) }}
                 min="0"
                 style={{ fontSize: 14, fontWeight: 700 }}
               />
@@ -250,8 +205,9 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
                 type="number"
                 className="form-input"
                 placeholder="e.g. 20"
-                value={baseRate}
-                onChange={e => setBaseRate(e.target.value)}
+                disabled={bill.tripLinked}
+              value={baseRate}
+                onChange={e => { setBaseRate(e.target.value); setBillAmount(String(Math.round((Number(totalWeight) || 0) * (Number(e.target.value) || 0) * 100) / 100)) }}
                 min="0"
                 step="0.1"
                 style={{ fontSize: 14, fontWeight: 700 }}
@@ -276,7 +232,8 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               <input
                 type="number"
                 className="form-input"
-                value={billAmount}
+                disabled={bill.tripLinked}
+              value={billAmount}
                 onChange={e => {
                   setBillAmount(e.target.value)
                   const val = parseFloat(e.target.value) || 0
@@ -296,7 +253,8 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               <input
                 type="number"
                 className="form-input"
-                value={billAmount}
+                disabled={bill.tripLinked}
+              value={billAmount}
                 onChange={e => setBillAmount(e.target.value)}
                 required
                 min="1"
@@ -347,7 +305,8 @@ export default function EditBillModal({ bill, isOpen, onClose }: Props) {
               <input
                 type="number"
                 className="form-input"
-                value={totalTrips}
+                disabled={bill.tripLinked}
+              value={totalTrips}
                 onChange={e => setTotalTrips(e.target.value)}
                 min="0"
               />

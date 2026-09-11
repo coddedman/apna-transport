@@ -25,7 +25,7 @@ async function resolveRates(projectId: string, tripDate: Date, project: { partyR
 export async function createTrip(formData: FormData) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
-  if (!transporterId) throw new Error('Unauthorized')
+  if (!transporterId || session?.user?.role === 'OWNER') throw new Error('Unauthorized')
 
   const vehicleId = formData.get('vehicleId') as string
   const projectId = formData.get('projectId') as string
@@ -38,7 +38,10 @@ export async function createTrip(formData: FormData) {
   }
 
   const project = await prisma.project.findUnique({ where: { id: projectId } })
-  if (!project) throw new Error('Project not found')
+  if (!project || project.transporterId !== transporterId) throw new Error('Project not found')
+
+  const vehicle = await prisma.vehicle.findFirst({ where: { id: vehicleId, owner: { transporterId } }, select: { id: true } })
+  if (!vehicle) throw new Error('Vehicle not found')
 
   // Combine date and time
   let tripDate = new Date()
@@ -77,7 +80,7 @@ export async function createTrip(formData: FormData) {
 export async function updateTrip(tripId: string, formData: FormData) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
-  if (!transporterId) throw new Error('Unauthorized')
+  if (!transporterId || session?.user?.role === 'OWNER') throw new Error('Unauthorized')
 
   const vehicleId = formData.get('vehicleId') as string
   const projectId = formData.get('projectId') as string
@@ -91,6 +94,9 @@ export async function updateTrip(tripId: string, formData: FormData) {
 
   const project = await prisma.project.findUnique({ where: { id: projectId } })
   if (!project || project.transporterId !== transporterId) throw new Error('Project not found')
+
+  const vehicle = await prisma.vehicle.findFirst({ where: { id: vehicleId, owner: { transporterId } }, select: { id: true } })
+  if (!vehicle) throw new Error('Vehicle not found')
 
   // Combine date and time
   let tripDate = undefined
@@ -107,9 +113,14 @@ export async function updateTrip(tripId: string, formData: FormData) {
   const invoiceNo = formData.get('invoiceNo') as string
   const lrNo = formData.get('lrNo') as string
 
+  const existing = await prisma.trip.findFirst({ where: { id: tripId, project: { transporterId } } })
+  if (!existing) throw new Error('Trip not found')
+  if (existing.partyBillId) throw new Error('This trip is linked to an invoice. Release it by deleting the unpaid invoice first.')
+
   const trip = await prisma.trip.update({
     where: { 
       id: tripId,
+      partyBillId: null,
       project: { transporterId } // Ensure security
     },
     data: {
@@ -134,7 +145,7 @@ export async function updateTrip(tripId: string, formData: FormData) {
 export async function deleteTrip(tripId: string) {
   const session = await auth()
   const transporterId = (session?.user as any)?.transporterId
-  if (!transporterId) throw new Error('Unauthorized')
+  if (!transporterId || session?.user?.role === 'OWNER') throw new Error('Unauthorized')
 
   // Verify trip belongs to this transporter
   const trip = await prisma.trip.findFirst({
@@ -143,7 +154,8 @@ export async function deleteTrip(tripId: string) {
 
   if (!trip) throw new Error('Trip not found')
 
-  await prisma.trip.delete({ where: { id: tripId } })
+  if (trip.partyBillId) throw new Error('This trip is linked to an invoice. Release it by deleting the unpaid invoice first.')
+  await prisma.trip.delete({ where: { id: tripId, partyBillId: null } })
 
   revalidateDashboard()
 }

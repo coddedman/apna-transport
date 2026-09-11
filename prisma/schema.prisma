@@ -222,6 +222,8 @@ model Vehicle {
 }
 
 model Trip {
+  partyBillId        String?
+  partyBill          PartyBill? @relation(fields: [partyBillId], references: [id], onDelete: SetNull)
   id                 String   @id @default(cuid())
   date               DateTime @default(now())
   invoiceNo          String?  // External Trip ID / Invoice Number
@@ -238,6 +240,7 @@ model Trip {
 
   @@index([projectId])
   @@index([vehicleId])
+  @@index([partyBillId])
   @@index([date])
 }
 
@@ -378,6 +381,8 @@ model DailyLumpsum {
 // ========================
 
 model PartyBill {
+  tripLinked      Boolean     @default(false)
+  trips           Trip[]
   id              String      @id @default(cuid())
   billNo          String      // Your invoice/bill number
   projectId       String

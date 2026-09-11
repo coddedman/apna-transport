@@ -5,6 +5,8 @@ import { auth } from '@/lib/auth'
 import { revalidateDashboard } from '@/lib/actions/revalidate'
 import { BillStatus } from '@prisma/client'
 import { incentiveTotal, totalPayableFor, outstandingFor, statusFor, money, validDate, validateAmount } from '@/lib/finance/receivables'
+import { eligibleTrips } from '@/lib/finance/eligibleTrips'
+import { summarizeTrips, validateTripSelection } from '@/lib/finance/tripBilling'
 import { financeTransaction } from '@/lib/finance/transaction'
 
 async function getTransporterId() {
@@ -19,6 +21,7 @@ export async function createPartyBill(data: {
   projectId: string
   periodStart: string
   periodEnd: string
+  tripIds?: string[]
   totalTrips?: number
   totalWeight?: number
   billAmount: number
@@ -45,28 +48,47 @@ export async function createPartyBill(data: {
   const project = await prisma.project.findFirst({ where: { id: data.projectId, transporterId: tid }, select: { id: true } })
   if (!project) throw new Error('Project not found')
 
-  // Check for duplicate bill number
-  const existing = await prisma.partyBill.findFirst({
-    where: { transporterId: tid, billNo: data.billNo }
-  })
-  if (existing) throw new Error(`Duplicate bill number: "${data.billNo}" already exists`)
+  const bill = await financeTransaction(async tx => {
+    const isFreight = (data.billType || 'FREIGHT') === 'FREIGHT'
+    if (!['FREIGHT', 'TOLL'].includes(data.billType || 'FREIGHT')) throw new Error('Invalid bill type')
+    let totals = { totalTrips: 0, totalWeight: 0, billAmount: data.billAmount }
+    const tripIds = data.tripIds || []
+    if (isFreight) {
+      const available = await eligibleTrips(tx, tid, data.projectId, { start: data.periodStart, end: data.periodEnd })
+      validateTripSelection(tripIds, available.map(trip => trip.id))
+      totals = summarizeTrips(available.filter(trip => tripIds.includes(trip.id)))
+      validateAmount(totals.billAmount, 'Trip freight total')
+      if (money(data.billAmount) !== totals.billAmount || data.totalTrips !== totals.totalTrips || Math.abs((data.totalWeight ?? 0) - totals.totalWeight) > 0.000001) {
+        throw new Error('Trip totals changed. Reload the trips and review the invoice before saving.')
+      }
+    } else if (tripIds.length) throw new Error('Only freight invoices can link trips')
+    // Check for duplicate bill number
+    const existing = await tx.partyBill.findFirst({
+      where: { transporterId: tid, billNo: data.billNo }
+    })
+    if (existing) throw new Error(`Duplicate bill number: "${data.billNo}" already exists`)
 
-  const bill = await prisma.partyBill.create({
-    data: {
-      billNo: data.billNo,
-      projectId: data.projectId,
-      periodStart: new Date(data.periodStart),
-      periodEnd: new Date(data.periodEnd),
-      totalTrips: data.totalTrips || 0,
-      totalWeight: data.totalWeight || 0,
-      billAmount: data.billAmount,
-      incentive: data.incentive || 0,
-      billType: data.billType || 'FREIGHT',
-      submittedAt: data.submittedAt ? new Date(data.submittedAt) : null,
-      dueDate: data.dueDate ? new Date(data.dueDate) : null,
-      remarks: data.remarks || null,
-      transporterId: tid,
+    const bill = await tx.partyBill.create({
+      data: {
+        billNo: data.billNo,
+        projectId: data.projectId,
+        periodStart: new Date(data.periodStart),
+        periodEnd: new Date(data.periodEnd),
+        ...totals,
+        tripLinked: isFreight,
+        incentive: isFreight ? data.incentive || 0 : 0,
+        billType: data.billType || 'FREIGHT',
+        submittedAt: data.submittedAt ? new Date(data.submittedAt) : null,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        remarks: data.remarks || null,
+        transporterId: tid,
+      }
+    })
+    if (isFreight) {
+      const claimed = await tx.trip.updateMany({ where: { id: { in: tripIds }, partyBillId: null, projectId: data.projectId, project: { transporterId: tid } }, data: { partyBillId: bill.id } })
+      if (claimed.count !== tripIds.length) throw new Error('One or more trips were just invoiced. Reload the trips and try again.')
     }
+    return bill
   })
 
   revalidateDashboard()
@@ -79,25 +101,26 @@ export async function createPartyBill(data: {
 export async function calculateBillFromTrips(projectId: string, periodStart: string, periodEnd: string) {
   const tid = await getTransporterId()
 
-  validDate(periodStart, 'Period start')
-  validDate(periodEnd, 'Period end')
-  if (periodStart > periodEnd) throw new Error('Period end must be on or after period start')
-  const start = new Date(periodStart + 'T00:00:00')
-  const end = new Date(periodEnd + 'T23:59:59')
+  if (!projectId) throw new Error('Project is required')
+  const trips = await eligibleTrips(prisma, tid, projectId, { start: periodStart, end: periodEnd })
+  return { ...summarizeTrips(trips), trips }
+}
 
-  const trips = await prisma.trip.findMany({
-    where: {
-      projectId,
-      project: { transporterId: tid },
-      date: { gte: start, lte: end },
-    },
-    select: { weight: true, partyFreightAmount: true },
-  })
-
+export async function getUnbilledWork() {
+  const tid = await getTransporterId()
+  const [trips, legacyCount] = await Promise.all([
+    eligibleTrips(prisma, tid),
+    prisma.partyBill.count({ where: { transporterId: tid, tripLinked: false, billType: 'FREIGHT' } }),
+  ])
+  const groups = new Map<string, typeof trips>()
+  for (const trip of trips) {
+    const rows = groups.get(trip.projectId) || []
+    rows.push(trip)
+    groups.set(trip.projectId, rows)
+  }
   return {
-    totalTrips: trips.length,
-    totalWeight: trips.reduce((s, t) => s + t.weight, 0),
-    billAmount: trips.reduce((s, t) => s + t.partyFreightAmount, 0),
+    legacyCount,
+    projects: [...groups.entries()].map(([projectId, rows]) => ({ projectId, projectName: rows[0].project.projectName, ...summarizeTrips(rows), periodStart: rows[0].date.toISOString().slice(0, 10), periodEnd: rows[rows.length - 1].date.toISOString().slice(0, 10) })),
   }
 }
 
@@ -288,6 +311,7 @@ export async function getPartyBills(filters: ReceivableFilters = {}) {
     include: {
       project: { select: { id: true, projectName: true } },
       payments: { orderBy: { date: 'desc' } },
+      trips: { select: { id: true, date: true, weight: true, partyFreightAmount: true, vehicle: { select: { plateNo: true } } }, orderBy: { date: 'asc' } },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -363,10 +387,12 @@ export async function getProjectWisePending() {
 
 export async function deletePartyBill(billId: string) {
   const tid = await getTransporterId()
-  const bill = await prisma.partyBill.findFirst({ where: { id: billId, transporterId: tid } })
-  if (!bill) throw new Error('Bill not found')
-
-  await prisma.partyBill.delete({ where: { id: billId } })
+  await financeTransaction(async tx => {
+    const bill = await tx.partyBill.findFirst({ where: { id: billId, transporterId: tid }, include: { _count: { select: { payments: true } } } })
+    if (!bill) throw new Error('Bill not found')
+    if (bill._count.payments > 0 || bill.receivedAmount > 0) throw new Error('Remove or reverse recorded payments before deleting this invoice')
+    await tx.partyBill.delete({ where: { id: billId } })
+  })
   revalidateDashboard()
 }
 
@@ -387,6 +413,17 @@ export async function updatePartyBill(billId: string, data: {
   await financeTransaction(async tx => {
     const bill = await tx.partyBill.findFirst({ where: { id: billId, transporterId: tid } })
     if (!bill) throw new Error('Bill not found')
+    if (bill.tripLinked) {
+      const changesTripBasis =
+        (data.billType !== undefined && data.billType !== bill.billType) ||
+        (data.totalTrips !== undefined && data.totalTrips !== bill.totalTrips) ||
+        (data.totalWeight !== undefined && data.totalWeight !== bill.totalWeight) ||
+        (data.billAmount !== undefined && money(data.billAmount) !== money(bill.billAmount)) ||
+        (data.periodStart !== undefined && data.periodStart !== bill.periodStart.toISOString().slice(0, 10)) ||
+        (data.periodEnd !== undefined && data.periodEnd !== bill.periodEnd.toISOString().slice(0, 10))
+      if (changesTripBasis) throw new Error('Trip-linked invoice totals and period are locked. Delete the unpaid invoice to release its trips, then rebuild it.')
+    }
+
 
     if (data.billNo !== undefined && !data.billNo.trim()) throw new Error('Bill number is required')
     if (data.billAmount !== undefined) validateAmount(data.billAmount, 'Bill amount')
