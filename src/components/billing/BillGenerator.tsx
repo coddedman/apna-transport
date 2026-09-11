@@ -33,7 +33,7 @@ function getMonths() {
   })
 }
 
-const card: React.CSSProperties = { background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: 28, marginBottom: 28 }
+const card: React.CSSProperties = { background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 20, padding: 28, marginBottom: 28 }
 const sectionTitle = (emoji: string, text: string) => (
   <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
     <span style={{ background: 'rgba(245,158,11,0.1)', padding: '5px 8px', borderRadius: 8 }}>{emoji}</span>{text}
@@ -103,7 +103,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
             <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Owner-level Rate Override</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
               {owners.map(o => (
-                <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#0b1120', borderRadius: 10, padding: '10px 14px' }}>
+                <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--color-bg-secondary)', borderRadius: 10, padding: '10px 14px' }}>
                   <div style={{ flex: 1 }}><div style={{ fontWeight: 700 }}>{o.ownerName}</div><div style={{ fontSize: 11, color: '#64748b' }}>{o.vehicles.length} vehicle(s)</div></div>
                   <input type="number" className="form-input" placeholder={`₹${projectDefaultOwnerRate}`} value={ownerRates[o.id] ?? ''} min={0} onChange={e => setOwnerRates(p => ({ ...p, [o.id]: e.target.value }))} style={{ width: 90, fontSize: 13, padding: '8px 10px', textAlign: 'right' }} />
                   <button className="btn btn-primary btn-sm" onClick={() => saveOwnerRate(o.id)} disabled={saving[o.id]}>{saving[o.id] ? '...' : 'Save'}</button>
@@ -115,7 +115,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
             <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 10, textTransform: 'uppercase' }}>Vehicle-level Override <span style={{ color: '#8b5cf6', fontSize: 11 }}>(highest priority)</span></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
               {vehicles.map(v => (
-                <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#0b1120', borderRadius: 10, padding: '10px 14px' }}>
+                <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--color-bg-secondary)', borderRadius: 10, padding: '10px 14px' }}>
                   <div style={{ flex: 1 }}><div style={{ fontWeight: 800 }}>{v.plateNo}</div><div style={{ fontSize: 11, color: '#64748b' }}>{v.owner.ownerName}</div></div>
                   <input type="number" className="form-input" placeholder="Override" value={vehicleRates[v.id] ?? ''} min={0} onChange={e => setVehicleRates(p => ({ ...p, [v.id]: e.target.value }))} style={{ width: 80, fontSize: 13, padding: '8px 10px', textAlign: 'right' }} />
                   <button className="btn btn-primary btn-sm" onClick={() => saveVehicleRate(v.id)} disabled={saving['v' + v.id]}>{saving['v' + v.id] ? '...' : 'Save'}</button>
@@ -133,7 +133,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
           {/* Period */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>1. Period</div>
-            <div style={{ display: 'flex', gap: 4, background: '#0b1120', padding: 5, borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 4, background: 'var(--color-bg-secondary)', padding: 5, borderRadius: 10, border: '1px solid var(--color-border)', marginBottom: 12 }}>
               {(['weekly', 'monthly', 'custom', 'till_date'] as const).map(t => (
                 <button key={t} onClick={() => setPeriodType(t)} style={{ flex: 1, padding: '8px 4px', fontSize: 11, fontWeight: 700, borderRadius: 7, border: 'none', cursor: 'pointer', textTransform: 'capitalize', background: periodType === t ? '#f59e0b' : 'transparent', color: periodType === t ? '#000' : '#94a3b8', transition: 'all 0.2s' }}>
                   {t === 'till_date' ? 'Till Date' : t}
@@ -154,8 +154,8 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
           {/* Vehicles */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>2. Vehicles {selectedVehicles.length > 0 && <span style={{ color: '#f59e0b' }}>({selectedVehicles.length})</span>}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 150, overflowY: 'auto', background: '#0b1120', padding: 12, borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
-              <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 150, overflowY: 'auto', background: 'var(--color-bg-secondary)', padding: 12, borderRadius: 10, border: '1px solid var(--color-border)' }}>
+              <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', paddingBottom: 6, borderBottom: '1px solid var(--color-border)' }}>
                 <input type="checkbox" checked={selectedVehicles.length === 0} onChange={() => setSelectedVehicles([])} style={{ accentColor: '#f59e0b' }} /><strong>All Vehicles</strong>
               </label>
               {vehicles.map(v => (
@@ -170,7 +170,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
           {/* Deductibles */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 }}>3. Deduct from Settlement</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: '#0b1120', padding: 12, borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--color-bg-secondary)', padding: 12, borderRadius: 10, border: '1px solid var(--color-border)' }}>
               {DEDUCT_OPTS.map(({ key, label, hint }) => (
                 <label key={key} style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 8px', borderRadius: 6, background: deductibles.includes(key) ? 'rgba(239,68,68,0.08)' : 'transparent', border: `1px solid ${deductibles.includes(key) ? 'rgba(239,68,68,0.2)' : 'transparent'}` }}>
                   <input type="checkbox" checked={deductibles.includes(key)} onChange={e => setDeductibles(p => e.target.checked ? [...p, key] : p.filter(t => t !== key))} style={{ accentColor: '#ef4444' }} />
@@ -192,7 +192,7 @@ export default function BillGenerator({ vehicles, owners, projectDefaultOwnerRat
       {/* ── OUTPUT ── */}
       {bill && (
         <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 20, borderBottom: '1px solid var(--color-border)' }}>
             <div>
               <div style={{ fontSize: 22, fontWeight: 900 }}>Settlement Invoice</div>
               <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{bill.period.label}</div>
