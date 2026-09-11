@@ -82,7 +82,7 @@ const roleLabels: Record<string, string> = {
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { isOpen, close, isCollapsed, toggleCollapse } = useSidebar()
+  const { isOpen, close } = useSidebar()
   const { data: session } = useSession()
 
   const user = session?.user as any

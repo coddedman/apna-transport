@@ -29,7 +29,7 @@ function BarChart({ data, color = 'var(--color-accent)', height = 200 }: { data:
           return (
             <div key={i} className="analytics-bar-col">
               <div className="analytics-bar-tooltip">
-                {typeof d.value === 'number' && d.value >= 1000 ? `₹${d.value.toLocaleString('en-IN')}` : d.value.toLocaleString('en-IN')}
+                {d.value >= 1000 ? fmt(d.value) : Math.round(d.value).toLocaleString('en-IN')}
               </div>
               <div
                 className="analytics-bar"
@@ -128,7 +128,7 @@ function DonutChart({ data, size = 180 }: { data: { label: string; value: number
           <div key={i} className="analytics-legend-row">
             <span className="analytics-legend-dot" style={{ background: d.color }} />
             <span className="analytics-legend-label">{d.label}</span>
-            <span className="analytics-legend-value">₹{d.value.toLocaleString('en-IN')}</span>
+            <span className="analytics-legend-value">{fmt(d.value)}</span>
             <span className="analytics-legend-pct">{Math.round((d.value / total) * 100)}%</span>
           </div>
         ))}
@@ -145,7 +145,7 @@ function HorizontalBar({ data, maxValue }: { data: { label: string; value: numbe
         <div key={i} className="analytics-hbar-item">
           <div className="analytics-hbar-header">
             <span className="analytics-hbar-label">{d.label}</span>
-            <span className="analytics-hbar-value">₹{d.value.toLocaleString('en-IN')}</span>
+            <span className="analytics-hbar-value">{fmt(d.value)}</span>
           </div>
           <div className="analytics-hbar-track">
             <div
@@ -163,7 +163,8 @@ function HorizontalBar({ data, maxValue }: { data: { label: string; value: numbe
 // Helpers
 // ===========================
 
-const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+// Rupees, whole-number, sign before the symbol (-₹1,234 not ₹-1,234).
+const fmt = (n: number) => `${n < 0 ? '-' : ''}₹${Math.round(Math.abs(n)).toLocaleString('en-IN')}`
 
 // ===========================
 // Tab Definitions
@@ -171,16 +172,23 @@ const fmt = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 
 type TabKey = 'overview' | 'revenue' | 'expenses' | 'pnl' | 'vehicles' | 'projects' | 'owners' | 'activity'
 
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'overview', label: 'Overview', icon: '📊' },
-  { key: 'pnl', label: 'P&L', icon: '📑' },
-  { key: 'revenue', label: 'Revenue', icon: '💰' },
-  { key: 'expenses', label: 'Expenses', icon: '📉' },
-  { key: 'vehicles', label: 'Vehicles', icon: '🚛' },
-  { key: 'projects', label: 'Projects', icon: '📁' },
-  { key: 'owners', label: 'Owners', icon: '👤' },
-  { key: 'activity', label: 'Activity', icon: '📅' },
+// Line icons matching the design system (no emoji — they render inconsistently
+// across platforms and crowd the tab labels).
+const tabIcon = (paths: string[]) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    {paths.map((d, i) => <path key={i} d={d} />)}
+  </svg>
+)
 
+const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+  { key: 'overview', label: 'Overview', icon: tabIcon(['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z']) },
+  { key: 'pnl', label: 'P&L', icon: tabIcon(['M3 3v18h18', 'M7 14l4-4 3 3 5-6']) },
+  { key: 'revenue', label: 'Revenue', icon: tabIcon(['M4 6h16v12H4z', 'M12 9a3 3 0 100 6 3 3 0 000-6z', 'M7 12h.01', 'M17 12h.01']) },
+  { key: 'expenses', label: 'Expenses', icon: tabIcon(['M3 7a2 2 0 012-2h13a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z', 'M16 12h4', 'M16.5 12a.5.5 0 100 .01']) },
+  { key: 'vehicles', label: 'Vehicles', icon: tabIcon(['M1 6h12v9H1z', 'M13 9h4l3 3v3h-7z', 'M6 18.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z', 'M20 18.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z']) },
+  { key: 'projects', label: 'Projects', icon: tabIcon(['M3 6a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z']) },
+  { key: 'owners', label: 'Owners', icon: tabIcon(['M12 12a4 4 0 100-8 4 4 0 000 8z', 'M4.5 20a7.5 7.5 0 0115 0']) },
+  { key: 'activity', label: 'Activity', icon: tabIcon(['M3 17l6-6 4 4 8-8', 'M15 7h6v6']) },
 ]
 
 const PERIODS = [
@@ -488,7 +496,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
               })}>
                 <div className="analytics-kpi-icon">🏢</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.totalRevenue.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(data.totalRevenue)}</div>
                   <div className="analytics-kpi-label">Company Rev <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
@@ -524,7 +532,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
               })}>
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{netSettlement.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(netSettlement)}</div>
                   <div className="analytics-kpi-label">Owner Settlement <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
@@ -551,21 +559,21 @@ export default function DashboardAnalytics({ initialData }: Props) {
               })}>
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{nonDeductibleExpenses.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(nonDeductibleExpenses)}</div>
                   <div className="analytics-kpi-label">My Expenses <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
               <div className="analytics-kpi info" style={{ cursor: 'pointer' }} onClick={() => toast('Rate Spread:\nThe gross difference between Company Revenue and Owner Gross Payout.', { icon: 'ℹ️', duration: 4000 })}>
                 <div className="analytics-kpi-icon">📊</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{rateSpread.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(rateSpread)}</div>
                   <div className="analytics-kpi-label">Rate Spread <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
               <div className={`analytics-kpi ${adjustedNetProfit >= 0 ? 'success' : 'loss'}`} style={{ cursor: 'pointer' }} onClick={() => toast('Net Profit:\nFinal take-home profit: Company Revenue - Owner Settlement - My Expenses.', { icon: 'ℹ️', duration: 4000 })}>
                 <div className="analytics-kpi-icon">💵</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{adjustedNetProfit.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(adjustedNetProfit)}</div>
                   <div className="analytics-kpi-label">Net Profit <span style={{fontSize:'10px', opacity:0.5}}>ⓘ</span></div>
                 </div>
               </div>
@@ -714,7 +722,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                             <td>{t.date}</td>
                             <td><strong>{t.vehicle}</strong></td>
                             <td>{t.project}</td>
-                            <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{t.amount.toLocaleString('en-IN')}</td>
+                            <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>{fmt(t.amount)}</td>
                           </tr>
                         ))
                       )}
@@ -739,7 +747,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                             <td>{e.date}</td>
                             <td><strong>{e.vehicle}</strong></td>
                             <td><span className="badge other">{e.type}</span></td>
-                            <td style={{ textAlign: 'right', color: 'var(--color-danger)', fontWeight: 600 }}>₹{e.amount.toLocaleString('en-IN')}</td>
+                            <td style={{ textAlign: 'right', color: 'var(--color-danger)', fontWeight: 600 }}>{fmt(e.amount)}</td>
                           </tr>
                         ))
                       )}
@@ -758,7 +766,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
               <div className="analytics-kpi accent">
                 <div className="analytics-kpi-icon">💰</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.totalRevenue.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(data.totalRevenue)}</div>
                   <div className="analytics-kpi-label">Gross Billings</div>
                 </div>
               </div>
@@ -772,7 +780,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
               <div className="analytics-kpi success">
                 <div className="analytics-kpi-icon">💵</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.netProfit.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(data.netProfit)}</div>
                   <div className="analytics-kpi-label">Net Profit</div>
                 </div>
               </div>
@@ -814,7 +822,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                         <td><strong>{p.name}</strong></td>
                         <td style={{ textAlign: 'right' }}>{p.trips}</td>
                         <td style={{ textAlign: 'right' }}>{p.weight.toFixed(1)}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 700 }}>₹{p.revenue.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 700 }}>{fmt(p.revenue)}</td>
                       </tr>
                     ))}
                     {data.revenueByProject.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center' }}>No data</td></tr>}
@@ -832,14 +840,14 @@ export default function DashboardAnalytics({ initialData }: Props) {
               <div className="analytics-kpi danger">
                 <div className="analytics-kpi-icon">📉</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.totalExpenses.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(data.totalExpenses)}</div>
                   <div className="analytics-kpi-label">Total Outgoings</div>
                 </div>
               </div>
               <div className="analytics-kpi purple">
                 <div className="analytics-kpi-icon">💳</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.totalAdvances.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(data.totalAdvances)}</div>
                   <div className="analytics-kpi-label">Owner Advances</div>
                 </div>
               </div>
@@ -916,7 +924,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                             <strong>{e.type}</strong>
                           </div>
                         </td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{e.amount.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(e.amount)}</td>
                         <td style={{ textAlign: 'right', color: 'var(--color-text-muted)' }}>{e.pct}%</td>
                         <td>
                           <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 100, overflow: 'hidden' }}>
@@ -1067,11 +1075,11 @@ export default function DashboardAnalytics({ initialData }: Props) {
                           <td style={{ textAlign: 'right' }}>
                             <span style={{ background: 'rgba(59,130,246,.1)', color: 'var(--color-info)', borderRadius: 20, padding: '2px 8px', fontSize: '12px', fontWeight: 700 }}>{v.trips}</span>
                           </td>
-                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{v.revenue.toLocaleString('en-IN')}</td>
-                          <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>₹{v.payout.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>{fmt(v.revenue)}</td>
+                          <td style={{ textAlign: 'right', color: '#f59e0b', fontSize: '12px' }}>{fmt(v.payout)}</td>
                           <td style={{ textAlign: 'right', color: '#ef4444', fontSize: '12px' }}>{deductions > 0 ? `₹${deductions.toLocaleString('en-IN')}` : '—'}</td>
-                          <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>₹{settlement.toLocaleString('en-IN')}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: myProfit >= 0 ? '#10b981' : '#ef4444' }}>₹{myProfit.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', color: '#8b5cf6', fontWeight: 600 }}>{fmt(settlement)}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700, color: myProfit >= 0 ? '#10b981' : '#ef4444' }}>{fmt(myProfit)}</td>
                         </tr>
                       )
                     })}
@@ -1147,7 +1155,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                         <td><strong>{p.name}</strong></td>
                         <td style={{ textAlign: 'right' }}>{p.trips}</td>
                         <td style={{ textAlign: 'right' }}>{p.weight.toFixed(1)}</td>
-                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 700 }}>₹{p.revenue.toLocaleString('en-IN')}</td>
+                        <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 700 }}>{fmt(p.revenue)}</td>
                       </tr>
                     ))}
                     {data.revenueByProject.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center' }}>No data</td></tr>}
@@ -1187,7 +1195,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
               <div className="analytics-kpi purple">
                 <div className="analytics-kpi-icon">💵</div>
                 <div className="analytics-kpi-body">
-                  <div className="analytics-kpi-value">₹{data.totalAdvances.toLocaleString('en-IN')}</div>
+                  <div className="analytics-kpi-value">{fmt(data.totalAdvances)}</div>
                   <div className="analytics-kpi-label">Total Advances Paid</div>
                 </div>
               </div>
@@ -1285,8 +1293,8 @@ export default function DashboardAnalytics({ initialData }: Props) {
                               fontSize: '12px', fontWeight: 700,
                             }}>{o.trips}</span>
                           </td>
-                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>₹{o.revenue.toLocaleString('en-IN')}</td>
-                          <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>₹{o.expenses.toLocaleString('en-IN')}</td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-success)', fontWeight: 600 }}>{fmt(o.revenue)}</td>
+                          <td style={{ textAlign: 'right', color: 'var(--color-danger)' }}>{fmt(o.expenses)}</td>
                           <td style={{ textAlign: 'right' }}>
                             <span style={{
                               color: marginNum >= 30 ? 'var(--color-success)' : marginNum >= 10 ? 'var(--color-accent)' : 'var(--color-danger)',
