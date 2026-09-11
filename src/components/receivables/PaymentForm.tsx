@@ -163,7 +163,7 @@ export default function PaymentForm({ billId, payments, billAmount, receivedAmou
                 </div>
                 <div className="form-group">
                   <label className="form-label" style={{ fontSize: 10 }}>Amount (₹) *</label>
-                  <input type="number" className="form-input" placeholder={String(Math.round(pending))} value={amount} onChange={e => setAmount(e.target.value)} required min="1" style={{ fontSize: 13, fontWeight: 700 }} />
+                  <input type="number" className="form-input" placeholder={String(Math.round(pending))} value={amount} onChange={e => setAmount(e.target.value)} required min="0.01" step="0.01" max={pending} style={{ fontSize: 13, fontWeight: 700 }} />
                 </div>
                 <div className="form-group">
                   <label className="form-label" style={{ fontSize: 10 }}>Reference (UTR/Cheque)</label>

@@ -1,5 +1,6 @@
 'use client'
 
+import { agingLabels, agingBucketFor, outstandingFor, totalPayableFor, incentiveTotal, money } from '@/lib/finance/receivables'
 import { useState, useTransition } from 'react'
 import BillForm from './BillForm'
 import PaymentForm from './PaymentForm'
@@ -105,12 +106,16 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
   const [editingBill, setEditingBill] = useState<Bill | null>(null)
   const [filterProject, setFilterProject] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [search, setSearch] = useState('')
+  const [agingFilter, setAgingFilter] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showOverallPayments, setShowOverallPayments] = useState(true)
 
   const filteredBills = bills.filter(b => {
     if (filterProject && b.projectId !== filterProject) return false
     if (filterStatus && b.status !== filterStatus) return false
+    if (search && !`${b.billNo} ${b.project.projectName}`.toLowerCase().includes(search.toLowerCase().trim())) return false
+    if (agingFilter !== null && (outstandingFor(b) === 0 || agingBucketFor(b) !== agingFilter)) return false
     return true
   })
 
@@ -154,7 +159,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
               : `${summary.totalBills} bills`,
             icon: '📄'
           },
-          { label: 'Total Received (Lump-Sum Receipts)', value: fmt(summary.totalReceived), color: '#10b981', sub: `${summary.paidBills} fully settled`, icon: '✅' },
+          { label: 'Collected against invoices', value: fmt(summary.totalReceived), color: '#10b981', sub: `${summary.paidBills} fully settled`, icon: '✅' },
           { label: 'Remaining Receivable (To Collect)', value: fmt(summary.totalPending), color: '#22d3ee', sub: summary.totalPending > 0 ? 'Net remaining amount to collect' : 'Fully collected', icon: '⏳' },
           { label: 'Overdue Bills', value: summary.overdueBills > 0 ? String(summary.overdueBills) : '0', color: summary.overdueBills > 0 ? '#ef4444' : '#64748b', sub: summary.overdueBills > 0 ? 'needs attention' : 'all clear', icon: summary.overdueBills > 0 ? '🔴' : '🟢' },
         ].map(c => (
@@ -176,6 +181,24 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         ))}
       </div>
 
+      <section className="card" style={{ padding: 20, marginBottom: 24 }} aria-label="Receivables aging">
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+          <div><h2 style={{ fontSize: 14, fontWeight: 700 }}>Receivables Aging</h2><p style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Outstanding balances by days past due · select a bucket to view invoices</p></div>
+          {agingFilter !== null && <button className="btn btn-secondary btn-sm" onClick={() => setAgingFilter(null)}>Clear aging filter</button>}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
+          {agingLabels.map((label, index) => {
+            const bucket = bills.filter(b => (!filterProject || b.projectId === filterProject) && outstandingFor(b) > 0 && agingBucketFor(b) === index)
+            const amount = bucket.reduce((sum, b) => sum + outstandingFor(b), 0)
+            return <button key={label} aria-pressed={agingFilter === index} onClick={() => { setAgingFilter(agingFilter === index ? null : index); setFilterStatus('') }} style={{ padding: 16, borderRadius: 12, textAlign: 'left', cursor: 'pointer', border: `1px solid ${agingFilter === index ? 'var(--color-accent)' : 'var(--color-border)'}`, background: agingFilter === index ? 'var(--color-accent-subtle)' : 'var(--color-bg-secondary)' }}>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--color-text-secondary)' }}>{label}</span>
+              <strong style={{ display: 'block', fontSize: 22, margin: '6px 0', color: index === 3 ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{fmt(amount)}</strong>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{bucket.length} invoices</span>
+            </button>
+          })}
+        </div>
+      </section>
+
       {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & UNIFIED SINGLE EXPORT ═══ */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24, alignItems: 'center' }}>
         <OverallPaymentForm
@@ -188,20 +211,13 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         {/* STREAMLINED CSV EXPORT BUTTON */}
         <ExportCSVButton
           data={(() => {
-            // Build overall payment log string (actual lump-sum receipts)
-            const overallPaymentLog = filteredOverallPayments.length > 0
-              ? filteredOverallPayments.map(p =>
-                  `${new Date(p.date).toLocaleDateString('en-IN')}: ₹${Math.round(p.amount).toLocaleString('en-IN')}`
-                ).join(' ; ')
-              : '—'
-
             // Bill rows
             const rows = filteredBills.map(b => {
               const incRate = b.incentive || 0
               const weight = b.totalWeight || 0
               const baseRate = weight > 0 ? Math.round((b.billAmount / weight) * 100) / 100 : 0
-              const incTotal = weight > 0 ? (incRate * weight) : incRate
-              const totalPayable = Math.round(b.billAmount + incTotal)
+              const incTotal = incentiveTotal(incRate, weight)
+              const totalPayable = totalPayableFor(b)
 
               return {
                 billNo: b.billNo,
@@ -210,19 +226,20 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                 weight: b.billType === 'TOLL' ? '—' : (weight > 0 ? weight.toFixed(2) : '—'),
                 baseRate: b.billType === 'TOLL' ? '—' : (baseRate > 0 ? `₹${baseRate}` : '—'),
                 incentiveRate: b.billType === 'TOLL' ? '—' : (incRate > 0 ? `₹${incRate}` : '—'),
-                baseAmount: Math.round(b.billAmount),
-                incentiveAmount: Math.round(incTotal),
+                baseAmount: b.billAmount,
+                incentiveAmount: incTotal,
                 totalBill: totalPayable,
-                paymentReceived: '',
-                totalReceived: '',
-                pending: '',
+                paymentReceived: b.payments.map(p => `${fmtDate(p.date)}: ${fmt(p.amount)}${p.referenceNo ? ` [${p.referenceNo}]` : ''}`).join(' ; '),
+                totalReceived: b.receivedAmount as any,
+                pending: outstandingFor(b) as any,
                 status: b.status,
               }
             })
 
             // Calculate totals
-            const totalBillSum = rows.reduce((s, r) => s + (typeof r.totalBill === 'number' ? r.totalBill : 0), 0)
-            const totalPendingSum = totalBillSum - Math.round(totalOverallPaymentsSum)
+            const totalBillSum = money(rows.reduce((s, r) => s + (typeof r.totalBill === 'number' ? r.totalBill : 0), 0))
+            const totalReceivedSum = money(filteredBills.reduce((sum, bill) => sum + bill.receivedAmount, 0))
+            const totalPendingSum = money(filteredBills.reduce((sum, bill) => sum + outstandingFor(bill), 0))
 
             // Add a blank separator row, then overall payment rows
             rows.push({
@@ -236,8 +253,8 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
               billNo: '--- SUMMARY ---', project: '', billType: '', weight: '', baseRate: '', incentiveRate: '',
               baseAmount: '' as any, incentiveAmount: '' as any,
               totalBill: totalBillSum as any,
-              paymentReceived: overallPaymentLog,
-              totalReceived: Math.round(totalOverallPaymentsSum) as any,
+              paymentReceived: 'Payments allocated to filtered invoices',
+              totalReceived: totalReceivedSum as any,
               pending: totalPendingSum as any,
               status: '' as any,
             })
@@ -269,7 +286,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
         padding: '16px 20px',
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
       }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>Filter:</span>
+        <input className="form-input" type="search" aria-label="Search invoice number or project" placeholder="Search invoice or project…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 240 }} />
         <select
           className="form-select"
           value={filterProject}
@@ -399,7 +416,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
               const incRate = bill.incentive || 0
               const totalIncAmt = bill.totalWeight > 0 ? (incRate * bill.totalWeight) : incRate
               const totalPayable = Math.round(bill.billAmount + totalIncAmt)
-              const pendingAmt = totalPayable - bill.receivedAmount
+              const pendingAmt = outstandingFor(bill)
 
               return (
                 <div key={bill.id} style={{
@@ -497,7 +514,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
 
                     {/* Due Date */}
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 11, color: bill.dueDate && new Date(bill.dueDate) < new Date() && bill.status !== 'PAID' ? '#ef4444' : '#64748b' }}>
+                      <div style={{ fontSize: 11, color: bill.status === 'OVERDUE' ? '#ef4444' : '#64748b' }}>
                         {bill.dueDate ? fmtDate(bill.dueDate) : '—'}
                       </div>
                     </div>

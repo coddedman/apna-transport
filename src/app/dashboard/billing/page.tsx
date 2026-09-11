@@ -25,7 +25,7 @@ export default async function BillingPage() {
   return (
     <div className="page-container">
       <PageHeader
-        title="🧾 Bill Generator"
+        title="Owner Statements"
         subtitle="Generate weekly & monthly settlements per vehicle or owner"
       />
       <BillGenerator

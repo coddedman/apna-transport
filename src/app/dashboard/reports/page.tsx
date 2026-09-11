@@ -17,7 +17,7 @@ export default async function ReportsPage() {
   return (
     <div className="page-container">
       <PageHeader
-        title="📈 Reports"
+        title="Analytics & Reports"
         subtitle="Fortnightly P&L — compare profit, expenses, and transactions for each 15-day period"
       />
       <div className="page-body">

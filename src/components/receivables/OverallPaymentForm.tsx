@@ -62,6 +62,10 @@ export default function OverallPaymentForm({ projects, projectWise, totalPending
       return
     }
 
+    if (parsedAmount > currentOutstanding) {
+      setError('Payment exceeds outstanding invoices. Record client advances separately.')
+      return
+    }
     setError(null)
     startTransition(async () => {
       try {
@@ -146,8 +150,9 @@ export default function OverallPaymentForm({ projects, projectWise, totalPending
                 <label className="form-label" style={{ fontSize: 11 }}>Amount Received (₹) *</label>
                 <input
                   type="number"
-                  step="1"
-                  min="1"
+                  step="0.01"
+                  min="0.01"
+                  max={currentOutstanding}
                   className="form-input"
                   placeholder="e.g. 500000"
                   value={amount}

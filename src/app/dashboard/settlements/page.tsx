@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import GenerateSettlementButton from '@/components/GenerateSettlementButton'
@@ -70,18 +71,10 @@ export default async function SettlementsPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Settlements</h1>
-            <p className="page-subtitle">Owner reconciliation and payout records</p>
-          </div>
-        </div>
-        <div className="page-header-right" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <ExportCSVButton data={csvData} filename="settlements_export" columns={csvColumns} />
-          <GenerateSettlementButton owners={owners} lastSettlementByOwner={lastSettlementByOwner} />
-        </div>
-      </header>
+      <PageHeader title="Owner Settlements" subtitle="Reconcile trips, deductions, advances and payout records">
+        <ExportCSVButton data={csvData} filename="settlements_export" columns={csvColumns} />
+        <GenerateSettlementButton owners={owners} lastSettlementByOwner={lastSettlementByOwner} />
+      </PageHeader>
 
       <div className="page-body">
         {/* Formula Banner */}

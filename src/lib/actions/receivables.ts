@@ -4,22 +4,14 @@ import { prisma } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { revalidateDashboard } from '@/lib/actions/revalidate'
 import { BillStatus } from '@prisma/client'
+import { incentiveTotal, totalPayableFor, outstandingFor, statusFor, money, validDate, validateAmount } from '@/lib/finance/receivables'
+import { financeTransaction } from '@/lib/finance/transaction'
 
 async function getTransporterId() {
   const session = await auth()
   const tid = (session?.user as any)?.transporterId
-  if (!tid) throw new Error('Unauthorized')
+  if (!tid || session?.user?.role === 'OWNER') throw new Error('Unauthorized')
   return tid
-}
-
-// `incentive` is stored as a rate per MT (see BillForm's "Incentive Rate (₹/MT)"), not a flat amount.
-function incentiveTotal(incentiveRate: number | null | undefined, totalWeight: number): number {
-  const rate = incentiveRate || 0
-  return totalWeight > 0 ? rate * totalWeight : rate
-}
-
-function totalPayableFor(bill: { billAmount: number; incentive: number | null; totalWeight: number }): number {
-  return bill.billAmount + incentiveTotal(bill.incentive, bill.totalWeight)
 }
 
 export async function createPartyBill(data: {
@@ -38,9 +30,20 @@ export async function createPartyBill(data: {
 }) {
   const tid = await getTransporterId()
 
-  if (!data.billNo) throw new Error('Bill number is required')
+  if (!data.billNo?.trim()) throw new Error('Bill number is required')
   if (!data.projectId) throw new Error('Project is required')
-  if (data.billAmount <= 0) throw new Error('Bill amount must be positive')
+  validateAmount(data.billAmount, 'Bill amount')
+  validateAmount(data.incentive ?? 0, 'Incentive', true)
+  validateAmount(data.totalWeight ?? 0, 'Weight', true)
+  validateAmount(data.totalTrips ?? 0, 'Trip count', true)
+  if (!Number.isInteger(data.totalTrips ?? 0)) throw new Error('Trip count must be a whole number')
+  validDate(data.periodStart, 'Period start')
+  validDate(data.periodEnd, 'Period end')
+  if (data.periodStart > data.periodEnd) throw new Error('Period end must be on or after period start')
+  if (data.submittedAt) validDate(data.submittedAt, 'Submission date')
+  if (data.dueDate) validDate(data.dueDate, 'Due date')
+  const project = await prisma.project.findFirst({ where: { id: data.projectId, transporterId: tid }, select: { id: true } })
+  if (!project) throw new Error('Project not found')
 
   // Check for duplicate bill number
   const existing = await prisma.partyBill.findFirst({
@@ -76,6 +79,9 @@ export async function createPartyBill(data: {
 export async function calculateBillFromTrips(projectId: string, periodStart: string, periodEnd: string) {
   const tid = await getTransporterId()
 
+  validDate(periodStart, 'Period start')
+  validDate(periodEnd, 'Period end')
+  if (periodStart > periodEnd) throw new Error('Period end must be on or after period start')
   const start = new Date(periodStart + 'T00:00:00')
   const end = new Date(periodEnd + 'T23:59:59')
 
@@ -107,46 +113,42 @@ export async function addBillPayment(data: {
   remarks?: string
 }) {
   const tid = await getTransporterId()
+  await financeTransaction(async tx => {
 
-  const bill = await prisma.partyBill.findFirst({
-    where: { id: data.billId, transporterId: tid },
+    const bill = await tx.partyBill.findFirst({
+      where: { id: data.billId, transporterId: tid },
+    })
+    if (!bill) throw new Error('Bill not found')
+    validateAmount(data.amount, 'Amount')
+    if (money(data.amount) <= 0) throw new Error('Amount must be at least ₹0.01')
+    validDate(data.date, 'Payment date')
+
+    if (money(data.amount) > outstandingFor(bill)) throw new Error('Payment exceeds the remaining invoice balance')
+
+    // Create payment
+    await tx.billPayment.create({
+      data: {
+        billId: data.billId,
+        date: new Date(data.date),
+        amount: money(data.amount),
+        referenceNo: data.referenceNo || null,
+        remarks: data.remarks || null,
+      }
+    })
+
+    // Recalculate receivedAmount and status
+    const payments = await tx.billPayment.findMany({
+      where: { billId: data.billId },
+      select: { amount: true },
+    })
+    const totalReceived = money(payments.reduce((s, p) => s + p.amount, 0))
+    const status = statusFor({ ...bill, receivedAmount: totalReceived })
+
+    await tx.partyBill.update({
+      where: { id: data.billId },
+      data: { receivedAmount: totalReceived, status },
+    })
   })
-  if (!bill) throw new Error('Bill not found')
-  if (data.amount <= 0) throw new Error('Amount must be positive')
-
-  // Create payment
-  await prisma.billPayment.create({
-    data: {
-      billId: data.billId,
-      date: new Date(data.date),
-      amount: data.amount,
-      referenceNo: data.referenceNo || null,
-      remarks: data.remarks || null,
-    }
-  })
-
-  // Recalculate receivedAmount and status
-  const payments = await prisma.billPayment.findMany({
-    where: { billId: data.billId },
-    select: { amount: true },
-  })
-  const totalReceived = payments.reduce((s, p) => s + p.amount, 0)
-  const totalPayable = totalPayableFor(bill)
-
-  let status: BillStatus = 'PENDING'
-  if (totalReceived >= totalPayable) {
-    status = 'PAID'
-  } else if (totalReceived > 0) {
-    status = 'PARTIAL'
-  } else if (bill.dueDate && new Date() > bill.dueDate) {
-    status = 'OVERDUE'
-  }
-
-  await prisma.partyBill.update({
-    where: { id: data.billId },
-    data: { receivedAmount: totalReceived, status },
-  })
-
   revalidateDashboard()
 }
 
@@ -163,108 +165,106 @@ export async function addBulkPartyPayment(data: {
   remarks?: string
 }) {
   const tid = await getTransporterId()
+  await financeTransaction(async tx => {
 
-  if (data.amount <= 0) throw new Error('Amount must be positive')
+    validateAmount(data.amount, 'Amount')
+    if (money(data.amount) <= 0) throw new Error('Amount must be at least ₹0.01')
+    validDate(data.date, 'Payment date')
 
-  const where: any = {
-    transporterId: tid,
-    status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] }
-  }
-  if (data.projectId) {
-    where.projectId = data.projectId
-  }
+    if (data.projectId && !await tx.project.findFirst({ where: { id: data.projectId, transporterId: tid }, select: { id: true } })) throw new Error('Project not found')
 
-  const bills = await prisma.partyBill.findMany({
-    where,
-    include: { payments: true },
-    orderBy: { periodStart: 'asc' },
-  })
+    const where: any = {
+      transporterId: tid
+    }
+    if (data.projectId) {
+      where.projectId = data.projectId
+    }
 
-  let remainingToDistribute = data.amount
-  const payDate = new Date(data.date)
+    const bills = await tx.partyBill.findMany({
+      where,
+      include: { payments: true },
+      orderBy: { periodStart: 'asc' },
+    })
 
-  for (const bill of bills) {
-    if (remainingToDistribute <= 0) break
+    let remainingToDistribute = money(data.amount)
+    const payDate = new Date(data.date)
 
-    const alreadyReceived = bill.payments.reduce((s, p) => s + p.amount, 0)
-    const totalPayable = totalPayableFor(bill)
-    const billPending = totalPayable - alreadyReceived
+    for (const bill of bills) {
+      if (remainingToDistribute <= 0) break
 
-    if (billPending <= 0) continue
+      const alreadyReceived = bill.payments.reduce((s, p) => s + p.amount, 0)
+      const totalPayable = totalPayableFor(bill)
+      const billPending = money(totalPayable - alreadyReceived)
 
-    const payForThisBill = Math.min(remainingToDistribute, billPending)
+      if (billPending <= 0) continue
 
-    await prisma.billPayment.create({
+      const payForThisBill = Math.min(remainingToDistribute, billPending)
+
+      await tx.billPayment.create({
+        data: {
+          billId: bill.id,
+          date: payDate,
+          amount: payForThisBill,
+          referenceNo: data.referenceNo || null,
+          remarks: data.remarks ? `${data.remarks} (Overall Payment)` : 'Overall Payment',
+        }
+      })
+
+      const newTotalReceived = money(alreadyReceived + payForThisBill)
+      const newStatus = statusFor({ ...bill, receivedAmount: newTotalReceived })
+
+      await tx.partyBill.update({
+        where: { id: bill.id },
+        data: { receivedAmount: newTotalReceived, status: newStatus },
+      })
+
+      remainingToDistribute = money(remainingToDistribute - payForThisBill)
+    }
+
+    if (money(remainingToDistribute) > 0) throw new Error('Payment exceeds outstanding invoices. Record any client advance separately.')
+
+    // Create Transaction record for CashFlow tracking
+    await tx.transaction.create({
       data: {
-        billId: bill.id,
+        transporterId: tid,
         date: payDate,
-        amount: payForThisBill,
+        projectId: data.projectId || null,
+        type: 'PARTY_PAYMENT',
+        amount: money(data.amount),
+        status: 'COMPLETED',
         referenceNo: data.referenceNo || null,
-        remarks: data.remarks ? `${data.remarks} (Overall Payment)` : 'Overall Payment',
+        description: `Overall Party Payment Received${data.remarks ? ': ' + data.remarks : ''}`,
       }
     })
-
-    const newTotalReceived = alreadyReceived + payForThisBill
-    let newStatus: BillStatus = 'PENDING'
-    if (newTotalReceived >= totalPayable) {
-      newStatus = 'PAID'
-    } else if (newTotalReceived > 0) {
-      newStatus = 'PARTIAL'
-    }
-
-    await prisma.partyBill.update({
-      where: { id: bill.id },
-      data: { receivedAmount: newTotalReceived, status: newStatus },
-    })
-
-    remainingToDistribute -= payForThisBill
-  }
-
-  // Create Transaction record for CashFlow tracking
-  await prisma.transaction.create({
-    data: {
-      transporterId: tid,
-      projectId: data.projectId || null,
-      type: 'PARTY_PAYMENT',
-      amount: data.amount,
-      status: 'COMPLETED',
-      referenceNo: data.referenceNo || null,
-      description: `Overall Party Payment Received${data.remarks ? ': ' + data.remarks : ''}`,
-    }
   })
-
   revalidateDashboard()
 }
 
 export async function deleteBillPayment(paymentId: string) {
   const tid = await getTransporterId()
+  await financeTransaction(async tx => {
 
-  const payment = await prisma.billPayment.findUnique({
-    where: { id: paymentId },
-    include: { bill: { select: { id: true, transporterId: true, billAmount: true, incentive: true, totalWeight: true, dueDate: true } } },
+    const payment = await tx.billPayment.findUnique({
+      where: { id: paymentId },
+      include: { bill: { select: { id: true, transporterId: true, billAmount: true, incentive: true, totalWeight: true, dueDate: true } } },
+    })
+    if (!payment || payment.bill.transporterId !== tid) throw new Error('Payment not found')
+
+    await tx.billPayment.delete({ where: { id: paymentId } })
+
+    // Recalculate
+    const remaining = await tx.billPayment.findMany({
+      where: { billId: payment.billId },
+      select: { amount: true },
+    })
+    const totalReceived = money(remaining.reduce((s, p) => s + p.amount, 0))
+    const status = statusFor({ ...payment.bill, receivedAmount: totalReceived })
+
+    await tx.partyBill.update({
+      where: { id: payment.billId },
+      data: { receivedAmount: totalReceived, status },
+    })
   })
-  if (!payment || payment.bill.transporterId !== tid) throw new Error('Payment not found')
-
-  await prisma.billPayment.delete({ where: { id: paymentId } })
-
-  // Recalculate
-  const remaining = await prisma.billPayment.findMany({
-    where: { billId: payment.billId },
-    select: { amount: true },
-  })
-  const totalReceived = remaining.reduce((s, p) => s + p.amount, 0)
-  const totalPayable = totalPayableFor(payment.bill)
-
-  let status: BillStatus = 'PENDING'
-  if (totalReceived >= totalPayable) status = 'PAID'
-  else if (totalReceived > 0) status = 'PARTIAL'
-  else if (payment.bill.dueDate && new Date() > payment.bill.dueDate) status = 'OVERDUE'
-
-  await prisma.partyBill.update({
-    where: { id: payment.billId },
-    data: { receivedAmount: totalReceived, status },
-  })
-
   revalidateDashboard()
 }
 
@@ -282,9 +282,8 @@ export async function getPartyBills(filters: ReceivableFilters = {}) {
 
   const where: any = { transporterId: tid }
   if (filters.projectId) where.projectId = filters.projectId
-  if (filters.status) where.status = filters.status
 
-  return prisma.partyBill.findMany({
+  const bills = await prisma.partyBill.findMany({
     where,
     include: {
       project: { select: { id: true, projectName: true } },
@@ -292,6 +291,7 @@ export async function getPartyBills(filters: ReceivableFilters = {}) {
     },
     orderBy: { createdAt: 'desc' },
   })
+  return bills.map(bill => ({ ...bill, status: statusFor(bill) })).filter(bill => !filters.status || bill.status === filters.status)
 }
 
 export async function getOverallPartyPayments() {
@@ -312,14 +312,14 @@ export async function getReceivableSummary() {
 
   const bills = await prisma.partyBill.findMany({
     where: { transporterId: tid },
-    select: { billAmount: true, incentive: true, totalWeight: true, receivedAmount: true, status: true },
+    select: { billAmount: true, incentive: true, totalWeight: true, receivedAmount: true, dueDate: true, status: true },
   })
 
   const totalBaseBilled = bills.reduce((s, b) => s + b.billAmount, 0)
   const totalIncentives = bills.reduce((s, b) => s + incentiveTotal(b.incentive, b.totalWeight), 0)
   const totalBilled = totalBaseBilled + totalIncentives
   const totalReceived = bills.reduce((s, b) => s + b.receivedAmount, 0)
-  const totalPending = totalBilled - totalReceived
+  const totalPending = bills.reduce((sum, bill) => sum + outstandingFor(bill), 0)
 
   return {
     totalBilled,
@@ -328,10 +328,10 @@ export async function getReceivableSummary() {
     totalReceived,
     totalPending,
     totalBills: bills.length,
-    pendingBills: bills.filter(b => b.status === 'PENDING').length,
-    partialBills: bills.filter(b => b.status === 'PARTIAL').length,
-    paidBills: bills.filter(b => b.status === 'PAID').length,
-    overdueBills: bills.filter(b => b.status === 'OVERDUE').length,
+    pendingBills: bills.filter(b => statusFor(b) === 'PENDING').length,
+    partialBills: bills.filter(b => statusFor(b) === 'PARTIAL').length,
+    paidBills: bills.filter(b => statusFor(b) === 'PAID').length,
+    overdueBills: bills.filter(b => statusFor(b) === 'OVERDUE').length,
   }
 }
 
@@ -351,7 +351,7 @@ export async function getProjectWisePending() {
     const existing = projectMap.get(pid) || { projectName: b.project.projectName, billed: 0, received: 0, pending: 0, count: 0 }
     existing.billed += totalBillPayable
     existing.received += b.receivedAmount
-    existing.pending += (totalBillPayable - b.receivedAmount)
+    existing.pending += outstandingFor(b)
     existing.count += 1
     projectMap.set(pid, existing)
   }
@@ -384,50 +384,53 @@ export async function updatePartyBill(billId: string, data: {
   remarks?: string | null
 }) {
   const tid = await getTransporterId()
-  const bill = await prisma.partyBill.findFirst({ where: { id: billId, transporterId: tid } })
-  if (!bill) throw new Error('Bill not found')
+  await financeTransaction(async tx => {
+    const bill = await tx.partyBill.findFirst({ where: { id: billId, transporterId: tid } })
+    if (!bill) throw new Error('Bill not found')
 
-  const updateData: any = {}
-  if (data.billNo !== undefined) {
-    // Check for duplicate bill number (excluding current bill)
-    if (data.billNo !== bill.billNo) {
-      const dup = await prisma.partyBill.findFirst({
-        where: { transporterId: tid, billNo: data.billNo, id: { not: billId } }
-      })
-      if (dup) throw new Error(`Duplicate bill number: "${data.billNo}" already exists`)
+    if (data.billNo !== undefined && !data.billNo.trim()) throw new Error('Bill number is required')
+    if (data.billAmount !== undefined) validateAmount(data.billAmount, 'Bill amount')
+    if (data.incentive !== undefined) validateAmount(data.incentive, 'Incentive', true)
+    if (data.totalWeight !== undefined) validateAmount(data.totalWeight, 'Weight', true)
+    if (data.totalTrips !== undefined) {
+      validateAmount(data.totalTrips, 'Trip count', true)
+      if (!Number.isInteger(data.totalTrips)) throw new Error('Trip count must be a whole number')
     }
-    updateData.billNo = data.billNo
-  }
-  if (data.periodStart !== undefined) updateData.periodStart = new Date(data.periodStart)
-  if (data.periodEnd !== undefined) updateData.periodEnd = new Date(data.periodEnd)
-  if (data.totalTrips !== undefined) updateData.totalTrips = data.totalTrips
-  if (data.totalWeight !== undefined) updateData.totalWeight = data.totalWeight
-  if (data.incentive !== undefined) updateData.incentive = data.incentive
-  if (data.billType !== undefined) updateData.billType = data.billType
-  if (data.billAmount !== undefined || data.incentive !== undefined || data.totalWeight !== undefined) {
+    if (data.periodStart !== undefined) validDate(data.periodStart, 'Period start')
+    if (data.periodEnd !== undefined) validDate(data.periodEnd, 'Period end')
+    if (data.submittedAt) validDate(data.submittedAt, 'Submission date')
+    if (data.dueDate) validDate(data.dueDate, 'Due date')
+    if (new Date(data.periodStart ?? bill.periodStart) > new Date(data.periodEnd ?? bill.periodEnd)) throw new Error('Period end must be on or after period start')
+    const updateData: any = {}
+    if (data.billNo !== undefined) {
+      // Check for duplicate bill number (excluding current bill)
+      if (data.billNo !== bill.billNo) {
+        const dup = await tx.partyBill.findFirst({
+          where: { transporterId: tid, billNo: data.billNo, id: { not: billId } }
+        })
+        if (dup) throw new Error(`Duplicate bill number: "${data.billNo}" already exists`)
+      }
+      updateData.billNo = data.billNo
+    }
+    if (data.periodStart !== undefined) updateData.periodStart = new Date(data.periodStart)
+    if (data.periodEnd !== undefined) updateData.periodEnd = new Date(data.periodEnd)
+    if (data.totalTrips !== undefined) updateData.totalTrips = data.totalTrips
+    if (data.totalWeight !== undefined) updateData.totalWeight = data.totalWeight
+    if (data.incentive !== undefined) updateData.incentive = data.incentive
+    if (data.billType !== undefined) updateData.billType = data.billType
     if (data.billAmount !== undefined) updateData.billAmount = data.billAmount
-    const finalBillAmount = data.billAmount ?? bill.billAmount
-    const finalIncentive = data.incentive ?? bill.incentive
-    const finalWeight = data.totalWeight ?? bill.totalWeight
-    const totalPayable = finalBillAmount + incentiveTotal(finalIncentive, finalWeight)
+    if (data.submittedAt !== undefined) updateData.submittedAt = data.submittedAt ? new Date(data.submittedAt) : null
+    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null
+    if (data.remarks !== undefined) updateData.remarks = data.remarks
 
-    // Recalculate status based on new total amount
-    const payments = await prisma.billPayment.findMany({
-      where: { billId },
-      select: { amount: true },
-    })
-    const totalReceived = payments.reduce((s, p) => s + p.amount, 0)
-    let status: BillStatus = 'PENDING'
-    if (totalReceived >= totalPayable) status = 'PAID'
-    else if (totalReceived > 0) status = 'PARTIAL'
-    else if (data.dueDate !== undefined ? (data.dueDate && new Date() > new Date(data.dueDate)) : (bill.dueDate && new Date() > bill.dueDate)) status = 'OVERDUE'
-    updateData.status = status
-  }
-  if (data.submittedAt !== undefined) updateData.submittedAt = data.submittedAt ? new Date(data.submittedAt) : null
-  if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null
-  if (data.remarks !== undefined) updateData.remarks = data.remarks
-
-  await prisma.partyBill.update({ where: { id: billId }, data: updateData })
+    const payments = await tx.billPayment.aggregate({ where: { billId }, _sum: { amount: true } })
+    const receivedAmount = money(payments._sum.amount || 0)
+    const updated = { ...bill, ...updateData, receivedAmount }
+    if (totalPayableFor(updated) < receivedAmount) throw new Error('Invoice total cannot be less than payments already received')
+    updateData.receivedAmount = receivedAmount
+    updateData.status = statusFor(updated)
+    await tx.partyBill.update({ where: { id: billId }, data: updateData })
+  })
   revalidateDashboard()
 }
 

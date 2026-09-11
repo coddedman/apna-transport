@@ -16,5 +16,8 @@ export async function revalidateDashboard() {
   revalidatePath('/dashboard/projects')
   revalidatePath('/dashboard/settlements')
   revalidatePath('/dashboard/billing')
+  revalidatePath('/dashboard/bills')
+  revalidatePath('/dashboard/reports')
+  revalidatePath('/dashboard/transactions')
   revalidatePath('/dashboard/partners')
 }

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { useState, useTransition } from 'react'
+import { money } from '@/lib/finance/receivables'
 import Modal from '@/components/Modal'
 import { createPartyBill, calculateBillFromTrips } from '@/lib/actions/receivables'
 
@@ -31,26 +32,15 @@ export default function BillForm({ projects }: Props) {
   const [dueDate, setDueDate] = useState('')
   const [remarks, setRemarks] = useState('')
 
-  // When project changes, set default base rate from project
-  useEffect(() => {
-    if (projectId) {
-      const proj = projects.find(p => p.id === projectId)
-      if (proj) {
-        setBaseRate(String(proj.partyRate))
-      }
-    }
-  }, [projectId, projects])
+  function changeWeight(value: string) {
+    setTotalWeight(value)
+    setBillAmount(String(money((parseFloat(value) || 0) * (parseFloat(baseRate) || 0))))
+  }
 
-  // Auto-calculate Base Bill Amount whenever Weight or Base Rate changes
-  useEffect(() => {
-    if (billType === 'FREIGHT') {
-      const w = parseFloat(totalWeight) || 0
-      const r = parseFloat(baseRate) || 0
-      if (w > 0 && r > 0) {
-        setBillAmount(String(Math.round(w * r)))
-      }
-    }
-  }, [totalWeight, baseRate, billType])
+  function changeRate(value: string) {
+    setBaseRate(value)
+    setBillAmount(String(money((parseFloat(totalWeight) || 0) * (parseFloat(value) || 0))))
+  }
 
   function resetForm() {
     setBillNo(''); setBillType('FREIGHT'); setProjectId(''); setPeriodStart(''); setPeriodEnd('')
@@ -68,14 +58,14 @@ export default function BillForm({ projects }: Props) {
         const data = await calculateBillFromTrips(projectId, periodStart, periodEnd)
         setTotalTrips(String(data.totalTrips))
         const w = data.totalWeight || 0
-        setTotalWeight(String(w.toFixed(2)))
+        setTotalWeight(String(w))
         const calcBase = data.billAmount || 0
         if (w > 0) {
           const calculatedRate = Math.round((calcBase / w) * 100) / 100
           setBaseRate(String(calculatedRate))
-          setBillAmount(String(Math.round(w * calculatedRate)))
+          setBillAmount(String(money(calcBase)))
         } else {
-          setBillAmount(String(Math.round(calcBase)))
+          setBillAmount(String(money(calcBase)))
         }
       } catch (err: any) {
         alert(err.message)
@@ -103,7 +93,7 @@ export default function BillForm({ projects }: Props) {
           periodEnd,
           billType,
           billAmount: parsedBase,
-          incentive: parsedIncRate,
+          incentive: billType === 'FREIGHT' ? parsedIncRate : 0,
           totalTrips: billType === 'FREIGHT' ? (parseInt(totalTrips) || 0) : 0,
           totalWeight: billType === 'FREIGHT' ? parsedWeight : 0,
           submittedAt: submittedAt || undefined,
@@ -164,7 +154,7 @@ export default function BillForm({ projects }: Props) {
 
             <div className="form-group">
               <label className="form-label" style={{ fontSize: 11 }}>Project *</label>
-              <select className="form-select" value={projectId} onChange={e => setProjectId(e.target.value)} required>
+              <select className="form-select" value={projectId} onChange={e => { setProjectId(e.target.value); setBaseRate(String(projects.find(p => p.id === e.target.value)?.partyRate ?? '')); setTotalWeight(''); setTotalTrips(''); setBillAmount('') }} required>
                 <option value="">— Select Project —</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.projectName} (₹{p.partyRate}/MT)</option>
@@ -179,7 +169,7 @@ export default function BillForm({ projects }: Props) {
 
             <div className="form-group">
               <label className="form-label" style={{ fontSize: 11 }}>Period End *</label>
-              <input type="date" className="form-input" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} required />
+              <input type="date" className="form-input" value={periodEnd} min={periodStart} onChange={e => setPeriodEnd(e.target.value)} required />
             </div>
           </div>
 
@@ -211,7 +201,7 @@ export default function BillForm({ projects }: Props) {
                   className="form-input"
                   placeholder="e.g. 100"
                   value={totalWeight}
-                  onChange={e => setTotalWeight(e.target.value)}
+                  onChange={e => changeWeight(e.target.value)}
                   min="0"
                   step="0.01"
                   style={{ fontSize: 14, fontWeight: 700 }}
@@ -225,9 +215,9 @@ export default function BillForm({ projects }: Props) {
                   className="form-input"
                   placeholder="e.g. 20"
                   value={baseRate}
-                  onChange={e => setBaseRate(e.target.value)}
+                  onChange={e => changeRate(e.target.value)}
                   min="0"
-                  step="0.1"
+                  step="any"
                   style={{ fontSize: 14, fontWeight: 700 }}
                 />
               </div>
@@ -241,7 +231,7 @@ export default function BillForm({ projects }: Props) {
                   value={incentive}
                   onChange={e => setIncentive(e.target.value)}
                   min="0"
-                  step="0.1"
+                  step="any"
                   style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}
                 />
               </div>
@@ -260,7 +250,7 @@ export default function BillForm({ projects }: Props) {
                     if (w > 0) setBaseRate(String(Math.round((val / w) * 100) / 100))
                   }}
                   required
-                  min="1"
+                  min="0.01" step="0.01"
                   style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}
                 />
               </div>
@@ -276,7 +266,7 @@ export default function BillForm({ projects }: Props) {
                   value={billAmount}
                   onChange={e => setBillAmount(e.target.value)}
                   required
-                  min="1"
+                  min="0.01" step="0.01"
                   style={{ fontSize: 16, fontWeight: 800, color: '#10b981' }}
                 />
               </div>
