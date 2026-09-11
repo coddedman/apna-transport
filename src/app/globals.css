@@ -1,6 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/* Bind Tailwind's `dark:` variant to the app's own theme toggle ([data-theme="dark"]).
+   By default it follows the OS prefers-color-scheme, which made `dark:` utilities
+   render dark on a light app whenever the user's OS was in dark mode. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
