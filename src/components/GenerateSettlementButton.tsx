@@ -142,7 +142,7 @@ export default function GenerateSettlementButton({ owners, lastSettlementByOwner
             <label className="form-label" style={{ marginBottom: 8 }}>
               Deductible Expenses (कटौती के खर्चे)
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'var(--color-bg-secondary)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
               {ALL_EXPENSE_TYPES.map(type => (
                 <label key={type.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13 }}>
                   <input

@@ -193,7 +193,7 @@ export default function ActivityTab({ data }: { data: AnalyticsData }) {
                           return (
                             <div key={d} title={val > 0 ? `${d}: ${metric === 'revenue' ? fmt(val) : val + (metric === 'weight' ? ' MT' : ' trip' + (val > 1 ? 's' : ''))}` : `${d}: No trips`} style={{
                               height: 24, borderRadius: 4, background: bg,
-                              border: '1px solid rgba(255,255,255,0.04)',
+                              border: '1px solid var(--color-border)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: 9, color: intensity >= 3 ? '#fff' : 'transparent',
                               cursor: 'default',
@@ -209,7 +209,7 @@ export default function ActivityTab({ data }: { data: AnalyticsData }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, justifyContent: 'flex-end' }}>
                     <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>Less</span>
                     {INTENSITY_COLORS.map((c, i) => (
-                      <div key={i} style={{ width: 14, height: 14, borderRadius: 3, background: c || 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }} />
+                      <div key={i} style={{ width: 14, height: 14, borderRadius: 3, background: c || 'rgba(255,255,255,0.03)', border: '1px solid var(--color-border)' }} />
                     ))}
                     <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>More</span>
                   </div>

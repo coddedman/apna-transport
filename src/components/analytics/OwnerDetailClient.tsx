@@ -23,7 +23,7 @@ function getWeekLabel(key: string) {
 function Bar({ value, max, color = '#f59e0b', height = 6 }: { value: number; max: number; color?: string; height?: number }) {
   const pct = max > 0 ? Math.max((value / max) * 100, value > 0 ? 2 : 0) : 0
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 100, overflow: 'hidden', height }}>
+    <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 100, overflow: 'hidden', height }}>
       <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 100, transition: 'width .5s ease' }} />
     </div>
   )

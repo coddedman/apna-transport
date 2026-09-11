@@ -131,7 +131,7 @@ export default function BillForm({ projects }: Props) {
       <Modal isOpen={showForm} onClose={() => { resetForm(); setShowForm(false) }} title="📄 Record a Submitted Bill" maxWidth="760px">
         <form onSubmit={handleSubmit}>
           {/* Bill Category Selector */}
-          <div style={{ marginBottom: 16, display: 'flex', gap: 10, background: '#0b1120', padding: 6, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ marginBottom: 16, display: 'flex', gap: 10, background: 'var(--color-bg-secondary)', padding: 6, borderRadius: 12, border: '1px solid var(--color-border)' }}>
             <button
               type="button"
               onClick={() => setBillType('FREIGHT')}

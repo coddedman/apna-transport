@@ -134,7 +134,7 @@ export default function RatePeriodManager({ projectId, projectName, defaultParty
       <button
         onClick={toggleExpand}
         style={{
-          width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)',
+          width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid var(--color-border)',
           background: expanded ? 'rgba(139,92,246,0.08)' : 'rgba(255,255,255,0.03)',
           color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12, fontWeight: 700,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.2s',
@@ -147,7 +147,7 @@ export default function RatePeriodManager({ projectId, projectName, defaultParty
       </button>
 
       {expanded && (
-        <div style={{ marginTop: 8, padding: 14, background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)' }}>
+        <div style={{ marginTop: 8, padding: 14, background: 'rgba(0,0,0,0.2)', borderRadius: 12, border: '1px solid var(--color-border)' }}>
           {/* Actions */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <button
@@ -173,7 +173,7 @@ export default function RatePeriodManager({ projectId, projectName, defaultParty
 
           {/* Add Form */}
           {showAddForm && (
-            <form onSubmit={handleAddPeriod} style={{ marginBottom: 12, padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
+            <form onSubmit={handleAddPeriod} style={{ marginBottom: 12, padding: 12, background: 'var(--color-bg-secondary)', borderRadius: 10 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
                 <div>
                   <label style={{ fontSize: 10, color: 'var(--color-text-muted)', display: 'block', marginBottom: 4 }}>Start Date</label>
@@ -196,7 +196,7 @@ export default function RatePeriodManager({ projectId, projectName, defaultParty
                 <button type="submit" className="btn btn-primary btn-sm" disabled={isPending} style={{ fontSize: 11, padding: '5px 12px' }}>
                   {isPending ? '...' : 'Create'}
                 </button>
-                <button type="button" onClick={() => setShowAddForm(false)} style={{ fontSize: 11, padding: '5px 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-text-muted)', borderRadius: 6, cursor: 'pointer' }}>
+                <button type="button" onClick={() => setShowAddForm(false)} style={{ fontSize: 11, padding: '5px 12px', background: 'transparent', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', borderRadius: 6, cursor: 'pointer' }}>
                   Cancel
                 </button>
               </div>
@@ -245,7 +245,7 @@ export default function RatePeriodManager({ projectId, projectName, defaultParty
                         <button onClick={() => handleSaveEdit(p.id)} disabled={isPending} style={{ fontSize: 10, padding: '3px 8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
                           ✓ Save
                         </button>
-                        <button onClick={() => setEditingId(null)} style={{ fontSize: 10, padding: '3px 8px', background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, cursor: 'pointer' }}>
+                        <button onClick={() => setEditingId(null)} style={{ fontSize: 10, padding: '3px 8px', background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer' }}>
                           ✕
                         </button>
                       </>
@@ -256,7 +256,7 @@ export default function RatePeriodManager({ projectId, projectName, defaultParty
                         <span style={{ fontWeight: 700, color: '#f59e0b' }}>₹{p.ownerRate}</span>
                         <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>(party/owner)</span>
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                          <button onClick={() => startEdit(p)} style={{ fontSize: 10, padding: '3px 8px', background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-secondary)', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                          <button onClick={() => startEdit(p)} style={{ fontSize: 10, padding: '3px 8px', background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
                             ✏️
                           </button>
                           <button onClick={() => handleDeletePeriod(p.id)} disabled={isPending} style={{ fontSize: 10, padding: '3px 8px', background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: 'none', borderRadius: 6, cursor: 'pointer' }}>

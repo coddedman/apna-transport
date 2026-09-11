@@ -170,7 +170,7 @@ export default function PnLTab({ data }: Props) {
                       {isNeg ? '−' : ''}{fmt(w.value)}
                     </span>
                   </div>
-                  <div style={{ height: w.isSub ? 10 : 8, borderRadius: 100, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                  <div style={{ height: w.isSub ? 10 : 8, borderRadius: 100, background: 'var(--color-bg-secondary)', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', borderRadius: 100,
                       background: `linear-gradient(90deg, ${w.color} 0%, ${w.color}90 100%)`,
@@ -217,7 +217,7 @@ export default function PnLTab({ data }: Props) {
                         <span style={{ fontSize: 13, fontWeight: 900, color: OVERHEAD_COLORS[e.type] || '#64748b' }}>{fmt(e.amount)}</span>
                       </div>
                     </div>
-                    <div style={{ height: 6, borderRadius: 100, background: 'rgba(255,255,255,0.04)', overflow: 'hidden' }}>
+                    <div style={{ height: 6, borderRadius: 100, background: 'var(--color-bg-secondary)', overflow: 'hidden' }}>
                       <div style={{
                         height: '100%', borderRadius: 100,
                         background: `linear-gradient(90deg, ${OVERHEAD_COLORS[e.type] || '#64748b'}, ${OVERHEAD_COLORS[e.type] || '#64748b'}80)`,
@@ -275,7 +275,7 @@ export default function PnLTab({ data }: Props) {
                           <div style={{ color: 'var(--color-text-muted)', fontSize: 9, fontWeight: 600 }}>Pending</div>
                         </div>
                       </div>
-                      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', marginTop: 10 }}>
+                      <div style={{ height: 4, borderRadius: 2, background: 'var(--color-bg-secondary)', marginTop: 10 }}>
                         <div style={{ height: '100%', borderRadius: 2, background: color, width: `${Math.min(p.equityPct, 100)}%` }} />
                       </div>
                     </div>

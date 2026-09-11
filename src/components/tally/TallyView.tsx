@@ -146,7 +146,7 @@ export default function TallyPage() {
   }
 
   const card: React.CSSProperties = {
-    background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: 24, marginBottom: 16,
+    background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 20, padding: 24, marginBottom: 16,
   }
 
   return (
@@ -352,7 +352,7 @@ export default function TallyPage() {
                             {barWidth.toFixed(0)}%
                           </span>
                         </div>
-                        <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: 6, background: 'var(--color-bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
                           <div style={{
                             height: '100%', borderRadius: 3, transition: 'width 0.5s ease',
                             width: `${barWidth}%`,
@@ -385,7 +385,7 @@ export default function TallyPage() {
                   return (
                     <div key={entry.id} style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
-                      background: 'rgba(255,255,255,0.02)', borderRadius: 10, flexWrap: 'wrap',
+                      background: 'var(--color-bg-secondary)', borderRadius: 10, flexWrap: 'wrap',
                     }}>
                       <span style={{ fontSize: 12, color: 'var(--color-text-muted)', minWidth: 70, fontVariantNumeric: 'tabular-nums' }}>
                         {new Date(entry.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
@@ -397,14 +397,14 @@ export default function TallyPage() {
                         <>
                           <input type="number" className="form-input" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={{ width: 100, fontSize: 12, padding: '4px 8px' }} />
                           <button onClick={() => handleSaveEdit(entry.id)} disabled={isPending} style={{ fontSize: 10, padding: '3px 8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✓</button>
-                          <button onClick={() => setEditingId(null)} style={{ fontSize: 10, padding: '3px 8px', background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, cursor: 'pointer' }}>✕</button>
+                          <button onClick={() => setEditingId(null)} style={{ fontSize: 10, padding: '3px 8px', background: 'transparent', color: 'var(--color-text-muted)', border: '1px solid var(--color-border)', borderRadius: 6, cursor: 'pointer' }}>✕</button>
                         </>
                       ) : (
                         <>
                           <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-text-primary)' }}>{fmt(entry.amount)}</span>
                           {entry.remarks && <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>— {entry.remarks}</span>}
                           <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-                            <button onClick={() => { setEditingId(entry.id); setEditAmount(String(entry.amount)) }} style={{ fontSize: 10, padding: '3px 8px', background: 'rgba(255,255,255,0.06)', color: 'var(--color-text-secondary)', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✏️</button>
+                            <button onClick={() => { setEditingId(entry.id); setEditAmount(String(entry.amount)) }} style={{ fontSize: 10, padding: '3px 8px', background: 'var(--color-bg-secondary)', color: 'var(--color-text-secondary)', border: 'none', borderRadius: 6, cursor: 'pointer' }}>✏️</button>
                             <button onClick={() => handleDelete(entry.id)} disabled={isPending} style={{ fontSize: 10, padding: '3px 8px', background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: 'none', borderRadius: 6, cursor: 'pointer' }}>🗑</button>
                           </div>
                         </>
@@ -422,7 +422,7 @@ export default function TallyPage() {
       {!tally && !isPending && (
         <div style={{
           ...card, textAlign: 'center', padding: '60px 20px',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'var(--color-bg-secondary)',
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 8 }}>

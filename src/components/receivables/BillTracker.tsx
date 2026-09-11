@@ -92,8 +92,8 @@ const statusConfig: Record<string, { label: string; emoji: string; bg: string; b
 }
 
 const card: React.CSSProperties = {
-  background: '#111827',
-  border: '1px solid rgba(255,255,255,0.06)',
+  background: 'var(--color-bg-card)',
+  border: '1px solid var(--color-border)',
   borderRadius: 20,
   padding: 24,
   marginBottom: 24,
@@ -159,7 +159,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
           { label: 'Overdue Bills', value: summary.overdueBills > 0 ? String(summary.overdueBills) : '0', color: summary.overdueBills > 0 ? '#ef4444' : '#64748b', sub: summary.overdueBills > 0 ? 'needs attention' : 'all clear', icon: summary.overdueBills > 0 ? '🔴' : '🟢' },
         ].map(c => (
           <div key={c.label} style={{
-            background: '#111827',
+            background: 'var(--color-bg-card)',
             border: `1px solid ${c.color}22`,
             borderRadius: 16,
             padding: '20px 24px',
@@ -281,7 +281,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             <option key={p.id} value={p.id}>{p.projectName}</option>
           ))}
         </select>
-        <div style={{ display: 'flex', gap: 4, background: '#0b1120', padding: 4, borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--color-bg-secondary)', padding: 4, borderRadius: 10, border: '1px solid var(--color-border)' }}>
           {[
             { key: '', label: 'All' },
             { key: 'PENDING', label: '🟡 Pending' },
@@ -348,21 +348,21 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Date</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Project</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Amount Received</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Reference / UTR</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Description / Remarks</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Date</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Project</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Amount Received</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Reference / UTR</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Description / Remarks</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOverallPayments.map(p => (
                   <tr key={p.id}>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{fmtDate(p.date)}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#e2e8f0', fontWeight: 600 }}>{p.project?.projectName || 'All Projects'}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#10b981', fontWeight: 800, fontSize: 14, textAlign: 'right' }}>{fmt(p.amount)}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#8b5cf6', fontSize: 11 }}>{p.referenceNo || '—'}</td>
-                    <td style={{ padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8', fontSize: 11 }}>{p.description || '—'}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>{fmtDate(p.date)}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-border)', color: '#e2e8f0', fontWeight: 600 }}>{p.project?.projectName || 'All Projects'}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-border)', color: '#10b981', fontWeight: 800, fontSize: 14, textAlign: 'right' }}>{fmt(p.amount)}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-border)', color: '#8b5cf6', fontSize: 11 }}>{p.referenceNo || '—'}</td>
+                    <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8', fontSize: 11 }}>{p.description || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -403,7 +403,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
 
               return (
                 <div key={bill.id} style={{
-                  background: isExpanded ? '#0b1120' : 'transparent',
+                  background: isExpanded ? 'var(--color-bg-secondary)' : 'transparent',
                   borderRadius: 14,
                   border: isExpanded ? '1px solid rgba(139,92,246,0.15)' : '1px solid transparent',
                   overflow: 'hidden',

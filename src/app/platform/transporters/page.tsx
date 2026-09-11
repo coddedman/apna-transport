@@ -47,7 +47,7 @@ export default async function TransportersListPage() {
                 <div className="card" style={{
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  border: '1px solid rgba(255,255,255,0.06)',
+                  border: '1px solid var(--color-border)',
                 }}>
                   <div className="card-body">
                     {/* Header */}
@@ -117,7 +117,7 @@ export default async function TransportersListPage() {
                     <div style={{
                       marginTop: '14px',
                       paddingTop: '12px',
-                      borderTop: '1px solid rgba(255,255,255,0.06)',
+                      borderTop: '1px solid var(--color-border)',
                       fontSize: '12px',
                       color: 'var(--color-text-muted)',
                       display: 'flex',

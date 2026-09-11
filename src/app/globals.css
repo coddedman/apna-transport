@@ -36,6 +36,7 @@
   --color-warning-subtle: rgba(217, 119, 6, 0.11);
   --color-orange: #ea580c;
   --color-orange-subtle: rgba(234, 88, 12, 0.1);
+  --color-track: #eef0f4;
 
   --radius-sm: 6px;
   --radius-md: 9px;
@@ -82,6 +83,7 @@
   --color-warning-subtle: rgba(245, 158, 11, 0.14);
   --color-orange: #f97316;
   --color-orange-subtle: rgba(249, 115, 22, 0.14);
+  --color-track: rgba(255, 255, 255, 0.07);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -123,11 +125,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(100, 116, 139, 0.28);
   border-radius: 100px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(100, 116, 139, 0.45);
 }
 
 /* ======= APP LAYOUT ======= */
@@ -165,13 +167,13 @@ body {
   width: 38px;
   height: 38px;
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, var(--color-accent), #d97706);
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   font-weight: 800;
-  color: #0b1120;
+  color: #fff;
   flex-shrink: 0;
 }
 
@@ -765,7 +767,7 @@ body {
 }
 
 .modal-close:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-secondary);
   color: var(--color-text-primary);
 }
 
@@ -951,7 +953,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0b1120 0%, #111827 50%, #0b1120 100%);
+  background: var(--color-bg-primary);
   padding: 24px;
   position: relative;
   overflow: hidden;
@@ -968,7 +970,7 @@ body {
   right: -200px;
   width: 600px;
   height: 600px;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--color-accent-subtle) 0%, transparent 70%);
 }
 
 .login-bg-glow-2 {
@@ -982,7 +984,7 @@ body {
 .login-container {
   width: 100%;
   max-width: 420px;
-  background: rgba(26, 35, 50, 0.7);
+  background: var(--color-bg-card);
   backdrop-filter: blur(20px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -1000,14 +1002,14 @@ body {
   width: 60px;
   height: 60px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
   font-weight: 900;
-  color: #0b1120;
-  box-shadow: 0 0 50px rgba(245, 158, 11, 0.2);
+  color: #fff;
+  box-shadow: var(--shadow-md);
 }
 
 .login-title {
@@ -1038,7 +1040,7 @@ body {
   border-radius: var(--radius-md);
   padding: 12px 16px;
   font-size: 13px;
-  color: #ef4444;
+  color: var(--color-danger);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1061,8 +1063,8 @@ body {
 .login-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(11, 17, 32, 0.3);
-  border-top-color: #0b1120;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }
@@ -2012,7 +2014,7 @@ body {
 
 .analytics-hbar-track {
   height: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-track);
   border-radius: 100px;
   overflow: hidden;
 }
@@ -2350,13 +2352,13 @@ body {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-accent), #d97706);
+  background: var(--color-accent);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 15px;
   font-weight: 800;
-  color: #0b1120;
+  color: #fff;
   flex-shrink: 0;
 }
 
@@ -2393,7 +2395,7 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 10px 6px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -2420,7 +2422,7 @@ body {
   flex-direction: column;
   gap: 6px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.04);
   margin-bottom: 12px;
@@ -2470,7 +2472,7 @@ body {
 
 .owner-payout-track {
   height: 6px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-track);
   border-radius: 100px;
   overflow: hidden;
 }
@@ -2485,7 +2487,7 @@ body {
 .owner-vehicles-breakdown {
   margin-top: 10px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -2609,7 +2611,7 @@ body {
   flex-direction: column;
   gap: 2px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
   border-radius: var(--radius-sm);
   margin-bottom: 12px;
 }
@@ -2626,7 +2628,7 @@ body {
   flex-direction: column;
   align-items: center;
   padding: 8px 4px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--color-bg-secondary);
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -2660,7 +2662,7 @@ body {
 
 .vehicle-perf-bar-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--color-track);
   border-radius: 100px;
   overflow: hidden;
 }
@@ -2845,7 +2847,7 @@ body {
 .mobile-totals-bar {
   display: none;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--color-bg-secondary);
   border-bottom: 1px solid var(--color-border);
 }
 

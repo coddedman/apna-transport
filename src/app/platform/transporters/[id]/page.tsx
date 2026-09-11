@@ -133,8 +133,8 @@ export default async function TransporterDetailPage({
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--color-border)',
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{
@@ -177,8 +177,8 @@ export default async function TransporterDetailPage({
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: 'var(--color-bg-secondary)',
+                      border: '1px solid var(--color-border)',
                     }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 600 }}>{project.projectName}</div>

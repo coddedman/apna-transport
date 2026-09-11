@@ -330,7 +330,7 @@ export default async function OwnersPage({ searchParams }: OwnersPageProps) {
                         {totalRevenueAll > 0 ? Math.round((owner.totalRevenue / totalRevenueAll) * 100) : 0}%
                       </span>
                     </div>
-                    <div style={{ height: '3px', background: 'rgba(255,255,255,0.06)', borderRadius: '100px', overflow: 'hidden' }}>
+                    <div style={{ height: '3px', background: 'var(--color-bg-secondary)', borderRadius: '100px', overflow: 'hidden' }}>
                       <div style={{ 
                         height: '100%', borderRadius: '100px',
                         width: `${(owner.totalRevenue / maxRevenue) * 100}%`,
@@ -365,7 +365,7 @@ export default async function OwnersPage({ searchParams }: OwnersPageProps) {
                     <div style={{ 
                       display: 'flex', alignItems: 'center', gap: '6px',
                       padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                      background: 'rgba(255,255,255,0.02)', marginTop: '8px',
+                      background: 'var(--color-bg-secondary)', marginTop: '8px',
                       fontSize: '11px'
                     }}>
                       <span>🔐</span>

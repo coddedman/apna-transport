@@ -86,21 +86,21 @@ export default function PaymentForm({ billId, payments, billAmount, receivedAmou
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Date</th>
-                <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Amount</th>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Reference</th>
-                <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Remarks</th>
-                <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)', width: 60 }}></th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Date</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Amount</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Reference</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Remarks</th>
+                <th style={{ padding: '8px 12px', textAlign: 'center', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)', width: 60 }}></th>
               </tr>
             </thead>
             <tbody>
               {payments.map(p => (
                 <tr key={p.id}>
-                  <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{fmtDate(p.date)}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#10b981', fontWeight: 700, textAlign: 'right' }}>{fmt(p.amount)}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#8b5cf6', fontSize: 11 }}>{p.referenceNo || '—'}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#64748b', fontSize: 11 }}>{p.remarks || '—'}</td>
-                  <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', textAlign: 'center' }}>
+                  <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>{fmtDate(p.date)}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#10b981', fontWeight: 700, textAlign: 'right' }}>{fmt(p.amount)}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#8b5cf6', fontSize: 11 }}>{p.referenceNo || '—'}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#64748b', fontSize: 11 }}>{p.remarks || '—'}</td>
+                  <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', textAlign: 'center' }}>
                     <button
                       onClick={() => handleDelete(p.id)}
                       disabled={deletingId === p.id}
@@ -126,7 +126,7 @@ export default function PaymentForm({ billId, payments, billAmount, receivedAmou
           <span style={{ color: '#64748b' }}>Collected: <span style={{ color: '#10b981', fontWeight: 700 }}>{fmt(receivedAmount)}</span></span>
           <span style={{ color: '#64748b' }}>Pending: <span style={{ color: pending > 0 ? '#f59e0b' : '#10b981', fontWeight: 700 }}>{fmt(pending)}</span></span>
         </div>
-        <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: 6, background: 'var(--color-bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
           <div style={{
             height: '100%',
             width: `${Math.min((receivedAmount / billAmount) * 100, 100)}%`,

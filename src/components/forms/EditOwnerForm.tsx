@@ -104,7 +104,7 @@ export default function EditOwnerForm({ owner, onSuccess }: EditOwnerFormProps) 
           gap: '8px',
           marginBottom: '12px',
           padding: '10px 14px',
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--color-bg-secondary)',
           borderRadius: 'var(--radius-sm)',
           border: '1px solid var(--color-border)',
         }}>

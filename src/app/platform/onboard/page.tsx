@@ -95,8 +95,8 @@ export default function OnboardTransporterPage() {
                   <div style={{
                     padding: '16px',
                     borderRadius: '10px',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--color-border)',
                   }}>
                     <div style={{
                       fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' as const,
@@ -129,8 +129,8 @@ export default function OnboardTransporterPage() {
                   <div style={{
                     padding: '16px',
                     borderRadius: '10px',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--color-border)',
                   }}>
                     <div style={{
                       fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' as const,

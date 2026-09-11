@@ -293,7 +293,7 @@ export default function SimulatorTab({
                             <span style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>{fmt(o.amount)}</span>
                           </div>
                         </div>
-                        <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4 }}>
+                        <div style={{ height: 4, background: 'var(--color-bg-secondary)', borderRadius: 4 }}>
                           <div style={{ height: '100%', width: `${pct}%`, background: '#f59e0b', borderRadius: 4 }} />
                         </div>
                       </div>

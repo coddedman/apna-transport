@@ -149,7 +149,7 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
                         </div>
                       </div>
                       {/* Equity bar */}
-                      <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.06)', marginTop: 14 }}>
+                      <div style={{ height: 4, borderRadius: 2, background: 'var(--color-bg-secondary)', marginTop: 14 }}>
                         <div style={{ height: '100%', borderRadius: 2, background: color, width: `${Math.min(p.equityPct, 100)}%` }} />
                       </div>
                     </div>
@@ -203,7 +203,7 @@ export default function PartnersClient({ partners: init, expenses: initExp, netP
                   const share = (p.equityPct / 100) * netAfterOverhead
                   const pending = share - p.paidOutAmount
                   return (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: '1px solid var(--color-border)' }}>
                       <span style={{ color: colors[i % colors.length] }}>{p.name} ({p.equityPct}%)</span>
                       <div style={{ textAlign: 'right' }}>
                         <strong>{fmt(share)}</strong>

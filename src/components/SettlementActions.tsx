@@ -124,13 +124,13 @@ export default function SettlementActions({ settlement: s }: Props) {
       <Modal isOpen={reviewOpen} onClose={() => setReviewOpen(false)} title={`Settlement Review — ${s.owner.ownerName}`}>
         <div style={{ fontSize: 13 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 10, padding: 14, border: '1px solid var(--color-border)' }}>
               <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Period</div>
               <div style={{ fontWeight: 700 }}>
                 {isTillDate ? `Till ${fmtDate(s.periodEnd)}` : `${fmtDate(s.periodStart)} — ${fmtDate(s.periodEnd)}`}
               </div>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 10, padding: 14, border: '1px solid var(--color-border)' }}>
               <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Status</div>
               <div style={{ fontWeight: 700, color: s.status === 'SETTLED' ? '#10b981' : '#f59e0b' }}>
                 {s.status === 'SETTLED' ? '✓ Settled' : '◷ Pending'}
@@ -151,19 +151,19 @@ export default function SettlementActions({ settlement: s }: Props) {
                 { label: 'Other (Driver Advance, Cash)', value: `−${fmt(s.totalOther)}`, color: '#ef4444' },
               ].map(r => (
                 <tr key={r.label}>
-                  <td style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{r.label}</td>
-                  <td style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', color: r.color, fontWeight: 700 }}>{r.value}</td>
+                  <td style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>{r.label}</td>
+                  <td style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)', textAlign: 'right', color: r.color, fontWeight: 700 }}>{r.value}</td>
                 </tr>
               ))}
               <tr>
-                <td style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', fontWeight: 700 }}>Net Settlement</td>
-                <td style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', textAlign: 'right', color: '#10b981', fontWeight: 800, fontSize: 15 }}>
+                <td style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)', fontWeight: 700 }}>Net Settlement</td>
+                <td style={{ padding: '10px 0', borderBottom: '1px solid var(--color-border)', textAlign: 'right', color: '#10b981', fontWeight: 800, fontSize: 15 }}>
                   {fmt(s.totalRevenue - s.totalFuel - s.totalMaint - s.totalTolls - s.totalOther)}
                 </td>
               </tr>
               <tr>
-                <td style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>Advances Paid (All Time)</td>
-                <td style={{ padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', color: '#f97316', fontWeight: 700 }}>−{fmt(s.totalAdvances)}</td>
+                <td style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>Advances Paid (All Time)</td>
+                <td style={{ padding: '8px 0', borderBottom: '1px solid var(--color-border)', textAlign: 'right', color: '#f97316', fontWeight: 700 }}>−{fmt(s.totalAdvances)}</td>
               </tr>
             </tbody>
           </table>
@@ -205,7 +205,7 @@ export default function SettlementActions({ settlement: s }: Props) {
           ))}
 
           {/* Live preview */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 14, border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 10, padding: 14, border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: 11, color: '#64748b' }}>Payout − Deductions = Net</span>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>{fmt(rev)} − {fmt(operationalDed)} = {fmt(net)}</span>

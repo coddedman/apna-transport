@@ -13,7 +13,7 @@ const fmtSm = (n: number) => {
 }
 
 const card: React.CSSProperties = {
-  background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: 24, marginBottom: 16,
+  background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 20, padding: 24, marginBottom: 16,
 }
 
 function PnLColumn({ data, label }: { data: FortnightPnL; label: string }) {
@@ -177,8 +177,8 @@ export default function FortnightlyPnL({ initialYear, initialMonth }: Props) {
           <button
             onClick={() => handleMonthChange(-1)}
             style={{
-              width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(255,255,255,0.04)', color: 'var(--color-text-primary)',
+              width: 36, height: 36, borderRadius: 10, border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)',
               cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -191,8 +191,8 @@ export default function FortnightlyPnL({ initialYear, initialMonth }: Props) {
           <button
             onClick={() => handleMonthChange(1)}
             style={{
-              width: 36, height: 36, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(255,255,255,0.04)', color: 'var(--color-text-primary)',
+              width: 36, height: 36, borderRadius: 10, border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-secondary)', color: 'var(--color-text-primary)',
               cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -254,7 +254,7 @@ export default function FortnightlyPnL({ initialYear, initialMonth }: Props) {
                     <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>{item.label}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                       <span style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 36 }}>1-15</span>
-                      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 8, background: 'var(--color-bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${(Math.abs(item.first) / max) * 100}%`, background: item.color, borderRadius: 4, transition: 'width 0.5s ease' }} />
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, color: item.color, minWidth: 60, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -263,7 +263,7 @@ export default function FortnightlyPnL({ initialYear, initialMonth }: Props) {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 10, color: 'var(--color-text-muted)', width: 36 }}>16+</span>
-                      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, height: 8, background: 'var(--color-bg-secondary)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${(Math.abs(item.second) / max) * 100}%`, background: item.color, borderRadius: 4, opacity: 0.6, transition: 'width 0.5s ease' }} />
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, color: item.color, minWidth: 60, textAlign: 'right', fontVariantNumeric: 'tabular-nums', opacity: 0.7 }}>
@@ -291,7 +291,7 @@ export default function FortnightlyPnL({ initialYear, initialMonth }: Props) {
       {!report && !isPending && (
         <div style={{
           ...card, textAlign: 'center', padding: '60px 20px',
-          background: 'rgba(255,255,255,0.02)',
+          background: 'var(--color-bg-secondary)',
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 8 }}>

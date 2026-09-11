@@ -96,7 +96,7 @@ export default function OverallPaymentForm({ projects, projectWise, totalPending
       </button>
 
       {showForm && (
-        <div className="card" style={{ marginTop: 16, padding: 24, background: '#111827', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 16 }}>
+        <div className="card" style={{ marginTop: 16, padding: 24, background: 'var(--color-bg-card)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, color: '#10b981' }}>
             <span style={{ background: 'rgba(16,185,129,0.15)', padding: '6px 10px', borderRadius: 8 }}>💳</span>
             Record Overall Payment Received from Party
@@ -185,7 +185,7 @@ export default function OverallPaymentForm({ projects, projectWise, totalPending
             {/* Live Remaining Balance Calculation Preview */}
             <div style={{
               padding: '16px 20px', borderRadius: 12, marginBottom: 20,
-              background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(15,23,42,0.8)', border: '1px solid var(--color-border)',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16
             }}>
               <div>

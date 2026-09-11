@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0b1120 0%, #111827 50%, #0b1120 100%)',
+      background: 'var(--color-bg-primary)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -26,7 +26,7 @@ export default function Home() {
         width: '600px',
         height: '600px',
         borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, var(--color-accent-subtle) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
       <div style={{
@@ -45,15 +45,15 @@ export default function Home() {
         width: '72px',
         height: '72px',
         borderRadius: '18px',
-        background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        background: 'var(--color-accent)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: '28px',
         fontWeight: 900,
-        color: '#0b1120',
+        color: '#fff',
         marginBottom: '28px',
-        boxShadow: '0 0 60px rgba(245,158,11,0.2)',
+        boxShadow: 'var(--shadow-md)',
       }}>
         HT
       </div>
@@ -62,7 +62,7 @@ export default function Home() {
       <h1 style={{
         fontSize: '42px',
         fontWeight: 900,
-        color: '#f1f5f9',
+        color: 'var(--color-text-primary)',
         letterSpacing: '-0.04em',
         textAlign: 'center',
         marginBottom: '12px',
@@ -73,7 +73,7 @@ export default function Home() {
 
       <p style={{
         fontSize: '18px',
-        color: '#64748b',
+        color: 'var(--color-text-muted)',
         textAlign: 'center',
         maxWidth: '520px',
         lineHeight: 1.6,
@@ -95,10 +95,10 @@ export default function Home() {
           <span key={f} style={{
             padding: '8px 16px',
             borderRadius: '100px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--color-bg-card)',
+            border: '1px solid var(--color-border)',
             fontSize: '13px',
-            color: '#94a3b8',
+            color: 'var(--color-text-secondary)',
             fontWeight: 500,
           }}>
             {f}
@@ -115,13 +115,13 @@ export default function Home() {
           gap: '10px',
           padding: '14px 32px',
           borderRadius: '12px',
-          background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-          color: '#0b1120',
+          background: 'var(--color-accent)',
+          color: '#fff',
           fontSize: '15px',
           fontWeight: 700,
           textDecoration: 'none',
           transition: 'all 0.2s ease',
-          boxShadow: '0 0 30px rgba(245,158,11,0.2)',
+          boxShadow: 'var(--shadow-md)',
         }}
       >
         Get Started →
@@ -130,7 +130,7 @@ export default function Home() {
       <p style={{
         marginTop: '20px',
         fontSize: '12px',
-        color: '#475569',
+        color: 'var(--color-text-secondary)',
       }}>
         Version 0.1.0 · Built with Next.js + Prisma
       </p>

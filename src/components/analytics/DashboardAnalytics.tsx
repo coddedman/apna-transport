@@ -927,7 +927,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
                         <td style={{ textAlign: 'right', fontWeight: 600 }}>{fmt(e.amount)}</td>
                         <td style={{ textAlign: 'right', color: 'var(--color-text-muted)' }}>{e.pct}%</td>
                         <td>
-                          <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 100, overflow: 'hidden' }}>
+                          <div style={{ height: 6, background: 'var(--color-bg-secondary)', borderRadius: 100, overflow: 'hidden' }}>
                             <div style={{ width: `${e.pct}%`, height: '100%', background: expenseColors[e.type] || '#64748b', borderRadius: 100, transition: 'width 0.6s ease' }} />
                           </div>
                         </td>

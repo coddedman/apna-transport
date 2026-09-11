@@ -17,7 +17,7 @@ const getWeekLabel = (k: string) => { const d = new Date(k); const e = new Date(
 
 function Bar({ value, max, color = '#f59e0b', height = 6 }: { value: number; max: number; color?: string; height?: number }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 100, overflow: 'hidden', height }}>
+    <div style={{ background: 'var(--color-bg-secondary)', borderRadius: 100, overflow: 'hidden', height }}>
       <div style={{ height: '100%', width: `${max > 0 ? Math.max((value / max) * 100, value > 0 ? 2 : 0) : 0}%`, background: color, borderRadius: 100, transition: 'width .5s' }} />
     </div>
   )
@@ -160,7 +160,7 @@ export default function VehicleDetailClient({ data }: { data: any }) {
                 { label: 'Total Exp/Trip', value: totalTrips > 0 && totalExpenses > 0 ? fmt(totalExpenses / totalTrips) : '—', color: '#ef4444' },
                 { label: 'Revenue/MT', value: totalWeight > 0 ? fmt(totalRevenue / totalWeight) : '—', color: '#3b82f6' },
               ].map(m => (
-                <div key={m.label} style={{ textAlign: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '10px 8px' }}>
+                <div key={m.label} style={{ textAlign: 'center', background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: 8, padding: '10px 8px' }}>
                   <div style={{ fontSize: '16px', fontWeight: 800, color: m.color }}>{m.value}</div>
                   <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: 2 }}>{m.label}</div>
                 </div>

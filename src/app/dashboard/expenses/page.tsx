@@ -148,7 +148,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
         <details style={{ marginBottom: 16 }}>
           <summary style={{
             cursor: 'pointer', padding: '14px 20px', borderRadius: 16,
-            background: '#111827', border: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--color-bg-card)', border: '1px solid var(--color-border)',
             fontSize: 14, fontWeight: 800, color: 'var(--color-text-primary)',
             display: 'flex', alignItems: 'center', gap: 8,
             listStyle: 'none',

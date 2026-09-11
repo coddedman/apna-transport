@@ -62,7 +62,7 @@ export default function MarkSettledButton({ settlement }: { settlement: Settleme
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Finalize Settlement Payout">
         <form onSubmit={handleSubmit}>
           <div style={{
-            padding: '14px 16px', background: 'rgba(255,255,255,0.03)',
+            padding: '14px 16px', background: 'var(--color-bg-secondary)',
             borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
             marginBottom: '16px'
           }}>

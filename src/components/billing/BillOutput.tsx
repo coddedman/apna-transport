@@ -35,7 +35,7 @@ export default function BillOutput({ bill }: Props) {
   return (
     <div>
       {/* ── Grand Total ── */}
-      <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '24px 28px', marginBottom: 28 }}>
+      <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 16, padding: '24px 28px', marginBottom: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Overall Settlement</div>
@@ -51,7 +51,7 @@ export default function BillOutput({ bill }: Props) {
             { label: 'Advances Paid', value: fmt(bill.grandTotal.totalAdvancesPaid), color: '#f97316' },
             { label: 'Balance Due', value: fmt(bill.grandTotal.totalBalanceDue), color: bill.grandTotal.totalBalanceDue < 0 ? '#ef4444' : '#22d3ee' },
           ].map(b => (
-            <div key={b.label} style={{ background: '#0b1120', borderRadius: 10, padding: '14px 16px', border: `1px solid ${b.color}22` }}>
+            <div key={b.label} style={{ background: 'var(--color-bg-secondary)', borderRadius: 10, padding: '14px 16px', border: `1px solid ${b.color}22` }}>
               <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>{b.label}</div>
               <div style={{ fontSize: 18, fontWeight: 800, color: b.color }}>{b.value}</div>
             </div>
@@ -64,10 +64,10 @@ export default function BillOutput({ bill }: Props) {
         const allAdvTotal = owner.ownerAdvanceItems.reduce((s, a) => s + a.amount, 0)
 
         return (
-        <div key={owner.ownerId} style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, marginBottom: 20, overflow: 'hidden' }}>
+        <div key={owner.ownerId} style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 16, marginBottom: 20, overflow: 'hidden' }}>
 
           {/* Owner Header */}
-          <div style={{ padding: '16px 20px', background: 'rgba(139,92,246,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ padding: '16px 20px', background: 'rgba(139,92,246,0.06)', borderBottom: '1px solid var(--color-border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🧑</div>
@@ -85,7 +85,7 @@ export default function BillOutput({ bill }: Props) {
             </div>
 
             {/* ── Step-by-step Balance Due Calculation ── */}
-            <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: '16px 18px', border: '1px solid rgba(255,255,255,0.04)' }}>
+            <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.2)', borderRadius: 12, padding: '16px 18px', border: '1px solid var(--color-border)' }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
                 How Balance Due is Calculated
               </div>
@@ -108,7 +108,7 @@ export default function BillOutput({ bill }: Props) {
                     <td style={{ padding: '6px 0', textAlign: 'right', color: '#ef4444', fontWeight: 700 }}>−{fmt(owner.totalDeductions)}</td>
                   </tr>
                   {/* Step 3 — Net */}
-                  <tr style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <tr style={{ borderTop: '1px solid var(--color-border)' }}>
                     <td style={{ padding: '8px 0', color: '#e2e8f0', fontWeight: 700 }}>
                       <span style={{ display: 'inline-block', width: 22, height: 22, borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#10b981', textAlign: 'center', lineHeight: '22px', fontSize: 11, fontWeight: 800, marginRight: 8 }}>C</span>
                       Net Settlement (A − B)
@@ -159,7 +159,7 @@ export default function BillOutput({ bill }: Props) {
 
           {/* Owner Advances Section (cumulative, all vehicles) */}
           {owner.ownerAdvanceItems.length > 0 && (
-            <div style={{ padding: '12px 20px', background: 'rgba(249,115,22,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <div style={{ padding: '12px 20px', background: 'rgba(249,115,22,0.04)', borderBottom: '1px solid var(--color-border)' }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
                 🏦 Owner Advances — All Time Total: {fmt(allAdvTotal)}
                 {allAdvTotal !== owner.ownerAdvanceTotal && (
@@ -183,7 +183,7 @@ export default function BillOutput({ bill }: Props) {
           {/* Vehicles */}
           {owner.vehicles.map(v => (
             <div key={v.vehicleId}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', cursor: 'pointer', borderBottom: '1px solid var(--color-border)' }}
                 onClick={() => setExpanded(expanded === v.vehicleId ? null : v.vehicleId)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 14, fontWeight: 800 }}>🚛 {v.plateNo}</span>
@@ -199,25 +199,25 @@ export default function BillOutput({ bill }: Props) {
               </div>
 
               {expanded === v.vehicleId && (
-                <div style={{ padding: 20, background: '#0b1120', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ padding: 20, background: 'var(--color-bg-secondary)', borderTop: '1px solid var(--color-border)' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: v.deductions.items.length > 0 ? '1fr 1fr' : '1fr', gap: 20 }}>
                     {/* Trips */}
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 }}>🟢 Trip Earnings</div>
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                         <thead><tr>
-                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Date</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Inv/LR</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Weight</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Payout</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Date</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Inv/LR</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Weight</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Payout</th>
                         </tr></thead>
                         <tbody>
                           {v.trips.map(t => (
                             <tr key={t.id}>
-                              <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{fmtD(t.date)}</td>
-                              <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#64748b' }}>{t.invoiceNo || t.lrNo || '—'}</td>
-                              <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8', textAlign: 'right' }}>{t.weight.toFixed(2)} MT</td>
-                              <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#f59e0b', fontWeight: 700, textAlign: 'right' }}>{fmt(t.ownerPayout)}</td>
+                              <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>{fmtD(t.date)}</td>
+                              <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#64748b' }}>{t.invoiceNo || t.lrNo || '—'}</td>
+                              <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8', textAlign: 'right' }}>{t.weight.toFixed(2)} MT</td>
+                              <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#f59e0b', fontWeight: 700, textAlign: 'right' }}>{fmt(t.ownerPayout)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -234,16 +234,16 @@ export default function BillOutput({ bill }: Props) {
                         <div style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 }}>🔴 Deductions</div>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                           <thead><tr>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Date</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Item</th>
-                            <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>Amount</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Date</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Item</th>
+                            <th style={{ padding: '8px 12px', textAlign: 'right', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid var(--color-border)' }}>Amount</th>
                           </tr></thead>
                           <tbody>
                             {v.deductions.items.map((d, i) => (
                               <tr key={i}>
-                                <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{fmtD(d.date)}</td>
-                                <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#94a3b8' }}>{d.label}{d.note && <span style={{ color: '#64748b' }}> · {d.note}</span>}</td>
-                                <td style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', color: '#ef4444', fontWeight: 700, textAlign: 'right' }}>−{fmt(d.amount)}</td>
+                                <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>{fmtD(d.date)}</td>
+                                <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#94a3b8' }}>{d.label}{d.note && <span style={{ color: '#64748b' }}> · {d.note}</span>}</td>
+                                <td style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', color: '#ef4444', fontWeight: 700, textAlign: 'right' }}>−{fmt(d.amount)}</td>
                               </tr>
                             ))}
                           </tbody>

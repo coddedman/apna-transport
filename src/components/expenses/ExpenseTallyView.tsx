@@ -143,7 +143,7 @@ function VehicleRow({ v, onAddExpense }: { v: VehicleExpenseTally; onAddExpense:
 
       {/* Expanded Detail */}
       {expanded && (
-        <div style={{ padding: '0 18px 16px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <div style={{ padding: '0 18px 16px', borderTop: '1px solid var(--color-border)' }}>
           {/* Category Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, marginTop: 14 }}>
             {categories.map(cat => {
@@ -191,7 +191,7 @@ function VehicleRow({ v, onAddExpense }: { v: VehicleExpenseTally; onAddExpense:
           {/* Per-trip stats */}
           {v.tripsCount > 0 && (
             <div style={{
-              marginTop: 12, padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: 10,
+              marginTop: 12, padding: '10px 14px', background: 'var(--color-bg-secondary)', borderRadius: 10,
               display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 11, color: 'var(--color-text-muted)',
             }}>
               <span>Expense/Trip: <strong style={{ color: 'var(--color-text-primary)' }}>{fmt(v.expensePerTrip)}</strong></span>
@@ -257,7 +257,7 @@ export default function ExpenseTallyView({ vehicles, projects }: Props) {
     <div>
       {/* Period Selector */}
       <div style={{
-        background: '#111827', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 20, padding: 20, marginBottom: 16,
+        background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 20, padding: 20, marginBottom: 16,
       }}>
         <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ background: 'rgba(239,68,68,0.1)', padding: '5px 8px', borderRadius: 8 }}>🔍</span>
@@ -345,7 +345,7 @@ export default function ExpenseTallyView({ vehicles, projects }: Props) {
 
             {/* Missing Breakdown */}
             {result.summary.missingBreakdown.length > 0 && (
-              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--color-border)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)' }}>Missing:</span>
                 {result.summary.missingBreakdown.map(m => {
                   const cfg = CATEGORY_CONFIG[m.category]
@@ -391,7 +391,7 @@ export default function ExpenseTallyView({ vehicles, projects }: Props) {
             {filteredVehicles.length === 0 ? (
               <div style={{
                 padding: 40, textAlign: 'center', color: 'var(--color-text-muted)',
-                background: 'rgba(255,255,255,0.02)', borderRadius: 16,
+                background: 'var(--color-bg-secondary)', borderRadius: 16,
               }}>
                 No vehicles match the selected filter.
               </div>
@@ -415,7 +415,7 @@ export default function ExpenseTallyView({ vehicles, projects }: Props) {
             onClick={e => e.stopPropagation()}
             style={{
               background: '#1a1f2e', borderRadius: 20, padding: 28, maxWidth: 400, width: '100%',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--color-border)',
             }}
           >
             <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -447,8 +447,8 @@ export default function ExpenseTallyView({ vehicles, projects }: Props) {
       {/* Empty State */}
       {!result && !isPending && (
         <div style={{
-          background: 'rgba(255,255,255,0.02)', borderRadius: 20, padding: '60px 20px', textAlign: 'center',
-          border: '1px solid rgba(255,255,255,0.04)',
+          background: 'var(--color-bg-secondary)', borderRadius: 20, padding: '60px 20px', textAlign: 'center',
+          border: '1px solid var(--color-border)',
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 8 }}>
