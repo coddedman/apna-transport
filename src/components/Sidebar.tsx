@@ -157,10 +157,7 @@ export default function Sidebar() {
                   className={`workspace-nav-link flex items-center gap-[11px] p-[8px_11px] rounded-[8px] text-[13.5px] transition-all ${active ? 'font-semibold text-[var(--color-accent)] bg-[var(--color-accent-subtle)]' : 'font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'}`}
                 >
                   <span className="flex shrink-0">{item.icon}</span>
-                  <span className="flex flex-col leading-[1.15]">
-                    <span>{labels[item.href] || item.label}</span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] font-normal">{item.hi}</span>
-                  </span>
+                  <span>{labels[item.href] || item.label}</span>
                 </Link>
               )
             })}
