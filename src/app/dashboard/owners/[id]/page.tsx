@@ -7,7 +7,7 @@ import OwnerDetailClient from '@/components/analytics/OwnerDetailClient'
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const owner = await prisma.owner.findUnique({ where: { id }, select: { ownerName: true } })
-  return { title: `${owner?.ownerName ?? 'Owner'} Analytics — Hyva Transport` }
+  return { title: `${owner?.ownerName ?? 'Owner'} Analytics — Apna Transport` }
 }
 
 export default async function OwnerDetailPage({ params }: { params: Promise<{ id: string }> }) {

@@ -10,7 +10,7 @@ import PageHeader from '@/components/PageHeader'
 import { Prisma } from '@prisma/client'
 
 export const metadata = {
-  title: 'Trip Logger — Hyva Transport',
+  title: 'Trip Logger — Apna Transport',
   description: 'Daily trip entries with automated freight calculation',
 }
 

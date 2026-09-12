@@ -1,5 +1,7 @@
 'use client'
 
+import PageHeader from '@/components/PageHeader'
+
 import { useState } from 'react'
 import { onboardTransporter } from '@/lib/actions/platform'
 import { useRouter } from 'next/navigation'
@@ -31,14 +33,7 @@ export default function OnboardTransporterPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Onboard New Transporter</h1>
-            <p className="page-subtitle">Register a new transport company on the platform</p>
-          </div>
-        </div>
-      </header>
+      <PageHeader title="Onboard Transporter" subtitle="Create a transporter workspace" />
 
       <div className="page-body">
         <div style={{ maxWidth: '640px' }}>

@@ -4,7 +4,7 @@ import BillTracker from '@/components/receivables/BillTracker'
 import { getPartyBills, getReceivableSummary, getProjectWisePending, getReceivableFormData, getOverallPartyPayments } from '@/lib/actions/receivables'
 
 export const metadata = {
-  title: 'Bill Tracker — Hyva Transport',
+  title: 'Bill Tracker — Apna Transport',
   description: 'Track party bills, record payments, and monitor receivables',
 }
 

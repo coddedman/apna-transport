@@ -1,3 +1,4 @@
+import ThemeControl from '@/components/ThemeControl'
 import { auth, signOut } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { redirect } from 'next/navigation'
@@ -9,7 +10,7 @@ async function handleSignOut() {
 }
 
 export const metadata = {
-  title: 'My Dashboard — Hyva Transport',
+  title: 'My Dashboard — Apna Transport',
 }
 
 export default async function OwnerPortalPage() {
@@ -94,6 +95,7 @@ export default async function OwnerPortalPage() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <ThemeControl />
           <OwnerChangePasswordButton />
           <form action={async () => { 'use server'; await handleSignOut(); }}>
             <button type="submit" className="btn btn-secondary btn-sm">🚪 Sign Out</button>

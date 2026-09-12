@@ -8,7 +8,7 @@ import OwnerAdvanceButton from '@/components/OwnerAdvanceButton'
 import PageHeader from '@/components/PageHeader'
 
 export const metadata = {
-  title: 'Vehicle Owners — Hyva Transport',
+  title: 'Vehicle Owners — Apna Transport',
   description: 'Manage 3rd party vehicle owners and their details',
 }
 

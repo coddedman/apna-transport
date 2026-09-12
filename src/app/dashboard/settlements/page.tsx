@@ -7,7 +7,7 @@ import ExportCSVButton from '@/components/ExportCSVButton'
 import SettlementActions from '@/components/SettlementActions'
 
 export const metadata = {
-  title: 'Settlements — Hyva Transport',
+  title: 'Settlements — Apna Transport',
   description: 'Owner reconciliation and payout generation',
 }
 

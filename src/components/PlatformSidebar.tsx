@@ -1,5 +1,6 @@
 'use client'
 
+import { useSidebar } from '@/lib/context/SidebarContext'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -13,25 +14,15 @@ const platformNavItems = [
       { href: '/platform/onboard', icon: '➕', label: 'Onboard New' },
     ],
   },
-  {
-    section: 'Analytics',
-    items: [
-      { href: '/platform/analytics', icon: '📊', label: 'Platform Stats' },
-    ],
-  },
-  {
-    section: 'Settings',
-    items: [
-      { href: '/platform/settings', icon: '⚙️', label: 'Platform Settings' },
-    ],
-  },
+
 ]
 
 export default function PlatformSidebar() {
   const pathname = usePathname()
+  const { isOpen, close } = useSidebar()
 
   return (
-    <aside className="sidebar" id="platform-sidebar">
+    <aside className={`sidebar workspace-sidebar ${isOpen ? 'open' : ''}`} id="platform-sidebar">
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon" style={{
@@ -39,7 +30,7 @@ export default function PlatformSidebar() {
           color: '#fff',
         }}>SA</div>
         <div className="sidebar-brand-text">
-          <span className="sidebar-brand-name">Hyva Platform</span>
+          <span className="sidebar-brand-name">Apna Platform</span>
           <span className="sidebar-brand-tag">Super Admin</span>
         </div>
       </div>
@@ -53,6 +44,8 @@ export default function PlatformSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={close}
+                aria-current={pathname === item.href ? 'page' : undefined}
                 className={`sidebar-link${pathname === item.href ? ' active' : ''}`}
               >
                 <span className="sidebar-link-icon">{item.icon}</span>

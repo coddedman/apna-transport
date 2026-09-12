@@ -5,7 +5,7 @@ import TransactionForm from '@/components/transactions/TransactionForm'
 import TransactionTable from '@/components/transactions/TransactionTable'
 
 export const metadata = {
-  title: 'Transactions — Hyva Transport',
+  title: 'Transactions — Apna Transport',
   description: 'Track party payments, owner payouts, and financial transactions',
 }
 

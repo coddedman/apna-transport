@@ -101,7 +101,7 @@ export default function Sidebar() {
   const user = session?.user as any
   const userName = user?.name || user?.email?.split('@')[0] || 'User'
   const userRole = roleLabels[user?.role] || 'User'
-  const transporterName = user?.transporterName || 'Hyva Transport'
+  const transporterName = user?.transporterName || 'Apna Transport'
 
   return (
     <aside className={`workspace-sidebar fixed top-0 left-0 bottom-0 z-50 flex flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-sidebar)] transition-transform duration-300 w-[var(--sidebar-width)] ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>

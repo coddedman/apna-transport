@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader'
 import { getPlatformStats, getTransporters, getTenantMetrics } from '@/lib/actions/platform'
 import Link from 'next/link'
 
@@ -30,21 +31,7 @@ export default async function PlatformDashboard() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Platform Overview</h1>
-            <p className="page-subtitle">Manage all transporters and their operations</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <Link href="/platform/onboard" className="btn btn-primary" style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-          }}>
-            + Onboard Transporter
-          </Link>
-        </div>
-      </header>
+      <PageHeader title="Platform Overview" subtitle="Manage all transporters and their operations"><Link href="/platform/onboard" className="btn btn-primary">+ Onboard Transporter</Link></PageHeader>
 
       <div className="page-body">
         {/* Stats */}

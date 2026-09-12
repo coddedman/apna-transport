@@ -3118,3 +3118,20 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--color-accent); 
 .analytics-header { min-height: 76px; padding: 18px 30px; border-bottom: 1px solid var(--color-border); background: var(--color-bg-card); align-items: center; }
 .analytics-title { font-size: 20px; font-weight: 750; }
 @media(max-width:767px) { .analytics-header { padding: 16px; } }
+
+/* Shared application surfaces: dashboard, detail pages and platform administration. */
+.page-header { min-height: 76px; padding: 16px 30px; background: var(--color-bg-card); border-bottom: 1px solid var(--color-border); }
+.theme-control { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-bg-card); color: var(--color-text-secondary); cursor: pointer; }
+.theme-control:hover { background: var(--color-bg-secondary); }
+.card, .stat-card { border-radius: 16px; border-color: var(--color-border); }
+.form-input, .form-select, .form-textarea { border-radius: 9px; background: var(--color-bg-input); color: var(--color-text-primary); border-color: var(--color-border); }
+#platform-sidebar { background: #0b1220; }
+#platform-sidebar .sidebar-link.active { color: white; background: linear-gradient(90deg,#2563eb42,#2563eb19); box-shadow: inset 3px 0 0 #2563eb; }
+.platform-backdrop { display: none; }
+[data-theme="dark"] { --color-bg-primary: #0b1120; --color-border: rgba(255,255,255,.08); }
+@media(max-width:767px) {
+  .page-header { padding: 16px; }
+  .platform-backdrop { display: block; position: fixed; inset: 0; background: #0008; z-index: 45; }
+  #platform-sidebar { z-index: 50; }
+  .stats-grid { grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+}

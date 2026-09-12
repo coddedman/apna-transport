@@ -3,7 +3,7 @@ import PageHeader from '@/components/PageHeader'
 import FortnightlyPnL from '@/components/reports/FortnightlyPnL'
 
 export const metadata = {
-  title: 'Reports — Hyva Transport',
+  title: 'Reports — Apna Transport',
   description: 'Fortnightly profit & loss reports with expense breakdowns',
 }
 

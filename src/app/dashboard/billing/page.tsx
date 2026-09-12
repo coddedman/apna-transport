@@ -5,7 +5,7 @@ import PageHeader from '@/components/PageHeader'
 import BillGenerator from '@/components/billing/BillGenerator'
 
 export const metadata = {
-  title: 'Bill Generator — Hyva Transport',
+  title: 'Bill Generator — Apna Transport',
   description: 'Generate weekly and monthly settlement bills per vehicle or owner',
 }
 

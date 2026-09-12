@@ -9,7 +9,7 @@ import VehicleAnalyticsButton from '@/components/analytics/VehicleAnalyticsButto
 import PageHeader from '@/components/PageHeader'
 
 export const metadata = {
-  title: 'Vehicles — Hyva Transport',
+  title: 'Vehicles — Apna Transport',
   description: 'Fleet registry with operational tracking and performance metrics',
 }
 

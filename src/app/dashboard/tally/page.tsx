@@ -3,7 +3,7 @@ import PageHeader from '@/components/PageHeader'
 import TallyView from '@/components/tally/TallyView'
 
 export const metadata = {
-  title: 'Expense Tally — Hyva Transport',
+  title: 'Expense Tally — Apna Transport',
   description: 'Log daily lumpsum expenses and reconcile with vehicle-level entries',
 }
 

@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader'
 import { getTransporterDetails, getTenantMetrics } from '@/lib/actions/platform'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -25,31 +26,7 @@ export default async function TransporterDetailPage({
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{
-              width: '48px', height: '48px', borderRadius: '14px',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '18px', fontWeight: 800, color: '#fff',
-            }}>
-              {transporter.name.substring(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <h1 className="page-title">{transporter.name}</h1>
-              <p className="page-subtitle">
-                {transporter.registration || 'No registration'} · Joined {new Date(transporter.createdAt).toLocaleDateString('en-IN', {
-                  day: 'numeric', month: 'short', year: 'numeric',
-                })}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <Link href="/platform/transporters" className="btn btn-secondary">← Back</Link>
-        </div>
-      </header>
+      <PageHeader title={transporter.name} subtitle={transporter.registration || "Transporter workspace"}><Link href="/platform/transporters" className="btn btn-secondary">← Back</Link></PageHeader>
 
       <div className="page-body">
         {/* Business Metrics */}

@@ -7,8 +7,8 @@ import { useSidebar } from '@/lib/context/SidebarContext'
 const navItems = [
   { href: '/dashboard', icon: '📊', label: 'Home' },
   { href: '/dashboard/trips', icon: '🛣️', label: 'Trips' },
-  { href: '/dashboard/transactions', icon: '💳', label: 'Txns' },
-  { href: '/dashboard/settlements', icon: '🧾', label: 'Settle' },
+  { href: '/dashboard/bills', icon: '💳', label: 'Billing' },
+  { href: '/dashboard/settlements', icon: '🧾', label: 'Payouts' },
   { href: '/dashboard/reports', icon: '📈', label: 'Reports' },
 ]
 
@@ -23,6 +23,7 @@ export default function MobileBottomNav() {
           <Link
             key={item.href}
             href={item.href}
+            aria-current={pathname === item.href ? 'page' : undefined}
             className={`mobile-nav-item${pathname === item.href ? ' active' : ''}`}
           >
             <span className="mobile-nav-icon">{item.icon}</span>

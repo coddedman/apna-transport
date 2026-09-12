@@ -1,9 +1,9 @@
-import PlatformSidebar from '@/components/PlatformSidebar'
+import PlatformClientLayout from '@/components/PlatformClientLayout'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export const metadata = {
-  title: 'Platform Admin — Hyva Transport',
+  title: 'Platform Admin — Apna Transport',
 }
 
 export default async function PlatformLayout({
@@ -14,11 +14,6 @@ export default async function PlatformLayout({
   const session = await auth()
 
   return (
-    <div className="app-layout">
-      <PlatformSidebar />
-      <div className="main-content">
-        {children}
-      </div>
-    </div>
+    <PlatformClientLayout>{children}</PlatformClientLayout>
   )
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Hyva Transport — Fleet Management Platform',
+  title: 'Apna Transport — Fleet Management Platform',
   description: 'Multi-tenant fleet management platform for transport companies. Manage vehicles, log trips, track expenses, and settle owners.',
 }
 
@@ -68,7 +68,7 @@ export default function Home() {
         marginBottom: '12px',
         lineHeight: 1.1,
       }}>
-        Hyva Transport
+        Apna Transport
       </h1>
 
       <p style={{
