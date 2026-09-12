@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 
 export const metadata = {
-  title: 'Dashboard — Hyva Transport',
+  title: 'Dashboard — Apna Transport',
 }
 
 import DashboardClientLayout from '@/components/DashboardClientLayout'

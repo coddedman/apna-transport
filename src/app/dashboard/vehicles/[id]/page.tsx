@@ -7,7 +7,7 @@ import VehicleDetailClient from '@/components/analytics/VehicleDetailClient'
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const v = await prisma.vehicle.findUnique({ where: { id }, select: { plateNo: true } })
-  return { title: `${v?.plateNo ?? 'Vehicle'} Analytics — Hyva Transport` }
+  return { title: `${v?.plateNo ?? 'Vehicle'} Analytics — Apna Transport` }
 }
 
 export default async function VehicleDetailPage({ params }: { params: Promise<{ id: string }> }) {

@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
@@ -26,19 +27,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <Link href="/dashboard/projects" style={{ color: 'var(--color-text-muted)', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>
-                ← Projects
-              </Link>
-            </div>
-            <h1 className="page-title">🧮 {project.projectName}</h1>
-            <p className="page-subtitle">📍 {project.location} · Rate Calculator & Scenario Modelling</p>
-          </div>
-        </div>
-      </header>
+      <PageHeader title={project.projectName} subtitle={`${project.location || "Project"} · Rate calculator & scenario modelling`}><Link href="/dashboard/projects" className="btn btn-secondary">← Projects</Link></PageHeader>
 
       <div className="page-body">
         <ProjectRateCalculator

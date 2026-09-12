@@ -1,3 +1,4 @@
+import { ThemePreference } from '@/components/ThemeControl'
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ThemePreference />
         <LoadingProvider>
           <PageLoader />
           <Toaster 

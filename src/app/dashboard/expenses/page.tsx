@@ -10,7 +10,7 @@ import ExpenseTallyView from '@/components/expenses/ExpenseTallyView'
 import { ExpenseType, Prisma } from '@prisma/client'
 
 export const metadata = {
-  title: 'Expenses — Hyva Transport',
+  title: 'Expenses — Apna Transport',
   description: 'Log and track operational costs across your fleet',
 }
 

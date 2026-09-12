@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import AddProjectButton from '@/components/AddProjectButton'
@@ -7,7 +8,7 @@ import RateCalculatorButton from '@/components/projects/RateCalculatorButton'
 import RatePeriodManager from '@/components/projects/RatePeriodManager'
 
 export const metadata = {
-  title: 'Projects — Hyva Transport',
+  title: 'Projects — Apna Transport',
   description: 'Manage project sites and hauling rates',
 }
 
@@ -54,17 +55,7 @@ export default async function ProjectsPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">Projects</h1>
-            <p className="page-subtitle">Manage project sites and hauling rates</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <AddProjectButton />
-        </div>
-      </header>
+      <PageHeader title="Projects" subtitle="Manage project sites and hauling rates"><AddProjectButton /></PageHeader>
 
       <div className="page-body">
         {/* Stats */}

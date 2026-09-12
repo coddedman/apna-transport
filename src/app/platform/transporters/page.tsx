@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader'
 import { getTransporters } from '@/lib/actions/platform'
 import Link from 'next/link'
 
@@ -6,21 +7,7 @@ export default async function TransportersListPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div className="page-header-left">
-          <div>
-            <h1 className="page-title">All Transporters</h1>
-            <p className="page-subtitle">{transporters.length} registered companies on the platform</p>
-          </div>
-        </div>
-        <div className="page-header-right">
-          <Link href="/platform/onboard" className="btn btn-primary" style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-          }}>
-            + Onboard New
-          </Link>
-        </div>
-      </header>
+      <PageHeader title="All Transporters" subtitle={`${transporters.length} registered companies on the platform`}><Link href="/platform/onboard" className="btn btn-primary">+ Onboard New</Link></PageHeader>
 
       <div className="page-body">
         {transporters.length === 0 ? (

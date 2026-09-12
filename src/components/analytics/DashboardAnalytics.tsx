@@ -1,5 +1,6 @@
 'use client'
 
+import ThemeControl from '@/components/ThemeControl'
 import { useState, useTransition, useCallback, useEffect } from 'react'
 import { fetchAnalytics, type AnalyticsData, type AnalyticsFilters } from '@/lib/actions/analytics'
 import { useLoading } from '@/lib/context/LoadingContext'
@@ -392,6 +393,7 @@ export default function DashboardAnalytics({ initialData }: Props) {
         </div>
 
         <div className="analytics-header-right">
+          <ThemeControl />
           {/* Period Selector */}
           <div className="analytics-period-bar">
             {PERIODS.filter(p => p.key !== 'custom').map(p => (

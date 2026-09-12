@@ -5,7 +5,7 @@ import AddEmployeeButton from '@/components/employees/AddEmployeeButton'
 import { getEmployees, getEmployeeSummary } from '@/lib/actions/employees'
 
 export const metadata = {
-  title: 'Employees — Hyva Transport',
+  title: 'Employees — Apna Transport',
   description: 'Staff directory, designations and monthly payroll',
 }
 
