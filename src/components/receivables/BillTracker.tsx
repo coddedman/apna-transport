@@ -31,6 +31,8 @@ interface OverallPartyPayment {
 }
 
 interface Bill {
+  tripLinked?: boolean
+  trips?: { id: string; date: Date | string; weight: number; partyFreightAmount: number; vehicle: { plateNo: string } }[]
   id: string
   billNo: string
   projectId: string
@@ -74,6 +76,7 @@ interface ProjectPending {
 }
 
 interface Props {
+  unbilledWork: { legacyCount: number; projects: { projectId: string; projectName: string; totalTrips: number; totalWeight: number; billAmount: number; periodStart: string; periodEnd: string }[] }
   bills: Bill[]
   summary: Summary
   projectWise: ProjectPending[]
@@ -100,7 +103,7 @@ const card: React.CSSProperties = {
   marginBottom: 24,
 }
 
-export default function BillTracker({ bills, summary, projectWise, projects, overallPayments = [] }: Props) {
+export default function BillTracker({ bills, summary, projectWise, projects, unbilledWork, overallPayments = [] }: Props) {
   const [isPending, startTransition] = useTransition()
   const [expandedBill, setExpandedBill] = useState<string | null>(null)
   const [editingBill, setEditingBill] = useState<Bill | null>(null)
@@ -132,7 +135,7 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
     : 'None'
 
   function handleDelete(billId: string) {
-    if (!confirm('Delete this bill and all its payments? This cannot be undone.')) return
+    if (!confirm('Delete this unpaid invoice? Its linked trips will become available for billing again.')) return
     setDeletingId(billId)
     startTransition(async () => {
       try {
@@ -197,6 +200,13 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
             </button>
           })}
         </div>
+      </section>
+
+      <section className="card" style={{ padding: 20, marginBottom: 24 }} aria-label="Unbilled work">
+        <h2 style={{ fontSize: 14, fontWeight: 700 }}>Unbilled Work</h2>
+        <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '8px 0 16px' }}>Trips available to invoice · {fmt(unbilledWork.projects.reduce((sum, project) => sum + project.billAmount, 0))} freight</p>
+        {unbilledWork.legacyCount > 0 && <p style={{ padding: 12, borderRadius: 8, background: 'var(--color-warning-subtle)', color: 'var(--color-warning)', fontSize: 12, marginBottom: 16 }}>{unbilledWork.legacyCount} historical freight invoices have no trip links. Trips within their project and billing periods are held for reconciliation and excluded here.</p>}
+        {unbilledWork.projects.length === 0 ? <p style={{ fontSize: 13 }}>No eligible unbilled trips.</p> : <div style={{ overflowX: 'auto' }}><table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}><thead><tr><th style={{ textAlign: 'left' }}>Project</th><th>Trips</th><th>Weight (MT)</th><th>Freight</th><th>Action</th></tr></thead><tbody>{unbilledWork.projects.map(project => <tr key={project.projectId} style={{ borderTop: '1px solid var(--color-border)' }}><td style={{ padding: '14px 0' }}>{project.projectName}</td><td style={{ textAlign: 'center' }}>{project.totalTrips}</td><td style={{ textAlign: 'center' }}>{project.totalWeight}</td><td style={{ textAlign: 'center' }}>{fmt(project.billAmount)}</td><td style={{ textAlign: 'center' }}><BillForm projects={projects} initial={project} label="Build invoice" /></td></tr>)}</tbody></table></div>}
       </section>
 
       {/* ═══ ACTIONS: RECORD OVERALL PAYMENT & RECORD BILL & UNIFIED SINGLE EXPORT ═══ */}
@@ -555,6 +565,8 @@ export default function BillTracker({ bills, summary, projectWise, projects, ove
                   {/* Expanded Payment Section */}
                   {isExpanded && (
                     <div style={{ padding: '16px 20px' }}>
+                      {bill.tripLinked && <div style={{ marginBottom: 16 }}><strong style={{ fontSize: 13 }}>Linked trips ({bill.trips?.length || 0})</strong><ul style={{ marginTop: 8, fontSize: 12, listStyle: 'none' }}>{bill.trips?.map(trip => <li key={trip.id} style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border)' }}>{fmtDate(trip.date)} · {trip.vehicle.plateNo} · {trip.weight} MT · {fmt(trip.partyFreightAmount)}</li>)}</ul></div>}
+                      {!bill.tripLinked && bill.billType !== 'TOLL' && <p style={{ fontSize: 12, color: 'var(--color-warning)', marginBottom: 12 }}>Historical invoice — trip allocation needs review.</p>}
                       {/* Bill Details */}
                       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
                         {incRate > 0 && (
